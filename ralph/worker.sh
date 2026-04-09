@@ -27,7 +27,7 @@ ${RALPH_COMMITS}
 $(cat "$SCRIPT_DIR/prompt.md")"
 
 # 6. Call the Copilot CLI
-COPILOT_MODEL="${COPILOT_MODEL:-grok-code-fast-1}"
+COPILOT_MODEL="${COPILOT_MODEL:-claude-haiku-4-5}"
 echo "Invoking Copilot with model: $COPILOT_MODEL"
 echo "$CONTEXT" | copilot --model "$COPILOT_MODEL" --yolo -p "You are in an autonomous development loop. Ensure you work at the project root. Review all open issues and recent commits, pick the next best single issue, then implement it. Create a branch, implement, test, commit with RALPH prefix, push branch, create PR, and close the issue when completed. Follow all instructions in the provided context."
 
