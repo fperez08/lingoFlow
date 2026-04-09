@@ -28,6 +28,7 @@ Explore the repo to understand the existing code, patterns, and conventions. Ens
 1. Work on only ONE task or feature at a time.
 2. Ensure you add or update tests for your changes.
 3. Validate your changes (run build, typecheck, and tests).
+4. Never run watch-mode commands or long-running servers (for example: `next dev`, `pnpm dev`, `npm run dev`, test watch mode). Use one-shot commands only.
 
 ## COMMIT
 
