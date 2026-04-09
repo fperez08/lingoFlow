@@ -162,7 +162,7 @@ export default function ImportVideoModal({ isOpen, onClose, onSuccess }: ImportV
               id="transcript"
               type="file"
               accept=".srt,.vtt,.txt"
-              onChange={(e) => setTranscriptFile(e.files?.[0] || null)}
+              onChange={(e) => setTranscriptFile(e.currentTarget.files?.[0] || null)}
               disabled={isSubmitting}
               required
             />
