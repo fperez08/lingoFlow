@@ -1,30 +1,31 @@
 #!/bin/bash
 set -e
 
-# Usage: ralph/run.sh <parent_issue_number> <iterations>
+# Usage: ralph/run.sh <iterations>
 
-if [ -z "$1" ] || [ -z "$2" ]; then
-  echo "Usage: $0 <parent_issue_number> <iterations>"
-  echo "Example: $0 42 5"
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+if [ -z "$1" ]; then
+  echo "Usage: $0 <iterations>"
+  echo "Example: $0 5"
   exit 1
 fi
 
-PARENT_ISSUE=$1
-ITERATIONS=$2
+ITERATIONS=$1
 
 for ((i=1; i<=$ITERATIONS; i++)); do
   echo "======================================"
-  echo "RALPH ITERATION $i / $ITERATIONS (Parent Issue: #$PARENT_ISSUE)"
+  echo "RALPH ITERATION $i / $ITERATIONS"
   echo "======================================"
 
   # Call the worker script and capture output
   # We use tee to display output while also capturing it to check for COMPLETE signal
-  RESULT=$(./worker.sh "$PARENT_ISSUE" | tee /dev/tty)
+  RESULT=$("$SCRIPT_DIR/worker.sh" | tee /dev/tty)
 
   if [[ "$RESULT" == *"<promise>COMPLETE</promise>"* ]]; then
     echo ""
     echo "======================================"
-    echo "PRD / Tasks complete! Exiting loop."
+    echo "Tasks complete! Exiting loop."
     echo "======================================"
     exit 0
   fi

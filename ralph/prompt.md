@@ -42,24 +42,22 @@ Make a git commit. The commit message must:
 1. **Create a branch**: Use the naming convention `issue-{number}-{title-slug}` (e.g., `issue-42-fix-auth-bug`).
 2. **Implement & test** your changes on the branch.
 3. **Push the branch** to the remote repository (e.g., `git push origin issue-42-fix-auth-bug`).
-4. **Create a PR** linking to the child issue (e.g., `gh pr create --title "..." --body "fixes #{issue_number}" --base main --head issue-42-fix-auth-bug`).
+4. **Create a PR** linking to the issue (e.g., `gh pr create --title "..." --body "fixes #{issue_number}" --base main --head issue-42-fix-auth-bug`).
 
-## CLOSING CHILD ISSUES
+## CLOSING ISSUES
 
-- **After creating the PR**: Close the child GitHub issue using `gh issue close {issue_number} --comment "Closed via PR"`.
-- **Do NOT close the parent issue** (#$PARENT_ISSUE). Only child issues should be closed as they are completed.
-- If a task is not complete, leave a comment on the child issue describing what was done and what remains.
+- **After creating the PR**: Close the GitHub issue using `gh issue close {issue_number} --comment "Closed via PR"`.
+- If a task is not complete, leave a comment on the issue describing what was done and what remains.
 
 ## COMPLETION SIGNAL
 
-- When **all child issues are closed** (except the parent), output `<promise>COMPLETE</promise>`.
+- When **all open issues are complete**, output `<promise>COMPLETE</promise>`.
 - The loop will exit after detecting this signal.
 
 ## FINAL RULES
 
-- ONLY WORK ON A SINGLE TASK (one child issue per iteration).
+- ONLY WORK ON A SINGLE TASK (one issue per iteration).
 - ALWAYS prefix your commit with `RALPH:`.
 - ALWAYS create and push a branch before committing.
 - ALWAYS create a PR after pushing the branch.
-- ALWAYS close the child issue after the PR is created.
-- NEVER close the parent issue.
+- ALWAYS close the issue after the PR is created.
