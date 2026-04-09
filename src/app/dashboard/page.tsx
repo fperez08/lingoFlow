@@ -3,11 +3,14 @@
 import { useState, useEffect } from 'react'
 import ImportVideoModal from '@/components/ImportVideoModal'
 import VideoCard, { VideoCardProps } from '@/components/VideoCard'
+import DeleteVideoModal from '@/components/DeleteVideoModal'
 
 export default function DashboardPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [videos, setVideos] = useState<VideoCardProps[]>([])
   const [loading, setLoading] = useState(true)
+  const [deleteTarget, setDeleteTarget] = useState<VideoCardProps | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
     fetch('/api/videos')
@@ -31,6 +34,20 @@ export default function DashboardPage() {
       .finally(() => setLoading(false))
   }
 
+  const handleDelete = async () => {
+    if (!deleteTarget) return
+    setIsDeleting(true)
+    try {
+      const res = await fetch(`/api/videos/${deleteTarget.id}`, { method: 'DELETE' })
+      if (res.ok) {
+        setVideos(prev => prev.filter(v => v.id !== deleteTarget.id))
+        setDeleteTarget(null)
+      }
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
   return (
     <main className="dashboard-page">
       <h1>Dashboard</h1>
@@ -40,6 +57,12 @@ export default function DashboardPage() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSuccess={handleImportSuccess}
+      />
+      <DeleteVideoModal
+        video={deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        isDeleting={isDeleting}
       />
       {loading ? (
         <p data-testid="loading-indicator">Loading...</p>
@@ -56,7 +79,7 @@ export default function DashboardPage() {
           }}
         >
           {videos.map((video) => (
-            <VideoCard key={video.id} {...video} />
+            <VideoCard key={video.id} {...video} onDelete={() => setDeleteTarget(video)} />
           ))}
         </div>
       )}
