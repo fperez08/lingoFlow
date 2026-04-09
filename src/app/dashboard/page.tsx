@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import ImportVideoModal from '@/components/ImportVideoModal'
 import VideoCard, { VideoCardProps } from '@/components/VideoCard'
 import DeleteVideoModal from '@/components/DeleteVideoModal'
+import EditVideoModal from '@/components/EditVideoModal'
 
 export default function DashboardPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -11,6 +12,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [deleteTarget, setDeleteTarget] = useState<VideoCardProps | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [editTarget, setEditTarget] = useState<VideoCardProps | null>(null)
 
   useEffect(() => {
     fetch('/api/videos')
@@ -48,6 +50,11 @@ export default function DashboardPage() {
     }
   }
 
+  const handleEditSave = (updatedVideo: VideoCardProps) => {
+    setVideos(prev => prev.map(v => v.id === updatedVideo.id ? updatedVideo : v))
+    setEditTarget(null)
+  }
+
   return (
     <main className="dashboard-page">
       <h1>Dashboard</h1>
@@ -64,6 +71,11 @@ export default function DashboardPage() {
         onConfirm={handleDelete}
         isDeleting={isDeleting}
       />
+      <EditVideoModal
+        video={editTarget}
+        onClose={() => setEditTarget(null)}
+        onSave={handleEditSave}
+      />
       {loading ? (
         <p data-testid="loading-indicator">Loading...</p>
       ) : videos.length === 0 ? (
@@ -79,7 +91,7 @@ export default function DashboardPage() {
           }}
         >
           {videos.map((video) => (
-            <VideoCard key={video.id} {...video} onDelete={() => setDeleteTarget(video)} />
+            <VideoCard key={video.id} {...video} onDelete={() => setDeleteTarget(video)} onEdit={() => setEditTarget(video)} />
           ))}
         </div>
       )}
