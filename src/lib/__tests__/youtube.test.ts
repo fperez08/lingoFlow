@@ -32,23 +32,10 @@ describe('extractYoutubeId', () => {
 })
 
 describe('fetchYoutubeMetadata', () => {
-  let originalFetch: typeof global.fetch
-
-  beforeAll(() => {
-    originalFetch = global.fetch
-  })
-
   beforeEach(() => {
     jest.clearAllMocks()
   })
 
-  afterEach(() => {
-    global.fetch = originalFetch
-  })
-
-  afterAll(() => {
-    global.fetch = originalFetch
-  })
   it('returns metadata for a valid YouTube URL', async () => {
     const mockResponse = {
       title: 'Test Video',
