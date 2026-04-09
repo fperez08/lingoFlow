@@ -1,4 +1,4 @@
-import { createServerClient, parseCookieHeader } from '@supabase/ssr'
+import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
 function requireEnv(name: 'NEXT_PUBLIC_SUPABASE_URL' | 'NEXT_PUBLIC_SUPABASE_ANON_KEY') {
@@ -22,7 +22,7 @@ export async function createSupabaseServer() {
     {
       cookies: {
         getAll() {
-          return parseCookieHeader(cookieStore.toString())
+          return cookieStore.getAll()
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) => {

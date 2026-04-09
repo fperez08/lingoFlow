@@ -94,10 +94,11 @@ export async function POST(request: NextRequest) {
       .map((tag) => tag.trim())
       .filter((tag) => tag.length > 0)
 
-    // Insert video record
+    // Insert video record (use the same videoId as the primary key)
     const { data: video, error: insertError } = await supabase
       .from('videos')
       .insert({
+        id: videoId,
         user_id: userId,
         youtube_url: youtubeUrl,
         youtube_id: youtubeMetadata.youtube_id,
@@ -112,6 +113,8 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (insertError) {
+      // Clean up the uploaded transcript to avoid orphaned storage objects
+      await supabase.storage.from('transcripts').remove([storagePath])
       return NextResponse.json(
         { error: 'Failed to save video record' },
         { status: 500 }
