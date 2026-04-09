@@ -20,18 +20,35 @@ export async function POST(request: NextRequest) {
     const userId = sessionData.session.user.id
 
     const formData = await request.formData()
-    const youtubeUrl = formData.get('youtube_url') as string
-    const transcriptFile = formData.get('transcript') as File
-    const tagsString = (formData.get('tags') as string) || ''
+    const youtubeUrlValue = formData.get('youtube_url')
+    const transcriptFileValue = formData.get('transcript')
+    const tagsValue = formData.get('tags')
 
     // Validate inputs
-    if (!youtubeUrl || !transcriptFile) {
+    if (typeof youtubeUrlValue !== 'string' || youtubeUrlValue.trim() === '') {
       return NextResponse.json(
-        { error: 'Missing required fields: youtube_url and transcript' },
+        { error: 'Missing or invalid field: youtube_url' },
         { status: 400 }
       )
     }
 
+    if (!(transcriptFileValue instanceof File)) {
+      return NextResponse.json(
+        { error: 'Missing or invalid field: transcript' },
+        { status: 400 }
+      )
+    }
+
+    if (tagsValue !== null && typeof tagsValue !== 'string') {
+      return NextResponse.json(
+        { error: 'Invalid field: tags' },
+        { status: 400 }
+      )
+    }
+
+    const youtubeUrl = youtubeUrlValue
+    const transcriptFile = transcriptFileValue
+    const tagsString = tagsValue ?? ''
     // Validate transcript file extension
     const fileExtension = getFileExtension(transcriptFile.name)
     if (!ALLOWED_EXTENSIONS.includes(fileExtension)) {
