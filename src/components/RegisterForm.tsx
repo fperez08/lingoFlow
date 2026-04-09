@@ -8,6 +8,9 @@ import { useRouter } from 'next/navigation'
 export default function RegisterForm() {
   const [email, setEmail] = useState('')
   const [pin, setPin] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [username, setUsername] = useState('')
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
 
@@ -16,6 +19,13 @@ export default function RegisterForm() {
       const { data, error } = await supabase.auth.signUp({
         email,
         password: pin, // Using PIN as the password
+        options: {
+          data: {
+            first_name: firstName,
+            last_name: lastName,
+            username,
+          },
+        },
       })
 
       if (error) throw error
@@ -24,7 +34,7 @@ export default function RegisterForm() {
     onSuccess: () => {
       router.push('/dashboard')
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       setError(err.message)
     },
   })
@@ -45,6 +55,36 @@ export default function RegisterForm() {
     <form onSubmit={handleSubmit} className="register-form">
       <h2>Register</h2>
       {error && <p className="error">{error}</p>}
+      <div className="field">
+        <label htmlFor="firstName">First Name</label>
+        <input
+          id="firstName"
+          type="text"
+          value={firstName}
+          onChange={(e) => setFirstName(e.target.value)}
+          required
+        />
+      </div>
+      <div className="field">
+        <label htmlFor="lastName">Last Name</label>
+        <input
+          id="lastName"
+          type="text"
+          value={lastName}
+          onChange={(e) => setLastName(e.target.value)}
+          required
+        />
+      </div>
+      <div className="field">
+        <label htmlFor="username">Username</label>
+        <input
+          id="username"
+          type="text"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          required
+        />
+      </div>
       <div className="field">
         <label htmlFor="email">Email</label>
         <input
