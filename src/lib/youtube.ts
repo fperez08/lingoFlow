@@ -41,8 +41,32 @@ export function extractYoutubeId(url: string): string | null {
   return null
 }
 
+function parseYoutubeUrl(url: string): URL | null {
+  try {
+    const parsedUrl = new URL(url)
+    const validHosts = new Set([
+      'youtube.com',
+      'www.youtube.com',
+      'm.youtube.com',
+      'youtu.be',
+      'www.youtu.be',
+    ])
+
+    return validHosts.has(parsedUrl.hostname) ? parsedUrl : null
+  } catch {
+    return null
+  }
+}
+
 export async function fetchYoutubeMetadata(url: string): Promise<YoutubeMetadata> {
-  const videoId = extractYoutubeId(url)
+  const parsedUrl = parseYoutubeUrl(url)
+
+  if (!parsedUrl) {
+    throw new YoutubeMetadataError('Invalid YouTube URL')
+  }
+
+  const normalizedUrl = parsedUrl.toString()
+  const videoId = extractYoutubeId(normalizedUrl)
 
   if (!videoId) {
     throw new YoutubeMetadataError('Invalid YouTube URL')
@@ -50,7 +74,7 @@ export async function fetchYoutubeMetadata(url: string): Promise<YoutubeMetadata
 
   try {
     const response = await fetch(
-      `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`
+      `https://www.youtube.com/oembed?url=${encodeURIComponent(normalizedUrl)}&format=json`
     )
 
     if (!response.ok) {
