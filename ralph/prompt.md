@@ -32,16 +32,34 @@ Explore the repo to understand the existing code, patterns, and conventions. Ens
 ## COMMIT
 
 Make a git commit. The commit message must:
+
 1. Start with the `RALPH:` prefix.
 2. Include the task completed and reference the issue number (e.g., `(fixes #123)`).
 3. Briefly mention key decisions and files changed.
 
-## THE ISSUE
+## BRANCH & PR WORKFLOW
 
-- **If the task is complete**: Close the original GitHub issue using the appropriate tool.
-- **If the task is not complete**: Leave a comment on the issue describing what was done and what remains.
+1. **Create a branch**: Use the naming convention `issue-{number}-{title-slug}` (e.g., `issue-42-fix-auth-bug`).
+2. **Implement & test** your changes on the branch.
+3. **Push the branch** to the remote repository (e.g., `git push origin issue-42-fix-auth-bug`).
+4. **Create a PR** linking to the child issue (e.g., `gh pr create --title "..." --body "fixes #{issue_number}" --base main --head issue-42-fix-auth-bug`).
+
+## CLOSING CHILD ISSUES
+
+- **After creating the PR**: Close the child GitHub issue using `gh issue close {issue_number} --comment "Closed via PR"`.
+- **Do NOT close the parent issue** (#$PARENT_ISSUE). Only child issues should be closed as they are completed.
+- If a task is not complete, leave a comment on the child issue describing what was done and what remains.
+
+## COMPLETION SIGNAL
+
+- When **all child issues are closed** (except the parent), output `<promise>COMPLETE</promise>`.
+- The loop will exit after detecting this signal.
 
 ## FINAL RULES
 
-- ONLY WORK ON A SINGLE TASK.
+- ONLY WORK ON A SINGLE TASK (one child issue per iteration).
 - ALWAYS prefix your commit with `RALPH:`.
+- ALWAYS create and push a branch before committing.
+- ALWAYS create a PR after pushing the branch.
+- ALWAYS close the child issue after the PR is created.
+- NEVER close the parent issue.
