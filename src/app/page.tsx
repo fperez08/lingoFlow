@@ -4,7 +4,9 @@ export default function Home() {
   return (
     <main>
       <h1>Welcome to lingoFlow</h1>
-      <p>Please <Link href="/register">register</Link> to get started.</p>
+      <p>
+        <Link href="/register">Register</Link> or <Link href="/login">Login</Link> to get started.
+      </p>
     </main>
   )
 }
