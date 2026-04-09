@@ -1,7 +1,7 @@
 -- Create videos table
 CREATE TABLE public.videos (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id uuid REFERENCES auth.users ON DELETE CASCADE NOT NULL,
+  user_id uuid REFERENCES auth.users NOT NULL,
   youtube_url text NOT NULL,
   youtube_id text NOT NULL,
   title text NOT NULL,
@@ -29,7 +29,9 @@ CREATE POLICY "Users can delete their own videos"
   ON public.videos FOR DELETE USING (auth.uid() = user_id);
 
 -- Create transcripts storage bucket
-INSERT INTO storage.buckets (id, name, public) VALUES ('transcripts', 'transcripts', false);
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('transcripts', 'transcripts', false)
+ON CONFLICT DO NOTHING;
 
 -- Policy: Users can upload their own transcripts
 CREATE POLICY "Users can upload their own transcripts"

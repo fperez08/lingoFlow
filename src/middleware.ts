@@ -8,9 +8,18 @@ export async function middleware(request: NextRequest) {
     },
   })
 
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error(
+      'Missing required Supabase environment variables: NEXT_PUBLIC_SUPABASE_URL and/or NEXT_PUBLIC_SUPABASE_ANON_KEY'
+    )
+  }
+
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key',
+    supabaseUrl,
+    supabaseAnonKey,
     {
       cookies: {
         getAll() {
@@ -28,13 +37,7 @@ export async function middleware(request: NextRequest) {
   const { data } = await supabase.auth.getSession()
 
   if (!data.session && request.nextUrl.pathname.startsWith('/dashboard')) {
-    const redirectResponse = NextResponse.redirect(new URL('/login', request.url))
-
-    response.cookies.getAll().forEach((cookie) => {
-      redirectResponse.cookies.set(cookie)
-    })
-
-    return redirectResponse
+    return NextResponse.redirect(new URL('/login', request.url))
   }
 
   return response
