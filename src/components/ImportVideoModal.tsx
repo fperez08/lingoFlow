@@ -73,6 +73,11 @@ export default function ImportVideoModal({ isOpen, onClose, onSuccess }: ImportV
       return
     }
 
+    if (isLoadingPreview) {
+      setSubmitError('Please wait for the video preview to finish loading')
+      return
+    }
+
     if (previewError) {
       setSubmitError('Please fix the YouTube URL error before submitting')
       return
@@ -115,7 +120,7 @@ export default function ImportVideoModal({ isOpen, onClose, onSuccess }: ImportV
     return null
   }
 
-  const canSubmit = !isSubmitting && !previewError && !!transcriptFile && youtubeUrl.trim()
+  const canSubmit = !isSubmitting && !isLoadingPreview && !previewError && !!transcriptFile && youtubeUrl.trim()
 
   return (
     <div className="modal-overlay" onClick={onClose}>
