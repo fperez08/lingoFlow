@@ -13,7 +13,7 @@ jest.mock('next/server', () => ({
   },
 }))
 
-import { POST } from '../route'
+import { POST, ALLOWED_EXTENSIONS } from '../route'
 import { fetchYoutubeMetadata } from '@/lib/youtube'
 import { writeTranscript } from '@/lib/transcripts'
 import { insertVideo } from '@/lib/videos'
@@ -61,6 +61,73 @@ describe('POST /api/videos/import', () => {
     mockFetchYoutubeMetadata.mockResolvedValue(fakeMetadata)
     mockWriteTranscript.mockReturnValue('/data/transcripts/video-uuid.srt')
     mockInsertVideo.mockReturnValue(fakeVideo)
+  })
+
+  it('returns 400 when youtube_url is empty string', async () => {
+    const transcriptFile = new File(['content'], 'transcript.srt', { type: 'text/plain' })
+    const fd = makeFormData({ youtube_url: '   ', transcript: transcriptFile })
+    const req = makeRequest(fd)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const res = await POST(req as any)
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toBe('Missing required fields: youtube_url and transcript')
+  })
+
+  it('returns 400 when transcript has empty filename (no extension)', async () => {
+    const transcriptFile = new File([], '', { type: 'text/plain' })
+    const fd = makeFormData({
+      youtube_url: 'https://www.youtube.com/watch?v=abc123',
+      transcript: transcriptFile,
+    })
+    const req = makeRequest(fd)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const res = await POST(req as any)
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toBe('Invalid file extension. Allowed: srt, vtt, txt')
+  })
+
+  it('returns 400 when tags is a non-string (File)', async () => {
+    const transcriptFile = new File(['content'], 'transcript.srt', { type: 'text/plain' })
+    const tagsFile = new File(['tag1'], 'tags.txt', { type: 'text/plain' })
+    const fd = new FormData()
+    fd.append('youtube_url', 'https://www.youtube.com/watch?v=abc123')
+    fd.append('transcript', transcriptFile)
+    fd.append('tags', tagsFile)
+    const req = makeRequest(fd)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const res = await POST(req as any)
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toBe('Invalid tags field')
+  })
+
+  it('returns 201 with empty tags array when no tags provided', async () => {
+    const fakeVideoNoTags = { ...fakeVideo, tags: [] }
+    mockInsertVideo.mockReturnValue(fakeVideoNoTags)
+    const content = '1\n00:00:01,000 --> 00:00:02,000\nHello'
+    const transcriptFile = Object.assign(
+      new File([content], 'transcript.srt', { type: 'text/plain' }),
+      { arrayBuffer: async () => Buffer.from(content).buffer }
+    )
+    const fd = makeFormData({
+      youtube_url: 'https://www.youtube.com/watch?v=abc123',
+      transcript: transcriptFile,
+    })
+    const req = makeRequest(fd)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const res = await POST(req as any)
+    expect(res.status).toBe(201)
+    const body = await res.json()
+    expect(body.tags).toEqual([])
+    expect(mockInsertVideo).toHaveBeenCalledWith(
+      expect.objectContaining({ tags: [] })
+    )
+  })
+
+  it('exports ALLOWED_EXTENSIONS with srt, vtt, txt', () => {
+    expect(ALLOWED_EXTENSIONS).toEqual(['srt', 'vtt', 'txt'])
   })
 
   it('returns 400 when youtube_url is missing', async () => {
