@@ -26,9 +26,36 @@ ${RALPH_COMMITS}
 
 $(cat "$SCRIPT_DIR/prompt.md")"
 
+# 5. Configure Copilot execution limits to avoid stuck iterations
+ITERATION_TIMEOUT_SECONDS="${ITERATION_TIMEOUT_SECONDS:-2700}"
+
 # 6. Call the Copilot CLI
 COPILOT_MODEL="${COPILOT_MODEL:-claude-haiku-4.5}"
 echo "Invoking Copilot with model: $COPILOT_MODEL"
-echo "$CONTEXT" | copilot --model "$COPILOT_MODEL" --yolo -p "You are in an autonomous development loop. Ensure you work at the project root. Review all open issues and recent commits, pick the next best single issue, then implement it. Create a branch, implement, test, commit with RALPH prefix, push branch, create PR, and close the issue when completed. Follow all instructions in the provided context."
+
+PROMPT_TEXT="You are in an autonomous development loop. Ensure you work at the project root. Review all open issues and recent commits, pick the next best single issue, then implement it. Create a branch, implement, test, commit with RALPH prefix, push branch, create PR, and close the issue when completed. Do not run watch-mode or long-running server commands. Use one-shot commands only. When complete, stop and return your final summary. Follow all instructions in the provided context.
+
+${CONTEXT}"
+
+set +e
+if command -v gtimeout >/dev/null 2>&1; then
+	gtimeout "$ITERATION_TIMEOUT_SECONDS" copilot --model "$COPILOT_MODEL" --yolo --no-ask-user --max-autopilot-continues 5 -p "$PROMPT_TEXT"
+	COPILOT_EXIT=$?
+elif command -v timeout >/dev/null 2>&1; then
+	timeout "$ITERATION_TIMEOUT_SECONDS" copilot --model "$COPILOT_MODEL" --yolo --no-ask-user --max-autopilot-continues 5 -p "$PROMPT_TEXT"
+	COPILOT_EXIT=$?
+else
+	perl -e 'my $t = shift @ARGV; alarm $t; exec @ARGV or die $!;' "$ITERATION_TIMEOUT_SECONDS" copilot --model "$COPILOT_MODEL" --yolo --no-ask-user --max-autopilot-continues 5 -p "$PROMPT_TEXT"
+	COPILOT_EXIT=$?
+fi
+set -e
+
+if [ "$COPILOT_EXIT" -ne 0 ]; then
+	if [ "$COPILOT_EXIT" -eq 124 ] || [ "$COPILOT_EXIT" -eq 142 ]; then
+		echo "Copilot iteration timed out after ${ITERATION_TIMEOUT_SECONDS}s; continuing loop."
+	else
+		echo "Copilot exited with status ${COPILOT_EXIT}; continuing loop."
+	fi
+fi
 
 echo "Iteration finished."
