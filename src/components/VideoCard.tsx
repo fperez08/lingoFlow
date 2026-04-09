@@ -1,3 +1,5 @@
+'use client'
+
 interface VideoCardProps {
   id: string
   title: string
