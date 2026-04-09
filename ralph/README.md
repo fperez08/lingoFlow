@@ -1,36 +1,36 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Gemini Ralph Loop
 
-## Getting Started
+This folder contains the implementation of the autonomous "Ralph" development loop using the Gemini CLI. Ralph is designed to explore the codebase, identify tasks, and implement features or fixes autonomously.
 
-First, run the development server:
+## Contents
+
+- `prompt.md`: The base instruction set for the Gemini agent.
+- `worker.sh`: A script that runs a single iteration of the loop (fetches context, calls Gemini).
+- `run.sh`: The main loop orchestrator that runs multiple iterations.
+
+## Usage
+
+To start the autonomous loop, run the following command from the project root:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+./ralph/run.sh <number_of_iterations>
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+For example, to run 5 iterations:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+./ralph/run.sh 5
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## How it Works
 
-## Learn More
+1. **Context Fetching**: `worker.sh` retrieves recent commit history and relevant files to provide context on what has already been done.
+2. **Task Selection**: The agent explores the repository (PRDs, issues, README) to determine the next highest-priority task.
+3. **Execution**: The agent implements the task, adds tests, and validates the code.
+4. **Commit**: Work is automatically committed with descriptive messages.
+5. **Completion Signal**: When the agent determines all tasks are complete, it signals the loop to exit early.
 
-To learn more about Next.js, take a look at the following resources:
+## Notes
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Ensure you have the Gemini CLI installed and configured.
+- The loop uses `pnpm` for dependency management as per the project standards.
