@@ -95,6 +95,8 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (insertError) {
+      // Clean up the uploaded transcript to avoid orphaned storage objects
+      await supabase.storage.from('transcripts').remove([storagePath])
       return NextResponse.json(
         { error: 'Failed to save video record' },
         { status: 500 }

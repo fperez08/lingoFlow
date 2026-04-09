@@ -1,17 +1,19 @@
 'use client'
 
 import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import ImportVideoModal from '@/components/ImportVideoModal'
 import VideoCard from '@/components/VideoCard'
 import { useVideos } from '@/hooks/useVideos'
 
 export default function DashboardPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const { data: videos, isLoading, error, refetch } = useVideos()
+  const queryClient = useQueryClient()
+  const { data: videos, isLoading, error } = useVideos()
 
   const handleImportSuccess = () => {
     setIsModalOpen(false)
-    refetch()
+    queryClient.invalidateQueries({ queryKey: ['videos'] })
   }
 
   return (
@@ -29,7 +31,7 @@ export default function DashboardPage() {
 
       {videos && videos.length === 0 && (
         <div className="empty-state">
-          <p>No videos yet. Click Import Video to get started!</p>
+          <p>No videos yet — click Import to add your first one.</p>
         </div>
       )}
 
@@ -42,6 +44,7 @@ export default function DashboardPage() {
               title={video.title}
               author_name={video.author_name}
               thumbnail_url={video.thumbnail_url}
+              youtube_url={video.youtube_url}
               tags={video.tags}
               created_at={video.created_at}
             />

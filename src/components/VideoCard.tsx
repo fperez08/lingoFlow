@@ -1,10 +1,11 @@
 'use client'
 
-interface VideoCardProps {
+export interface VideoCardProps {
   id: string
   title: string
   author_name: string
   thumbnail_url: string
+  youtube_url: string
   tags: string[]
   created_at: string
 }
@@ -23,15 +24,22 @@ export default function VideoCard({
   title,
   author_name,
   thumbnail_url,
+  youtube_url,
   tags,
   created_at,
 }: VideoCardProps) {
   return (
     <div className="video-card" data-testid={`video-card-${id}`}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={thumbnail_url} alt={title} className="video-thumbnail" />
+      <a href={youtube_url} target="_blank" rel="noopener noreferrer">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={thumbnail_url} alt={title} className="video-thumbnail" />
+      </a>
       <div className="video-content">
-        <h3 className="video-title">{title}</h3>
+        <h3 className="video-title">
+          <a href={youtube_url} target="_blank" rel="noopener noreferrer">
+            {title}
+          </a>
+        </h3>
         <p className="video-author">{author_name}</p>
         {tags.length > 0 && (
           <div className="video-tags">
