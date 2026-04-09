@@ -92,4 +92,46 @@ describe('videos persistence module', () => {
     const { getVideoById } = require('../videos')
     expect(getVideoById('nonexistent')).toBeUndefined()
   })
+
+  describe('insertVideo', () => {
+    it('inserts a video and returns it with tags as array', () => {
+      const { insertVideo } = require('../videos')
+      const params = {
+        id: 'insert-test-id',
+        youtube_url: 'https://www.youtube.com/watch?v=inserttest',
+        youtube_id: 'inserttest',
+        title: 'Insert Test Video',
+        author_name: 'Insert Author',
+        thumbnail_url: 'https://img.youtube.com/vi/inserttest/0.jpg',
+        transcript_path: '/data/transcripts/insert-test-id.srt',
+        transcript_format: 'srt',
+        tags: ['insert', 'test'],
+      }
+      const video = insertVideo(params)
+      expect(video.id).toBe('insert-test-id')
+      expect(video.title).toBe('Insert Test Video')
+      expect(video.tags).toEqual(['insert', 'test'])
+      expect(video.transcript_format).toBe('srt')
+    })
+
+    it('makes the inserted video appear in listVideos()', () => {
+      const { insertVideo, listVideos } = require('../videos')
+      const params = {
+        id: 'list-test-id',
+        youtube_url: 'https://www.youtube.com/watch?v=listtest',
+        youtube_id: 'listtest',
+        title: 'List Test Video',
+        author_name: 'List Author',
+        thumbnail_url: 'https://img.youtube.com/vi/listtest/0.jpg',
+        transcript_path: '/data/transcripts/list-test-id.srt',
+        transcript_format: 'vtt',
+        tags: [],
+      }
+      insertVideo(params)
+      const videos = listVideos()
+      const found = videos.find((v: { id: string }) => v.id === 'list-test-id')
+      expect(found).toBeDefined()
+      expect(found?.tags).toEqual([])
+    })
+  })
 })

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseServer } from '@/lib/supabase-server'
 import { fetchYoutubeMetadata } from '@/lib/youtube'
+import { writeTranscript } from '@/lib/transcripts'
+import { insertVideo } from '@/lib/videos'
 
 const ALLOWED_EXTENSIONS = ['srt', 'vtt', 'txt']
 
@@ -10,113 +11,55 @@ function getFileExtension(filename: string): string {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createSupabaseServer()
-
-    const { data: sessionData } = await supabase.auth.getSession()
-    if (!sessionData.session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const userId = sessionData.session.user.id
-
     const formData = await request.formData()
     const youtubeUrlEntry = formData.get('youtube_url')
     const transcriptEntry = formData.get('transcript')
     const tagsEntry = formData.get('tags')
 
-    // Validate inputs
     if (typeof youtubeUrlEntry !== 'string' || youtubeUrlEntry.trim() === '' || !(transcriptEntry instanceof File)) {
-      return NextResponse.json(
-        { error: 'Missing required fields: youtube_url and transcript' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Missing required fields: youtube_url and transcript' }, { status: 400 })
     }
-
     if (tagsEntry !== null && typeof tagsEntry !== 'string') {
-      return NextResponse.json(
-        { error: 'Invalid tags field' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Invalid tags field' }, { status: 400 })
     }
 
-    const youtubeUrl = youtubeUrlEntry
+    const youtubeUrl = youtubeUrlEntry.trim()
     const transcriptFile = transcriptEntry
-    const tagsString = tagsEntry || ''
-    // Validate transcript file extension
+    const tagsString = typeof tagsEntry === 'string' ? tagsEntry : ''
+
     const fileExtension = getFileExtension(transcriptFile.name)
     if (!ALLOWED_EXTENSIONS.includes(fileExtension)) {
-      return NextResponse.json(
-        { error: `Invalid file extension. Allowed: ${ALLOWED_EXTENSIONS.join(', ')}` },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: `Invalid file extension. Allowed: ${ALLOWED_EXTENSIONS.join(', ')}` }, { status: 400 })
     }
 
-    // Fetch YouTube metadata
     let youtubeMetadata
     try {
       youtubeMetadata = await fetchYoutubeMetadata(youtubeUrl)
     } catch (error) {
-      return NextResponse.json(
-        { error: error instanceof Error ? error.message : 'Failed to fetch YouTube metadata' },
-        { status: 422 }
-      )
+      return NextResponse.json({ error: error instanceof Error ? error.message : 'Failed to fetch YouTube metadata' }, { status: 422 })
     }
 
-    // Generate video ID
     const videoId = crypto.randomUUID()
-    const storagePath = `${userId}/${videoId}.${fileExtension}`
+    const fileBuffer = Buffer.from(await transcriptFile.arrayBuffer())
+    const transcriptPath = writeTranscript(videoId, fileExtension, fileBuffer)
 
-    // Upload transcript to storage
-    const fileBuffer = await transcriptFile.arrayBuffer()
-    const { error: uploadError } = await supabase.storage
-      .from('transcripts')
-      .upload(storagePath, fileBuffer, {
-        contentType: transcriptFile.type || 'text/plain',
-      })
+    const tags = tagsString.split(',').map((t) => t.trim()).filter((t) => t.length > 0)
 
-    if (uploadError) {
-      return NextResponse.json(
-        { error: 'Failed to upload transcript file' },
-        { status: 500 }
-      )
-    }
-
-    // Parse tags
-    const tags = tagsString
-      .split(',')
-      .map((tag) => tag.trim())
-      .filter((tag) => tag.length > 0)
-
-    // Insert video record
-    const { data: video, error: insertError } = await supabase
-      .from('videos')
-      .insert({
-        user_id: userId,
-        youtube_url: youtubeUrl,
-        youtube_id: youtubeMetadata.youtube_id,
-        title: youtubeMetadata.title,
-        author_name: youtubeMetadata.author_name,
-        thumbnail_url: youtubeMetadata.thumbnail_url,
-        transcript_path: storagePath,
-        transcript_format: fileExtension,
-        tags,
-      })
-      .select()
-      .single()
-
-    if (insertError) {
-      return NextResponse.json(
-        { error: 'Failed to save video record' },
-        { status: 500 }
-      )
-    }
+    const video = insertVideo({
+      id: videoId,
+      youtube_url: youtubeUrl,
+      youtube_id: youtubeMetadata.youtube_id,
+      title: youtubeMetadata.title,
+      author_name: youtubeMetadata.author_name,
+      thumbnail_url: youtubeMetadata.thumbnail_url,
+      transcript_path: transcriptPath,
+      transcript_format: fileExtension,
+      tags,
+    })
 
     return NextResponse.json(video, { status: 201 })
   } catch (error) {
     console.error('Import API error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
