@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import VideoCard from '../VideoCard'
 
 describe('VideoCard', () => {
@@ -57,5 +57,22 @@ describe('VideoCard', () => {
     links.forEach((link) => {
       expect(link).toHaveAttribute('href', 'https://www.youtube.com/watch?v=abc123')
     })
+  })
+
+  it('renders delete button when onDelete is provided', () => {
+    render(<VideoCard {...mockVideo} onDelete={jest.fn()} />)
+    expect(screen.getByTestId('delete-button')).toBeInTheDocument()
+  })
+
+  it('calls onDelete when delete button is clicked', () => {
+    const onDelete = jest.fn()
+    render(<VideoCard {...mockVideo} onDelete={onDelete} />)
+    fireEvent.click(screen.getByTestId('delete-button'))
+    expect(onDelete).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not render delete button when onDelete is not provided', () => {
+    render(<VideoCard {...mockVideo} />)
+    expect(screen.queryByTestId('delete-button')).not.toBeInTheDocument()
   })
 })
