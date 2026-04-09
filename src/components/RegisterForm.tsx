@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
@@ -23,6 +23,15 @@ export default function RegisterForm() {
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null)
   const router = useRouter()
+  const redirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (redirectTimerRef.current !== null) {
+        clearTimeout(redirectTimerRef.current)
+      }
+    }
+  }, [])
 
   const validateForm = (): boolean => {
     const errors: ValidationErrors = {}
@@ -76,7 +85,7 @@ export default function RegisterForm() {
     },
     onSuccess: () => {
       setToast({ message: 'Registration successful! Redirecting to dashboard...', type: 'success' })
-      setTimeout(() => {
+      redirectTimerRef.current = setTimeout(() => {
         router.push('/dashboard')
       }, 1500)
     },
