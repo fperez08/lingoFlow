@@ -29,8 +29,9 @@ CREATE POLICY "Users can delete their own videos"
   ON public.videos FOR DELETE USING (auth.uid() = user_id);
 
 -- Create transcripts storage bucket
-INSERT INTO storage.buckets (id, name, public) VALUES ('transcripts', 'transcripts', false)
-ON CONFLICT (id) DO NOTHING;
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('transcripts', 'transcripts', false)
+ON CONFLICT DO NOTHING;
 
 -- Policy: Users can upload their own transcripts
 CREATE POLICY "Users can upload their own transcripts"

@@ -12,9 +12,9 @@ export async function middleware(request: NextRequest) {
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    return new NextResponse('Missing Supabase environment configuration', {
-      status: 500,
-    })
+    throw new Error(
+      'Missing required Supabase environment variables: NEXT_PUBLIC_SUPABASE_URL and/or NEXT_PUBLIC_SUPABASE_ANON_KEY'
+    )
   }
 
   const supabase = createServerClient(

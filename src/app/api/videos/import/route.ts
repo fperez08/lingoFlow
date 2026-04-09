@@ -20,35 +20,28 @@ export async function POST(request: NextRequest) {
     const userId = sessionData.session.user.id
 
     const formData = await request.formData()
-    const youtubeUrlValue = formData.get('youtube_url')
-    const transcriptFileValue = formData.get('transcript')
-    const tagsValue = formData.get('tags')
+    const youtubeUrlEntry = formData.get('youtube_url')
+    const transcriptEntry = formData.get('transcript')
+    const tagsEntry = formData.get('tags')
 
     // Validate inputs
-    if (typeof youtubeUrlValue !== 'string' || youtubeUrlValue.trim() === '') {
+    if (typeof youtubeUrlEntry !== 'string' || youtubeUrlEntry.trim() === '' || !(transcriptEntry instanceof File)) {
       return NextResponse.json(
-        { error: 'Missing or invalid field: youtube_url' },
+        { error: 'Missing required fields: youtube_url and transcript' },
         { status: 400 }
       )
     }
 
-    if (!(transcriptFileValue instanceof File)) {
+    if (tagsEntry !== null && typeof tagsEntry !== 'string') {
       return NextResponse.json(
-        { error: 'Missing or invalid field: transcript' },
+        { error: 'Invalid tags field' },
         { status: 400 }
       )
     }
 
-    if (tagsValue !== null && typeof tagsValue !== 'string') {
-      return NextResponse.json(
-        { error: 'Invalid field: tags' },
-        { status: 400 }
-      )
-    }
-
-    const youtubeUrl = youtubeUrlValue
-    const transcriptFile = transcriptFileValue
-    const tagsString = tagsValue ?? ''
+    const youtubeUrl = youtubeUrlEntry
+    const transcriptFile = transcriptEntry
+    const tagsString = tagsEntry || ''
     // Validate transcript file extension
     const fileExtension = getFileExtension(transcriptFile.name)
     if (!ALLOWED_EXTENSIONS.includes(fileExtension)) {
@@ -94,11 +87,10 @@ export async function POST(request: NextRequest) {
       .map((tag) => tag.trim())
       .filter((tag) => tag.length > 0)
 
-    // Insert video record (use the same videoId as the primary key)
+    // Insert video record
     const { data: video, error: insertError } = await supabase
       .from('videos')
       .insert({
-        id: videoId,
         user_id: userId,
         youtube_url: youtubeUrl,
         youtube_id: youtubeMetadata.youtube_id,
@@ -113,13 +105,6 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (insertError) {
-      // Clean up the uploaded transcript to avoid orphaned storage objects
-      const { error: removeError } = await supabase.storage
-        .from('transcripts')
-        .remove([storagePath])
-      if (removeError) {
-        console.error('Failed to clean up orphaned transcript:', removeError)
-      }
       return NextResponse.json(
         { error: 'Failed to save video record' },
         { status: 500 }
