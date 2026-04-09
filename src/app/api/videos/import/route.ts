@@ -114,7 +114,12 @@ export async function POST(request: NextRequest) {
 
     if (insertError) {
       // Clean up the uploaded transcript to avoid orphaned storage objects
-      await supabase.storage.from('transcripts').remove([storagePath])
+      const { error: removeError } = await supabase.storage
+        .from('transcripts')
+        .remove([storagePath])
+      if (removeError) {
+        console.error('Failed to clean up orphaned transcript:', removeError)
+      }
       return NextResponse.json(
         { error: 'Failed to save video record' },
         { status: 500 }
