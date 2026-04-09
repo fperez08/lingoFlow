@@ -47,7 +47,8 @@ ${RALPH_COMMITS}
 $(cat "$SCRIPT_DIR/prompt.md")"
 
 # 6. Call the Copilot CLI
-echo "Invoking Copilot..."
-echo "$CONTEXT" | copilot -y -p "You are in an autonomous development loop working on child issues of PR #$PARENT_ISSUE. Ensure you work at the project root. Review the issues and commits to pick and complete the next child issue. Create a branch, implement, test, commit with RALPH prefix, push branch, create PR, and close the issue. Follow all instructions in the provided context."
+COPILOT_MODEL="${COPILOT_MODEL:-grok-code-fast-1}"
+echo "Invoking Copilot with model: $COPILOT_MODEL"
+echo "$CONTEXT" | copilot --model "$COPILOT_MODEL" -y -p "You are in an autonomous development loop working on child issues of PR #$PARENT_ISSUE. Ensure you work at the project root. Review the issues and commits to pick and complete the next child issue. Create a branch, implement, test, commit with RALPH prefix, push branch, create PR, and close the issue. Follow all instructions in the provided context."
 
 echo "Iteration finished."
