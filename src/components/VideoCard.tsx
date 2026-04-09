@@ -9,6 +9,7 @@ export interface VideoCardProps {
   tags: string[]
   created_at: string
   onDelete?: () => void
+  onEdit?: () => void
 }
 
 function formatDate(dateString: string): string {
@@ -29,18 +30,30 @@ export default function VideoCard({
   tags,
   created_at,
   onDelete,
+  onEdit,
 }: VideoCardProps) {
   return (
     <div className="video-card-wrapper" style={{ position: 'relative' }}>
-      {onDelete && (
+      {(onDelete || onEdit) && (
         <div className="video-card-overlay">
-          <button
-            aria-label="Delete video"
-            data-testid="delete-button"
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete?.() }}
-          >
-            🗑️
-          </button>
+          {onEdit && (
+            <button
+              aria-label="Edit video"
+              data-testid="edit-button"
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit() }}
+            >
+              ✏️
+            </button>
+          )}
+          {onDelete && (
+            <button
+              aria-label="Delete video"
+              data-testid="delete-button"
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete?.() }}
+            >
+              🗑️
+            </button>
+          )}
         </div>
       )}
       <div className="video-card" data-testid={`video-card-${id}`}>

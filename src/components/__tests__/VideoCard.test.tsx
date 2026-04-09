@@ -75,4 +75,21 @@ describe('VideoCard', () => {
     render(<VideoCard {...mockVideo} />)
     expect(screen.queryByTestId('delete-button')).not.toBeInTheDocument()
   })
+
+  it('renders edit button when onEdit is provided', () => {
+    render(<VideoCard {...mockVideo} onEdit={jest.fn()} />)
+    expect(screen.getByTestId('edit-button')).toBeInTheDocument()
+  })
+
+  it('calls onEdit when edit button is clicked', () => {
+    const onEdit = jest.fn()
+    render(<VideoCard {...mockVideo} onEdit={onEdit} />)
+    fireEvent.click(screen.getByTestId('edit-button'))
+    expect(onEdit).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not render edit button when onEdit is not provided', () => {
+    render(<VideoCard {...mockVideo} />)
+    expect(screen.queryByTestId('edit-button')).not.toBeInTheDocument()
+  })
 })
