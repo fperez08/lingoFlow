@@ -86,6 +86,7 @@ export default function RegisterForm() {
     onSuccess: () => {
       setToast({ message: 'Registration successful! Redirecting to dashboard...', type: 'success' })
       redirectTimerRef.current = setTimeout(() => {
+        redirectTimerRef.current = null
         router.push('/dashboard')
       }, 1500)
     },
