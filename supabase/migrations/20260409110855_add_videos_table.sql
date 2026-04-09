@@ -1,7 +1,7 @@
 -- Create videos table
 CREATE TABLE public.videos (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id uuid REFERENCES auth.users NOT NULL,
+  user_id uuid REFERENCES auth.users ON DELETE CASCADE NOT NULL,
   youtube_url text NOT NULL,
   youtube_id text NOT NULL,
   title text NOT NULL,
