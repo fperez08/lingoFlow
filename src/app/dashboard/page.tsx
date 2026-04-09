@@ -2,24 +2,52 @@
 
 import { useState } from 'react'
 import ImportVideoModal from '@/components/ImportVideoModal'
+import VideoCard from '@/components/VideoCard'
+import { useVideos } from '@/hooks/useVideos'
 
 export default function DashboardPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const { data: videos, isLoading, error, refetch } = useVideos()
 
   const handleImportSuccess = () => {
     setIsModalOpen(false)
+    refetch()
   }
 
   return (
     <main className="dashboard-page">
       <h1>Dashboard</h1>
-      <p>Welcome to lingoFlow! You have successfully registered.</p>
       <button onClick={() => setIsModalOpen(true)}>Import Video</button>
       <ImportVideoModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSuccess={handleImportSuccess}
       />
+
+      {isLoading && <p>Loading videos...</p>}
+      {error && <p className="error">Failed to load videos: {error.message}</p>}
+
+      {videos && videos.length === 0 && (
+        <div className="empty-state">
+          <p>No videos yet. Click Import Video to get started!</p>
+        </div>
+      )}
+
+      {videos && videos.length > 0 && (
+        <div className="videos-grid">
+          {videos.map((video) => (
+            <VideoCard
+              key={video.id}
+              id={video.id}
+              title={video.title}
+              author_name={video.author_name}
+              thumbnail_url={video.thumbnail_url}
+              tags={video.tags}
+              created_at={video.created_at}
+            />
+          ))}
+        </div>
+      )}
     </main>
   )
 }
