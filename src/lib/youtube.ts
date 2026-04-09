@@ -13,16 +13,29 @@ export class YoutubeMetadataError extends Error {
 }
 
 export function extractYoutubeId(url: string): string | null {
-  const patterns = [
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
-    /^([a-zA-Z0-9_-]{11})$/,
-  ]
+  const videoIdPattern = /^[a-zA-Z0-9_-]{11}$/
 
-  for (const pattern of patterns) {
-    const match = url.match(pattern)
-    if (match) {
-      return match[1]
+  if (videoIdPattern.test(url)) {
+    return url
+  }
+
+  try {
+    const parsedUrl = new URL(url)
+    const hostname = parsedUrl.hostname.toLowerCase()
+
+    if (hostname === 'youtu.be' || hostname === 'www.youtu.be') {
+      const videoId = parsedUrl.pathname.slice(1).split('/')[0]
+      return videoIdPattern.test(videoId) ? videoId : null
     }
+
+    if (hostname === 'youtube.com' || hostname.endsWith('.youtube.com')) {
+      if (parsedUrl.pathname === '/watch') {
+        const videoId = parsedUrl.searchParams.get('v')
+        return videoId && videoIdPattern.test(videoId) ? videoId : null
+      }
+    }
+  } catch {
+    return null
   }
 
   return null
