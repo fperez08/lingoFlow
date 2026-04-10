@@ -1,89 +1,78 @@
 // @jest-environment node
 import { NextResponse } from 'next/server'
-import { createSupabaseServer } from '@/lib/supabase-server'
+import { getVideoById, deleteVideo, updateVideo, UpdateVideoParams } from '@/lib/videos'
+import { writeTranscript, deleteTranscript } from '@/lib/transcripts'
 
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await params
-  const supabase = await createSupabaseServer()
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return new NextResponse('Unauthorized', { status: 401 })
+  try {
+    const { id } = await params
+    const video = getVideoById(id)
+    if (!video) {
+      return new NextResponse('Not Found', { status: 404 })
+    }
+    if (video.transcript_path) {
+      deleteTranscript(video.transcript_path)
+    }
+    deleteVideo(id)
+    return new NextResponse(null, { status: 204 })
+  } catch (error) {
+    console.error('DELETE video error:', error)
+    return new NextResponse('Internal Server Error', { status: 500 })
   }
-
-  const { data: video } = await supabase
-    .from('videos')
-    .select('*')
-    .eq('id', id)
-    .single()
-
-  if (!video || video.user_id !== user.id) {
-    return new NextResponse('Forbidden', { status: 403 })
-  }
-
-  if (video.transcript_path) {
-    await supabase.storage.from('transcripts').remove([video.transcript_path])
-  }
-
-  await supabase.from('videos').delete().eq('id', id)
-
-  return new NextResponse(null, { status: 204 })
 }
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await params
-  const supabase = await createSupabaseServer()
+  try {
+    const { id } = await params
 
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) {
-    return new NextResponse('Unauthorized', { status: 401 })
-  }
+    const formData = await request.formData()
+    const tagsRaw = formData.get('tags')
+    const transcriptFile = formData.get('transcript') as File | null
 
-  const userId = session.user.id
-
-  const formData = await request.formData()
-  const tagsRaw = formData.get('tags') as string
-  const tags: string[] = JSON.parse(tagsRaw)
-  const transcriptFile = formData.get('transcript') as File | null
-
-  const { data: existingVideo } = await supabase
-    .from('videos')
-    .select('transcript_path')
-    .eq('id', id)
-    .eq('user_id', userId)
-    .single()
-
-  if (!existingVideo) {
-    return new NextResponse('Forbidden', { status: 403 })
-  }
-
-  const updateObj: Record<string, unknown> = { tags }
-
-  if (transcriptFile && transcriptFile.size > 0) {
-    const ext = transcriptFile.name.split('.').pop()
-    const newPath = `${userId}/${crypto.randomUUID()}.${ext}`
-    await supabase.storage.from('transcripts').upload(newPath, transcriptFile)
-    if (existingVideo.transcript_path) {
-      await supabase.storage.from('transcripts').remove([existingVideo.transcript_path])
+    if (typeof tagsRaw !== 'string') {
+      return NextResponse.json({ error: 'Invalid tags field' }, { status: 400 })
     }
-    updateObj.transcript_path = newPath
-    updateObj.transcript_format = ext
+
+    let tags: string[]
+    try {
+      tags = JSON.parse(tagsRaw)
+      if (!Array.isArray(tags)) throw new Error()
+    } catch {
+      return NextResponse.json({ error: 'Tags must be a JSON array' }, { status: 400 })
+    }
+
+    const existing = getVideoById(id)
+    if (!existing) {
+      return NextResponse.json({ error: 'Video not found' }, { status: 404 })
+    }
+
+    const updateParams: UpdateVideoParams = { tags }
+
+    if (transcriptFile && transcriptFile.size > 0) {
+      const ext = transcriptFile.name.split('.').pop()?.toLowerCase() || ''
+      if (!['srt', 'vtt', 'txt'].includes(ext)) {
+        return NextResponse.json({ error: 'Invalid file extension. Allowed: srt, vtt, txt' }, { status: 400 })
+      }
+      const buffer = Buffer.from(await transcriptFile.arrayBuffer())
+      const newPath = writeTranscript(id + '-' + Date.now(), ext, buffer)
+      if (existing.transcript_path) {
+        deleteTranscript(existing.transcript_path)
+      }
+      updateParams.transcript_path = newPath
+      updateParams.transcript_format = ext
+    }
+
+    const updated = updateVideo(id, updateParams)
+    return NextResponse.json(updated, { status: 200 })
+  } catch (error) {
+    console.error('PATCH video error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-
-  const { data: updatedVideo } = await supabase
-    .from('videos')
-    .update(updateObj)
-    .eq('id', id)
-    .eq('user_id', userId)
-    .select()
-    .single()
-
-  return NextResponse.json(updatedVideo, { status: 200 })
 }
 
