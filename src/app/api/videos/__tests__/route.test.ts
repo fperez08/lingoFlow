@@ -3,10 +3,10 @@
  */
 import { GET } from '../route'
 
-const mockListVideos = jest.fn()
+const mockList = jest.fn()
 
-jest.mock('@/lib/videos', () => ({
-  listVideos: (...args: unknown[]) => mockListVideos(...args),
+jest.mock('@/lib/server/composition', () => ({
+  getVideoStore: () => ({ list: mockList }),
 }))
 
 const mockVideos = [
@@ -28,18 +28,18 @@ const mockVideos = [
 describe('GET /api/videos', () => {
   afterEach(() => jest.clearAllMocks())
 
-  it('returns 200 with video array from listVideos', async () => {
-    mockListVideos.mockReturnValue(mockVideos)
+  it('returns 200 with video array from store.list()', async () => {
+    mockList.mockReturnValue(mockVideos)
 
     const response = await GET()
     expect(response.status).toBe(200)
     const body = await response.json()
     expect(body).toEqual(mockVideos)
-    expect(mockListVideos).toHaveBeenCalledTimes(1)
+    expect(mockList).toHaveBeenCalledTimes(1)
   })
 
-  it('returns 500 if listVideos throws', async () => {
-    mockListVideos.mockImplementation(() => {
+  it('returns 500 if store.list() throws', async () => {
+    mockList.mockImplementation(() => {
       throw new Error('DB error')
     })
 

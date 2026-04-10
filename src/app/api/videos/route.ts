@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
-import { listVideos } from '@/lib/videos'
+import { getVideoStore } from '@/lib/server/composition'
 
 export const runtime = 'nodejs'
 
 export async function GET() {
   try {
-    const videos = listVideos()
+    const videos = getVideoStore().list()
     return NextResponse.json(videos)
   } catch (error) {
     console.error('Videos API error:', error)

@@ -1,5 +1,5 @@
 // @jest-environment node
-import { DELETE, PATCH } from '../route'
+import { DELETE, PATCH, GET } from '../route'
 
 jest.mock('next/server', () => ({
   NextResponse: class MockNextResponse {
@@ -25,6 +25,11 @@ jest.mock('@/lib/videos', () => ({
 jest.mock('@/lib/transcripts', () => ({
   writeTranscript: jest.fn(),
   deleteTranscript: jest.fn(),
+}))
+
+const mockGetById = jest.fn()
+jest.mock('@/lib/server/composition', () => ({
+  getVideoStore: () => ({ getById: mockGetById }),
 }))
 
 import { getVideoById, deleteVideo, updateVideo } from '@/lib/videos'
@@ -146,5 +151,27 @@ describe('PATCH /api/videos/[id]', () => {
     const file = { name: 'subtitles.pdf', size: 7, arrayBuffer: jest.fn().mockResolvedValue(Buffer.from('content')) } as unknown as File
     const response = await PATCH(makePatchRequest({ tags: JSON.stringify(['spanish']), transcript: file }), { params: Promise.resolve({ id: 'video-1' }) })
     expect(response.status).toBe(400)
+  })
+})
+
+function makeGetRequest() {
+  return { method: 'GET', url: 'http://localhost/api/videos/video-1' } as unknown as Request
+}
+
+describe('GET /api/videos/[id]', () => {
+  afterEach(() => jest.clearAllMocks())
+
+  it('returns 404 if video not found', async () => {
+    mockGetById.mockReturnValue(undefined)
+    const response = await GET(makeGetRequest(), { params: Promise.resolve({ id: 'video-1' }) })
+    expect(response.status).toBe(404)
+  })
+
+  it('returns 200 with video data when found', async () => {
+    const video = { id: 'video-1', title: 'Test', tags: ['t1'], transcript_path: 'p.srt', transcript_format: 'srt', created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z', author_name: 'A', thumbnail_url: 'http://t.com', youtube_url: 'http://y.com', youtube_id: 'abc' }
+    mockGetById.mockReturnValue(video)
+    const response = await GET(makeGetRequest(), { params: Promise.resolve({ id: 'video-1' }) })
+    expect(response.status).toBe(200)
+    expect(mockGetById).toHaveBeenCalledWith('video-1')
   })
 })
