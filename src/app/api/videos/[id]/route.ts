@@ -1,8 +1,7 @@
 // @jest-environment node
 import { NextResponse } from 'next/server'
-import { getVideoById, deleteVideo, updateVideo, UpdateVideoParams } from '@/lib/videos'
-import { writeTranscript, deleteTranscript } from '@/lib/transcripts'
-import { getVideoStore } from '@/lib/server/composition'
+import { getVideoStore, getVideoService } from '@/lib/server/composition'
+import { UpdateVideoServiceParams } from '@/lib/video-service'
 
 export const runtime = 'nodejs'
 
@@ -29,14 +28,10 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params
-    const video = getVideoById(id)
-    if (!video) {
+    const deleted = await getVideoService().deleteVideo(id)
+    if (!deleted) {
       return new NextResponse('Not Found', { status: 404 })
     }
-    if (video.transcript_path) {
-      deleteTranscript(video.transcript_path)
-    }
-    deleteVideo(id)
     return new NextResponse(null, { status: 204 })
   } catch (error) {
     console.error('DELETE video error:', error)
@@ -67,28 +62,21 @@ export async function PATCH(
       return NextResponse.json({ error: 'Tags must be a JSON array' }, { status: 400 })
     }
 
-    const existing = getVideoById(id)
-    if (!existing) {
-      return NextResponse.json({ error: 'Video not found' }, { status: 404 })
-    }
-
-    const updateParams: UpdateVideoParams = { tags }
+    const serviceParams: UpdateVideoServiceParams = { tags }
 
     if (transcriptFile && transcriptFile.size > 0) {
       const ext = transcriptFile.name.split('.').pop()?.toLowerCase() || ''
       if (!['srt', 'vtt', 'txt'].includes(ext)) {
         return NextResponse.json({ error: 'Invalid file extension. Allowed: srt, vtt, txt' }, { status: 400 })
       }
-      const buffer = Buffer.from(await transcriptFile.arrayBuffer())
-      const newPath = writeTranscript(id + '-' + Date.now(), ext, buffer)
-      if (existing.transcript_path) {
-        deleteTranscript(existing.transcript_path)
-      }
-      updateParams.transcript_path = newPath
-      updateParams.transcript_format = ext
+      serviceParams.transcript_ext = ext
+      serviceParams.transcript_buffer = Buffer.from(await transcriptFile.arrayBuffer())
     }
 
-    const updated = updateVideo(id, updateParams)
+    const updated = await getVideoService().updateVideo(id, serviceParams)
+    if (!updated) {
+      return NextResponse.json({ error: 'Video not found' }, { status: 404 })
+    }
     return NextResponse.json(updated, { status: 200 })
   } catch (error) {
     console.error('PATCH video error:', error)

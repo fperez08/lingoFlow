@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchYoutubeMetadata } from '@/lib/youtube'
-import { writeTranscript } from '@/lib/transcripts'
-import { insertVideo } from '@/lib/videos'
+import { getVideoService } from '@/lib/server/composition'
 
 export const runtime = 'nodejs'
 
@@ -44,19 +43,18 @@ export async function POST(request: NextRequest) {
 
     const videoId = crypto.randomUUID()
     const fileBuffer = Buffer.from(await transcriptFile.arrayBuffer())
-    const transcriptPath = writeTranscript(videoId, fileExtension, fileBuffer)
-
     const tags = tagsString.split(',').map((t) => t.trim()).filter((t) => t.length > 0)
 
-    const video = insertVideo({
+    const service = getVideoService()
+    const video = await service.importVideo({
       id: videoId,
       youtube_url: youtubeUrl,
       youtube_id: youtubeMetadata.youtube_id,
       title: youtubeMetadata.title,
       author_name: youtubeMetadata.author_name,
       thumbnail_url: youtubeMetadata.thumbnail_url,
-      transcript_path: transcriptPath,
-      transcript_format: fileExtension,
+      transcript_ext: fileExtension,
+      transcript_buffer: fileBuffer,
       tags,
     })
 

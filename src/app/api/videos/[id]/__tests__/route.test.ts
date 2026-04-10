@@ -17,29 +17,14 @@ jest.mock('next/server', () => ({
   },
 }))
 
-jest.mock('@/lib/videos', () => ({
-  getVideoById: jest.fn(),
-  deleteVideo: jest.fn(),
-  updateVideo: jest.fn(),
-}))
-jest.mock('@/lib/transcripts', () => ({
-  writeTranscript: jest.fn(),
-  deleteTranscript: jest.fn(),
-}))
-
 const mockGetById = jest.fn()
+const mockDeleteVideo = jest.fn()
+const mockUpdateVideo = jest.fn()
+
 jest.mock('@/lib/server/composition', () => ({
   getVideoStore: () => ({ getById: mockGetById }),
+  getVideoService: () => ({ deleteVideo: mockDeleteVideo, updateVideo: mockUpdateVideo }),
 }))
-
-import { getVideoById, deleteVideo, updateVideo } from '@/lib/videos'
-import { writeTranscript, deleteTranscript } from '@/lib/transcripts'
-
-const mockGetVideoById = getVideoById as jest.Mock
-const mockDeleteVideo = deleteVideo as jest.Mock
-const mockUpdateVideo = updateVideo as jest.Mock
-const mockWriteTranscript = writeTranscript as jest.Mock
-const mockDeleteTranscript = deleteTranscript as jest.Mock
 
 function makeRequest() {
   return { method: 'DELETE', url: 'http://localhost/api/videos/video-1' } as unknown as Request
@@ -49,38 +34,29 @@ describe('DELETE /api/videos/[id]', () => {
   afterEach(() => jest.clearAllMocks())
 
   it('returns 404 if video not found', async () => {
-    mockGetVideoById.mockReturnValue(undefined)
+    mockDeleteVideo.mockResolvedValue(false)
     const response = await DELETE(makeRequest(), { params: Promise.resolve({ id: 'video-1' }) })
     expect(response.status).toBe(404)
   })
 
   it('returns 204 on successful delete', async () => {
-    mockGetVideoById.mockReturnValue({ id: 'video-1', transcript_path: '' })
-    mockDeleteVideo.mockReturnValue(true)
+    mockDeleteVideo.mockResolvedValue(true)
     const response = await DELETE(makeRequest(), { params: Promise.resolve({ id: 'video-1' }) })
     expect(response.status).toBe(204)
     expect(mockDeleteVideo).toHaveBeenCalledWith('video-1')
   })
 
-  it('calls deleteTranscript when transcript_path is present', async () => {
-    mockGetVideoById.mockReturnValue({ id: 'video-1', transcript_path: '/data/transcripts/video-1.srt' })
-    mockDeleteVideo.mockReturnValue(true)
+  it('calls service.deleteVideo with the correct id', async () => {
+    mockDeleteVideo.mockResolvedValue(true)
     await DELETE(makeRequest(), { params: Promise.resolve({ id: 'video-1' }) })
-    expect(mockDeleteTranscript).toHaveBeenCalledWith('/data/transcripts/video-1.srt')
+    expect(mockDeleteVideo).toHaveBeenCalledWith('video-1')
   })
 
-  it('does not call deleteTranscript when transcript_path is empty', async () => {
-    mockGetVideoById.mockReturnValue({ id: 'video-1', transcript_path: '' })
-    mockDeleteVideo.mockReturnValue(true)
+  it('returns 404 when service.deleteVideo returns false', async () => {
+    mockDeleteVideo.mockResolvedValue(false)
     await DELETE(makeRequest(), { params: Promise.resolve({ id: 'video-1' }) })
-    expect(mockDeleteTranscript).not.toHaveBeenCalled()
-  })
-
-  it('does not call deleteTranscript when transcript_path is null', async () => {
-    mockGetVideoById.mockReturnValue({ id: 'video-1', transcript_path: null })
-    mockDeleteVideo.mockReturnValue(true)
-    await DELETE(makeRequest(), { params: Promise.resolve({ id: 'video-1' }) })
-    expect(mockDeleteTranscript).not.toHaveBeenCalled()
+    const response = await DELETE(makeRequest(), { params: Promise.resolve({ id: 'video-1' }) })
+    expect(response.status).toBe(404)
   })
 })
 
@@ -114,40 +90,35 @@ describe('PATCH /api/videos/[id]', () => {
   })
 
   it('returns 404 if video not found', async () => {
-    mockGetVideoById.mockReturnValue(undefined)
+    mockUpdateVideo.mockResolvedValue(undefined)
     const response = await PATCH(makePatchRequest({ tags: JSON.stringify(['spanish']) }), { params: Promise.resolve({ id: 'video-1' }) })
     expect(response.status).toBe(404)
   })
 
   it('returns 200 with updated video on tags-only update', async () => {
-    const existingVideo = { id: 'video-1', tags: ['old'], transcript_path: null }
     const updatedVideo = { id: 'video-1', tags: ['spanish', 'advanced'] }
-    mockGetVideoById.mockReturnValue(existingVideo)
-    mockUpdateVideo.mockReturnValue(updatedVideo)
+    mockUpdateVideo.mockResolvedValue(updatedVideo)
 
     const response = await PATCH(makePatchRequest({ tags: JSON.stringify(['spanish', 'advanced']) }), { params: Promise.resolve({ id: 'video-1' }) })
     expect(response.status).toBe(200)
     expect(mockUpdateVideo).toHaveBeenCalledWith('video-1', { tags: ['spanish', 'advanced'] })
   })
 
-  it('returns 200, calls writeTranscript and deleteTranscript on transcript replacement', async () => {
-    const existingVideo = { id: 'video-1', tags: ['old'], transcript_path: '/old/path.srt' }
+  it('returns 200 and calls service.updateVideo with transcript params on transcript replacement', async () => {
     const updatedVideo = { id: 'video-1', tags: ['spanish'], transcript_path: '/new/path.srt' }
-    mockGetVideoById.mockReturnValue(existingVideo)
-    mockWriteTranscript.mockReturnValue('/new/path.srt')
-    mockUpdateVideo.mockReturnValue(updatedVideo)
+    mockUpdateVideo.mockResolvedValue(updatedVideo)
 
     const file = { name: 'subtitles.srt', size: 7, arrayBuffer: jest.fn().mockResolvedValue(Buffer.from('content')) } as unknown as File
     const response = await PATCH(makePatchRequest({ tags: JSON.stringify(['spanish']), transcript: file }), { params: Promise.resolve({ id: 'video-1' }) })
     expect(response.status).toBe(200)
-    expect(mockWriteTranscript).toHaveBeenCalled()
-    expect(mockDeleteTranscript).toHaveBeenCalledWith('/old/path.srt')
+    expect(mockUpdateVideo).toHaveBeenCalledWith('video-1', expect.objectContaining({
+      tags: ['spanish'],
+      transcript_ext: 'srt',
+      transcript_buffer: expect.any(Buffer),
+    }))
   })
 
   it('returns 400 for invalid transcript extension', async () => {
-    const existingVideo = { id: 'video-1', tags: ['old'], transcript_path: null }
-    mockGetVideoById.mockReturnValue(existingVideo)
-
     const file = { name: 'subtitles.pdf', size: 7, arrayBuffer: jest.fn().mockResolvedValue(Buffer.from('content')) } as unknown as File
     const response = await PATCH(makePatchRequest({ tags: JSON.stringify(['spanish']), transcript: file }), { params: Promise.resolve({ id: 'video-1' }) })
     expect(response.status).toBe(400)
@@ -175,3 +146,4 @@ describe('GET /api/videos/[id]', () => {
     expect(mockGetById).toHaveBeenCalledWith('video-1')
   })
 })
+
