@@ -134,4 +134,26 @@ describe('videos persistence module', () => {
       expect(found?.tags).toEqual([])
     })
   })
+
+  describe('deleteVideo', () => {
+    it('returns true and removes the video record', () => {
+      insertVideo()
+      const { deleteVideo, getVideoById } = require('../videos')
+      const result = deleteVideo('v1')
+      expect(result).toBe(true)
+      expect(getVideoById('v1')).toBeUndefined()
+    })
+
+    it('returns false for a non-existent id', () => {
+      const { deleteVideo } = require('../videos')
+      expect(deleteVideo('nonexistent')).toBe(false)
+    })
+
+    it('deleted video no longer appears in listVideos()', () => {
+      insertVideo()
+      const { deleteVideo, listVideos } = require('../videos')
+      deleteVideo('v1')
+      expect(listVideos()).toHaveLength(0)
+    })
+  })
 })

@@ -56,6 +56,14 @@ export interface InsertVideoParams {
   tags: string[]
 }
 
+export function deleteVideo(id: string): boolean {
+  const db = getDb()
+  const existing = getVideoById(id)
+  if (!existing) return false
+  db.prepare('DELETE FROM videos WHERE id = ?').run(id)
+  return true
+}
+
 export function insertVideo(params: InsertVideoParams): Video {
   const db = getDb()
   const now = new Date().toISOString()
