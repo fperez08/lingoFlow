@@ -3,7 +3,8 @@ import { fetchYoutubeMetadata } from '@/lib/youtube'
 import { writeTranscript } from '@/lib/transcripts'
 import { insertVideo } from '@/lib/videos'
 
-const ALLOWED_EXTENSIONS = ['srt', 'vtt', 'txt']
+export const ALLOWED_EXTENSIONS = ['srt', 'vtt', 'txt'] as const
+export type AllowedExtension = typeof ALLOWED_EXTENSIONS[number]
 
 function getFileExtension(filename: string): string {
   return filename.split('.').pop()?.toLowerCase() || ''
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest) {
     const tagsString = typeof tagsEntry === 'string' ? tagsEntry : ''
 
     const fileExtension = getFileExtension(transcriptFile.name)
-    if (!ALLOWED_EXTENSIONS.includes(fileExtension)) {
+    if (!ALLOWED_EXTENSIONS.includes(fileExtension as AllowedExtension)) {
       return NextResponse.json({ error: `Invalid file extension. Allowed: ${ALLOWED_EXTENSIONS.join(', ')}` }, { status: 400 })
     }
 
