@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server'
 import { getVideoStore, getVideoService } from '@/lib/server/composition'
 import { UpdateVideoServiceParams } from '@/lib/video-service'
+import { UpdateVideoRequestSchema } from '@/lib/api-schemas'
 
 export const runtime = 'nodejs'
 
@@ -47,29 +48,21 @@ export async function PATCH(
     const { id } = await params
 
     const formData = await request.formData()
-    const tagsRaw = formData.get('tags')
-    const transcriptFile = formData.get('transcript') as File | null
 
-    if (typeof tagsRaw !== 'string') {
-      return NextResponse.json({ error: 'Invalid tags field' }, { status: 400 })
+    const result = UpdateVideoRequestSchema.safeParse({
+      tags: formData.get('tags'),
+      transcript: formData.get('transcript'),
+    })
+
+    if (!result.success) {
+      return NextResponse.json({ error: result.error.issues[0].message }, { status: 400 })
     }
 
-    let tags: string[]
-    try {
-      tags = JSON.parse(tagsRaw)
-      if (!Array.isArray(tags)) throw new Error()
-    } catch {
-      return NextResponse.json({ error: 'Tags must be a JSON array' }, { status: 400 })
-    }
-
+    const { tags, transcript: transcriptFile } = result.data
     const serviceParams: UpdateVideoServiceParams = { tags }
 
     if (transcriptFile && transcriptFile.size > 0) {
-      const ext = transcriptFile.name.split('.').pop()?.toLowerCase() || ''
-      if (!['srt', 'vtt', 'txt'].includes(ext)) {
-        return NextResponse.json({ error: 'Invalid file extension. Allowed: srt, vtt, txt' }, { status: 400 })
-      }
-      serviceParams.transcript_ext = ext
+      serviceParams.transcript_ext = transcriptFile.name.split('.').pop()?.toLowerCase() || ''
       serviceParams.transcript_buffer = Buffer.from(await transcriptFile.arrayBuffer())
     }
 
