@@ -1,38 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchYoutubeMetadata } from '@/lib/youtube'
 import { getVideoService } from '@/lib/server/composition'
+import { ImportVideoRequestSchema } from '@/lib/api-schemas'
 
 export const runtime = 'nodejs'
-
-export const ALLOWED_EXTENSIONS = ['srt', 'vtt', 'txt'] as const
-export type AllowedExtension = typeof ALLOWED_EXTENSIONS[number]
-
-function getFileExtension(filename: string): string {
-  return filename.split('.').pop()?.toLowerCase() || ''
-}
 
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
-    const youtubeUrlEntry = formData.get('youtube_url')
-    const transcriptEntry = formData.get('transcript')
-    const tagsEntry = formData.get('tags')
 
-    if (typeof youtubeUrlEntry !== 'string' || youtubeUrlEntry.trim() === '' || !(transcriptEntry instanceof File)) {
-      return NextResponse.json({ error: 'Missing required fields: youtube_url and transcript' }, { status: 400 })
-    }
-    if (tagsEntry !== null && typeof tagsEntry !== 'string') {
-      return NextResponse.json({ error: 'Invalid tags field' }, { status: 400 })
+    const result = ImportVideoRequestSchema.safeParse({
+      youtube_url: formData.get('youtube_url'),
+      transcript: formData.get('transcript'),
+      tags: formData.get('tags'),
+    })
+
+    if (!result.success) {
+      return NextResponse.json({ error: result.error.issues[0].message }, { status: 400 })
     }
 
-    const youtubeUrl = youtubeUrlEntry.trim()
-    const transcriptFile = transcriptEntry
-    const tagsString = typeof tagsEntry === 'string' ? tagsEntry : ''
-
-    const fileExtension = getFileExtension(transcriptFile.name)
-    if (!ALLOWED_EXTENSIONS.includes(fileExtension as AllowedExtension)) {
-      return NextResponse.json({ error: `Invalid file extension. Allowed: ${ALLOWED_EXTENSIONS.join(', ')}` }, { status: 400 })
-    }
+    const { youtube_url: youtubeUrl, transcript: transcriptFile, tags: tagsString } = result.data
 
     let youtubeMetadata
     try {
@@ -43,6 +30,7 @@ export async function POST(request: NextRequest) {
 
     const videoId = crypto.randomUUID()
     const fileBuffer = Buffer.from(await transcriptFile.arrayBuffer())
+    const fileExtension = transcriptFile.name.split('.').pop()?.toLowerCase() || ''
     const tags = tagsString.split(',').map((t) => t.trim()).filter((t) => t.length > 0)
 
     const service = getVideoService()

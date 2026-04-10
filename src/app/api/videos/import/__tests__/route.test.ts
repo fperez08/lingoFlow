@@ -12,9 +12,10 @@ jest.mock('next/server', () => ({
   },
 }))
 
-import { POST, ALLOWED_EXTENSIONS } from '../route'
+import { POST } from '../route'
 import { fetchYoutubeMetadata } from '@/lib/youtube'
 import { getVideoService } from '@/lib/server/composition'
+import { ALLOWED_TRANSCRIPT_FORMATS } from '@/lib/api-schemas'
 
 const mockFetchYoutubeMetadata = fetchYoutubeMetadata as jest.MockedFunction<typeof fetchYoutubeMetadata>
 const mockGetVideoService = getVideoService as jest.MockedFunction<typeof getVideoService>
@@ -130,8 +131,8 @@ describe('POST /api/videos/import', () => {
     )
   })
 
-  it('exports ALLOWED_EXTENSIONS with srt, vtt, txt', () => {
-    expect(ALLOWED_EXTENSIONS).toEqual(['srt', 'vtt', 'txt'])
+  it('exports ALLOWED_TRANSCRIPT_FORMATS with srt, vtt, txt', () => {
+    expect(ALLOWED_TRANSCRIPT_FORMATS).toEqual(['srt', 'vtt', 'txt'])
   })
 
   it('returns 400 when youtube_url is missing', async () => {
