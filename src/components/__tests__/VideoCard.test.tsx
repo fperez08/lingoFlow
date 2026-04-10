@@ -51,11 +51,11 @@ describe('VideoCard', () => {
     expect(container.querySelector('[data-testid="video-card-video-1"]')).toBeInTheDocument()
   })
 
-  it('links title and thumbnail to youtube_url', () => {
+  it('links title and thumbnail to player page', () => {
     render(<VideoCard {...mockVideo} />)
     const links = screen.getAllByRole('link')
     links.forEach((link) => {
-      expect(link).toHaveAttribute('href', 'https://www.youtube.com/watch?v=abc123')
+      expect(link).toHaveAttribute('href', '/player/video-1')
     })
   })
 
