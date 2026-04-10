@@ -1,5 +1,6 @@
 // @jest-environment node
 import { DELETE, PATCH, GET } from '../route'
+import { videoStore, videoService } from '@/lib/server/composition'
 
 jest.mock('next/server', () => ({
   NextResponse: class MockNextResponse {
@@ -17,14 +18,14 @@ jest.mock('next/server', () => ({
   },
 }))
 
-const mockGetById = jest.fn()
-const mockDeleteVideo = jest.fn()
-const mockUpdateVideo = jest.fn()
-
 jest.mock('@/lib/server/composition', () => ({
-  getVideoStore: () => ({ getById: mockGetById }),
-  getVideoService: () => ({ deleteVideo: mockDeleteVideo, updateVideo: mockUpdateVideo }),
+  videoStore: { getById: jest.fn() },
+  videoService: { deleteVideo: jest.fn(), updateVideo: jest.fn() },
 }))
+
+const mockGetById = (videoStore.getById as jest.Mock)
+const mockDeleteVideo = (videoService.deleteVideo as jest.Mock)
+const mockUpdateVideo = (videoService.updateVideo as jest.Mock)
 
 function makeRequest() {
   return { method: 'DELETE', url: 'http://localhost/api/videos/video-1' } as unknown as Request

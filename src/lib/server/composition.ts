@@ -10,30 +10,26 @@
  */
 import path from 'path'
 import { ensureDataDirs, openDb, initializeSchema } from '@/lib/db'
-import { VideoStore, SqliteVideoStore } from '@/lib/video-store'
-import { TranscriptStore, VideoService } from '@/lib/video-service'
+import { SqliteVideoStore } from '@/lib/video-store'
+import { VideoService } from '@/lib/video-service'
 import { writeTranscript, deleteTranscript } from '@/lib/transcripts'
 
-let videoStore: VideoStore | null = null
+function createContainer(dataDir: string) {
+  ensureDataDirs(dataDir)
+  const db = openDb(path.join(dataDir, 'lingoflow.db'))
+  initializeSchema(db)
 
-export function getVideoStore(): VideoStore {
-  if (!videoStore) {
-    const dataDir = process.env.LINGOFLOW_DATA_DIR ?? path.join(process.cwd(), '.lingoflow-data')
-    ensureDataDirs(dataDir)
-    const db = openDb(path.join(dataDir, 'lingoflow.db'))
-    initializeSchema(db)
-    videoStore = new SqliteVideoStore(db)
+  const store = new SqliteVideoStore(db)
+  const transcriptStore = {
+    write: (videoId: string, ext: string, buffer: Buffer) => writeTranscript(videoId, ext, buffer),
+    delete: (filePath: string) => deleteTranscript(filePath),
   }
-  return videoStore
+  const service = new VideoService(store, transcriptStore)
+
+  return { videoStore: store, videoService: service }
 }
 
-export function getTranscriptStore(): TranscriptStore {
-  return {
-    write: (videoId, ext, buffer) => writeTranscript(videoId, ext, buffer),
-    delete: (filePath) => deleteTranscript(filePath),
-  }
-}
+const dataDir = process.env.LINGOFLOW_DATA_DIR ?? path.join(process.cwd(), '.lingoflow-data')
+const { videoStore, videoService } = createContainer(dataDir)
 
-export function getVideoService(): VideoService {
-  return new VideoService(getVideoStore(), getTranscriptStore())
-}
+export { videoStore, videoService }
