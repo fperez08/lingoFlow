@@ -10,6 +10,8 @@ import {
   teardownIsolatedDb,
   seedVideo,
   seedTranscript,
+  setupYoutubeStub,
+  teardownYoutubeStub,
   type FixtureContext,
 } from '../index'
 
@@ -174,5 +176,28 @@ describe('seedTranscript()', () => {
     const pathVtt = seedTranscript('v3', 'vtt', 'vtt content')
     expect(pathSrt.endsWith('.srt')).toBe(true)
     expect(pathVtt.endsWith('.vtt')).toBe(true)
+  })
+})
+
+describe('setupYoutubeStub / teardownYoutubeStub', () => {
+  it('sets E2E_STUB_YOUTUBE=true', () => {
+    const ctx = setupYoutubeStub()
+    expect(process.env.E2E_STUB_YOUTUBE).toBe('true')
+    teardownYoutubeStub(ctx)
+  })
+
+  it('restores the previous undefined value on teardown', () => {
+    delete process.env.E2E_STUB_YOUTUBE
+    const ctx = setupYoutubeStub()
+    teardownYoutubeStub(ctx)
+    expect(process.env.E2E_STUB_YOUTUBE).toBeUndefined()
+  })
+
+  it('restores a prior truthy value on teardown', () => {
+    process.env.E2E_STUB_YOUTUBE = 'false'
+    const ctx = setupYoutubeStub()
+    expect(process.env.E2E_STUB_YOUTUBE).toBe('true')
+    teardownYoutubeStub(ctx)
+    expect(process.env.E2E_STUB_YOUTUBE).toBe('false')
   })
 })

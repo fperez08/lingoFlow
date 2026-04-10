@@ -114,3 +114,38 @@ export function seedTranscript(videoId: string, ext: string, content: string): s
   const { writeTranscript } = require('../../../src/lib/transcripts')
   return writeTranscript(videoId, ext, Buffer.from(content, 'utf8'))
 }
+
+// ---------------------------------------------------------------------------
+// YouTube stub helpers
+// ---------------------------------------------------------------------------
+
+export interface YoutubeStubContext {
+  /** Original value of E2E_STUB_YOUTUBE (may be undefined) */
+  originalEnv: string | undefined
+}
+
+/**
+ * Sets E2E_STUB_YOUTUBE=true so that fetchYoutubeMetadata() returns canned
+ * responses instead of calling the real YouTube oEmbed API.
+ *
+ * Usage:
+ *   const ctx = setupYoutubeStub()
+ *   // ... run tests that call fetchYoutubeMetadata() ...
+ *   teardownYoutubeStub(ctx)
+ */
+export function setupYoutubeStub(): YoutubeStubContext {
+  const originalEnv = process.env.E2E_STUB_YOUTUBE
+  process.env.E2E_STUB_YOUTUBE = 'true'
+  return { originalEnv }
+}
+
+/**
+ * Restores E2E_STUB_YOUTUBE to its previous value.
+ */
+export function teardownYoutubeStub(ctx: YoutubeStubContext): void {
+  if (ctx.originalEnv === undefined) {
+    delete process.env.E2E_STUB_YOUTUBE
+  } else {
+    process.env.E2E_STUB_YOUTUBE = ctx.originalEnv
+  }
+}
