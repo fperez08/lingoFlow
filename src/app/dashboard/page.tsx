@@ -1,58 +1,37 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import ImportVideoModal from '@/components/ImportVideoModal'
 import VideoCard, { VideoCardProps } from '@/components/VideoCard'
 import DeleteVideoModal from '@/components/DeleteVideoModal'
 import EditVideoModal from '@/components/EditVideoModal'
+import { useVideos } from '@/hooks/useVideos'
+import { useVideoMutations } from '@/hooks/useVideoMutations'
+import { Video } from '@/lib/videos'
 
 export default function DashboardPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [videos, setVideos] = useState<VideoCardProps[]>([])
-  const [loading, setLoading] = useState(true)
-  const [deleteTarget, setDeleteTarget] = useState<VideoCardProps | null>(null)
-  const [isDeleting, setIsDeleting] = useState(false)
-  const [editTarget, setEditTarget] = useState<VideoCardProps | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Video | null>(null)
+  const [editTarget, setEditTarget] = useState<Video | null>(null)
 
-  useEffect(() => {
-    fetch('/api/videos')
-      .then((res) => res.json())
-      .then((data) => {
-        setVideos(Array.isArray(data) ? data : [])
-      })
-      .catch(() => setVideos([]))
-      .finally(() => setLoading(false))
-  }, [])
+  const { data: videos = [], isLoading, error } = useVideos()
+  const { deleteVideo, refreshVideos } = useVideoMutations()
 
   const handleImportSuccess = () => {
     setIsModalOpen(false)
-    setLoading(true)
-    fetch('/api/videos')
-      .then((res) => res.json())
-      .then((data) => {
-        setVideos(Array.isArray(data) ? data : [])
-      })
-      .catch(() => setVideos([]))
-      .finally(() => setLoading(false))
+    refreshVideos()
   }
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!deleteTarget) return
-    setIsDeleting(true)
-    try {
-      const res = await fetch(`/api/videos/${deleteTarget.id}`, { method: 'DELETE' })
-      if (res.ok) {
-        setVideos(prev => prev.filter(v => v.id !== deleteTarget.id))
-        setDeleteTarget(null)
-      }
-    } finally {
-      setIsDeleting(false)
-    }
+    deleteVideo.mutate(deleteTarget.id, {
+      onSuccess: () => setDeleteTarget(null),
+    })
   }
 
-  const handleEditSave = (updatedVideo: VideoCardProps) => {
-    setVideos(prev => prev.map(v => v.id === updatedVideo.id ? updatedVideo : v))
+  const handleEditSave = (_updatedVideo: VideoCardProps) => {
     setEditTarget(null)
+    refreshVideos()
   }
 
   return (
@@ -69,16 +48,16 @@ export default function DashboardPage() {
         video={deleteTarget}
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
-        isDeleting={isDeleting}
+        isDeleting={deleteVideo.isPending}
       />
       <EditVideoModal
         video={editTarget}
         onClose={() => setEditTarget(null)}
         onSave={handleEditSave}
       />
-      {loading ? (
+      {isLoading ? (
         <p data-testid="loading-indicator">Loading...</p>
-      ) : videos.length === 0 ? (
+      ) : error || videos.length === 0 ? (
         <p data-testid="empty-state">No videos imported yet</p>
       ) : (
         <div

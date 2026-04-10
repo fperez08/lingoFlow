@@ -7,6 +7,20 @@ jest.mock('@/components/ImportVideoModal', () => {
   }
 })
 
+jest.mock('@/hooks/useVideos')
+jest.mock('@/hooks/useVideoMutations')
+
+import { useVideos } from '@/hooks/useVideos'
+import { useVideoMutations } from '@/hooks/useVideoMutations'
+
+const mockDeleteMutate = jest.fn()
+const mockRefreshVideos = jest.fn()
+
+const defaultMutations = {
+  deleteVideo: { mutate: mockDeleteMutate, isPending: false },
+  refreshVideos: mockRefreshVideos,
+}
+
 const mockVideos = [
   {
     id: 'v1',
@@ -14,8 +28,12 @@ const mockVideos = [
     author_name: 'Author One',
     thumbnail_url: 'https://example.com/thumb1.jpg',
     youtube_url: 'https://youtube.com/watch?v=1',
+    youtube_id: '1',
+    transcript_path: 'path/v1.srt',
+    transcript_format: 'srt',
     tags: ['tag1'],
     created_at: '2026-04-10T00:00:00Z',
+    updated_at: '2026-04-10T00:00:00Z',
   },
   {
     id: 'v2',
@@ -23,25 +41,30 @@ const mockVideos = [
     author_name: 'Author Two',
     thumbnail_url: 'https://example.com/thumb2.jpg',
     youtube_url: 'https://youtube.com/watch?v=2',
+    youtube_id: '2',
+    transcript_path: 'path/v2.srt',
+    transcript_format: 'srt',
     tags: [],
     created_at: '2026-04-09T00:00:00Z',
+    updated_at: '2026-04-09T00:00:00Z',
   },
 ]
 
 describe('DashboardPage', () => {
+  beforeEach(() => {
+    ;(useVideoMutations as jest.Mock).mockReturnValue(defaultMutations)
+  })
+
   afterEach(() => jest.clearAllMocks())
 
   it('shows loading state initially', () => {
-    global.fetch = jest.fn(() => new Promise(() => {})) as jest.Mock
+    ;(useVideos as jest.Mock).mockReturnValue({ data: undefined, isLoading: true, error: null })
     render(<DashboardPage />)
     expect(screen.getByTestId('loading-indicator')).toBeInTheDocument()
   })
 
   it('renders video grid after fetching videos', async () => {
-    global.fetch = jest.fn().mockResolvedValue({
-      json: () => Promise.resolve(mockVideos),
-    }) as jest.Mock
-
+    ;(useVideos as jest.Mock).mockReturnValue({ data: mockVideos, isLoading: false, error: null })
     render(<DashboardPage />)
 
     await waitFor(() => {
@@ -55,10 +78,7 @@ describe('DashboardPage', () => {
   })
 
   it('shows empty state when no videos', async () => {
-    global.fetch = jest.fn().mockResolvedValue({
-      json: () => Promise.resolve([]),
-    }) as jest.Mock
-
+    ;(useVideos as jest.Mock).mockReturnValue({ data: [], isLoading: false, error: null })
     render(<DashboardPage />)
 
     await waitFor(() => {
@@ -69,8 +89,11 @@ describe('DashboardPage', () => {
   })
 
   it('shows empty state on fetch error', async () => {
-    global.fetch = jest.fn().mockRejectedValue(new Error('Network error')) as jest.Mock
-
+    ;(useVideos as jest.Mock).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: new Error('Network error'),
+    })
     render(<DashboardPage />)
 
     await waitFor(() => {
@@ -79,10 +102,7 @@ describe('DashboardPage', () => {
   })
 
   it('keeps the Import Video button', async () => {
-    global.fetch = jest.fn().mockResolvedValue({
-      json: () => Promise.resolve([]),
-    }) as jest.Mock
-
+    ;(useVideos as jest.Mock).mockReturnValue({ data: [], isLoading: false, error: null })
     render(<DashboardPage />)
 
     await waitFor(() => screen.getByTestId('empty-state'))
