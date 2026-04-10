@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchYoutubeMetadata } from '@/lib/youtube'
-import { getVideoService } from '@/lib/server/composition'
+import { videoService } from '@/lib/server/composition'
 import { ImportVideoRequestSchema } from '@/lib/api-schemas'
 
 export const runtime = 'nodejs'
@@ -33,8 +33,7 @@ export async function POST(request: NextRequest) {
     const fileExtension = transcriptFile.name.split('.').pop()?.toLowerCase() || ''
     const tags = tagsString.split(',').map((t) => t.trim()).filter((t) => t.length > 0)
 
-    const service = getVideoService()
-    const video = await service.importVideo({
+    const video = await videoService.importVideo({
       id: videoId,
       youtube_url: youtubeUrl,
       youtube_id: youtubeMetadata.youtube_id,

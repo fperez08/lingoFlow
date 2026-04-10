@@ -2,12 +2,13 @@
  * @jest-environment node
  */
 import { GET } from '../route'
-
-const mockList = jest.fn()
+import { videoStore } from '@/lib/server/composition'
 
 jest.mock('@/lib/server/composition', () => ({
-  getVideoStore: () => ({ list: mockList }),
+  videoStore: { list: jest.fn() },
 }))
+
+const mockList = (videoStore.list as jest.Mock)
 
 const mockVideos = [
   {

@@ -1,6 +1,6 @@
 // @jest-environment node
 import { NextResponse } from 'next/server'
-import { getVideoStore, getVideoService } from '@/lib/server/composition'
+import { videoStore, videoService } from '@/lib/server/composition'
 import { UpdateVideoServiceParams } from '@/lib/video-service'
 import { UpdateVideoRequestSchema } from '@/lib/api-schemas'
 
@@ -12,7 +12,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params
-    const video = getVideoStore().getById(id)
+    const video = videoStore.getById(id)
     if (!video) {
       return new NextResponse('Not Found', { status: 404 })
     }
@@ -29,7 +29,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params
-    const deleted = await getVideoService().deleteVideo(id)
+    const deleted = await videoService.deleteVideo(id)
     if (!deleted) {
       return new NextResponse('Not Found', { status: 404 })
     }
@@ -66,7 +66,7 @@ export async function PATCH(
       serviceParams.transcript_buffer = Buffer.from(await transcriptFile.arrayBuffer())
     }
 
-    const updated = await getVideoService().updateVideo(id, serviceParams)
+    const updated = await videoService.updateVideo(id, serviceParams)
     if (!updated) {
       return NextResponse.json({ error: 'Video not found' }, { status: 404 })
     }
