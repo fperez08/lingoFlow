@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { listVideos } from '@/lib/videos'
 
+export const runtime = 'nodejs'
+
 export async function GET() {
   try {
     const videos = listVideos()

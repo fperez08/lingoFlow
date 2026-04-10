@@ -3,6 +3,8 @@ import { fetchYoutubeMetadata } from '@/lib/youtube'
 import { writeTranscript } from '@/lib/transcripts'
 import { insertVideo } from '@/lib/videos'
 
+export const runtime = 'nodejs'
+
 export const ALLOWED_EXTENSIONS = ['srt', 'vtt', 'txt'] as const
 export type AllowedExtension = typeof ALLOWED_EXTENSIONS[number]
 

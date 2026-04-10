@@ -1,4 +1,10 @@
-import { getDb } from './db'
+import path from 'path'
+import { ensureDataDirs, openDb, initializeSchema } from './db'
+
+const dataDir = process.env.LINGOFLOW_DATA_DIR ?? path.join(process.cwd(), '.lingoflow-data')
+ensureDataDirs(dataDir)
+const db = openDb(path.join(dataDir, 'lingoflow.db'))
+initializeSchema(db)
 
 export interface Video {
   id: string
@@ -33,13 +39,11 @@ function rowToVideo(row: VideoRow): Video {
 }
 
 export function listVideos(): Video[] {
-  const db = getDb()
   const rows = db.prepare('SELECT * FROM videos ORDER BY created_at DESC').all() as VideoRow[]
   return rows.map(rowToVideo)
 }
 
 export function getVideoById(id: string): Video | undefined {
-  const db = getDb()
   const row = db.prepare('SELECT * FROM videos WHERE id = ?').get(id) as VideoRow | undefined
   return row ? rowToVideo(row) : undefined
 }
@@ -63,7 +67,6 @@ export interface UpdateVideoParams {
 }
 
 export function updateVideo(id: string, params: UpdateVideoParams): Video | undefined {
-  const db = getDb()
   const existing = getVideoById(id)
   if (!existing) return undefined
 
@@ -89,7 +92,6 @@ export function updateVideo(id: string, params: UpdateVideoParams): Video | unde
 }
 
 export function deleteVideo(id: string): boolean {
-  const db = getDb()
   const existing = getVideoById(id)
   if (!existing) return false
   db.prepare('DELETE FROM videos WHERE id = ?').run(id)
@@ -97,7 +99,6 @@ export function deleteVideo(id: string): boolean {
 }
 
 export function insertVideo(params: InsertVideoParams): Video {
-  const db = getDb()
   const now = new Date().toISOString()
   db.prepare(`
     INSERT INTO videos (id, youtube_url, youtube_id, title, author_name, thumbnail_url, transcript_path, transcript_format, tags, created_at, updated_at)
