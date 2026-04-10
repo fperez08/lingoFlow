@@ -5,6 +5,34 @@ export interface YoutubeMetadata {
   youtube_id: string
 }
 
+/**
+ * Canned responses returned when E2E_STUB_YOUTUBE=true.
+ * Keyed by YouTube video ID; the fallback entry handles any unknown ID.
+ */
+export const STUB_VIDEOS: Record<string, Omit<YoutubeMetadata, 'youtube_id'>> = {
+  dQw4w9WgXcQ: {
+    title: 'Rick Astley - Never Gonna Give You Up',
+    author_name: 'Rick Astley',
+    thumbnail_url: 'https://img.youtube.com/vi/dQw4w9WgXcQ/0.jpg',
+  },
+  jNQXAC9IVRw: {
+    title: 'Me at the zoo',
+    author_name: 'jawed',
+    thumbnail_url: 'https://img.youtube.com/vi/jNQXAC9IVRw/0.jpg',
+  },
+  kJQP7kiw5Fk: {
+    title: 'Luis Fonsi - Despacito ft. Daddy Yankee',
+    author_name: 'Luis Fonsi',
+    thumbnail_url: 'https://img.youtube.com/vi/kJQP7kiw5Fk/0.jpg',
+  },
+}
+
+const STUB_FALLBACK: Omit<YoutubeMetadata, 'youtube_id'> = {
+  title: 'Stub Video',
+  author_name: 'Stub Author',
+  thumbnail_url: '',
+}
+
 export class YoutubeMetadataError extends Error {
   constructor(message: string) {
     super(message)
@@ -70,6 +98,14 @@ export async function fetchYoutubeMetadata(url: string): Promise<YoutubeMetadata
 
   if (!videoId) {
     throw new YoutubeMetadataError('Invalid YouTube URL')
+  }
+
+  if (process.env.E2E_STUB_YOUTUBE === 'true') {
+    const stub = STUB_VIDEOS[videoId] ?? {
+      ...STUB_FALLBACK,
+      thumbnail_url: `https://img.youtube.com/vi/${videoId}/0.jpg`,
+    }
+    return { ...stub, youtube_id: videoId }
   }
 
   try {
