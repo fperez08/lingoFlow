@@ -93,6 +93,39 @@ describe('videos persistence module', () => {
     expect(getVideoById('nonexistent')).toBeUndefined()
   })
 
+  describe('updateVideo', () => {
+    it('updates tags for an existing video', () => {
+      insertVideo()
+      const { updateVideo } = require('../videos')
+      const result = updateVideo('v1', { tags: ['updated', 'tags'] })
+      expect(result).toBeDefined()
+      expect(result!.tags).toEqual(['updated', 'tags'])
+    })
+
+    it('updates transcript_path for an existing video', () => {
+      insertVideo()
+      const { updateVideo } = require('../videos')
+      const result = updateVideo('v1', { transcript_path: '/new/path.vtt', transcript_format: 'vtt' })
+      expect(result).toBeDefined()
+      expect(result!.transcript_path).toBe('/new/path.vtt')
+      expect(result!.transcript_format).toBe('vtt')
+    })
+
+    it('returns undefined for a non-existent id', () => {
+      const { updateVideo } = require('../videos')
+      const result = updateVideo('nonexistent', { tags: ['x'] })
+      expect(result).toBeUndefined()
+    })
+
+    it('changes updated_at after update', () => {
+      insertVideo({ updated_at: '2026-01-01T00:00:00Z' })
+      const { updateVideo } = require('../videos')
+      const result = updateVideo('v1', { tags: ['new'] })
+      expect(result).toBeDefined()
+      expect(result!.updated_at).not.toBe('2026-01-01T00:00:00Z')
+    })
+  })
+
   describe('insertVideo', () => {
     it('inserts a video and returns it with tags as array', () => {
       const { insertVideo } = require('../videos')
@@ -132,6 +165,28 @@ describe('videos persistence module', () => {
       const found = videos.find((v: { id: string }) => v.id === 'list-test-id')
       expect(found).toBeDefined()
       expect(found?.tags).toEqual([])
+    })
+  })
+
+  describe('deleteVideo', () => {
+    it('returns true and removes the video record', () => {
+      insertVideo()
+      const { deleteVideo, getVideoById } = require('../videos')
+      const result = deleteVideo('v1')
+      expect(result).toBe(true)
+      expect(getVideoById('v1')).toBeUndefined()
+    })
+
+    it('returns false for a non-existent id', () => {
+      const { deleteVideo } = require('../videos')
+      expect(deleteVideo('nonexistent')).toBe(false)
+    })
+
+    it('deleted video no longer appears in listVideos()', () => {
+      insertVideo()
+      const { deleteVideo, listVideos } = require('../videos')
+      deleteVideo('v1')
+      expect(listVideos()).toHaveLength(0)
     })
   })
 })

@@ -56,6 +56,46 @@ export interface InsertVideoParams {
   tags: string[]
 }
 
+export interface UpdateVideoParams {
+  tags?: string[]
+  transcript_path?: string
+  transcript_format?: string
+}
+
+export function updateVideo(id: string, params: UpdateVideoParams): Video | undefined {
+  const db = getDb()
+  const existing = getVideoById(id)
+  if (!existing) return undefined
+
+  const updates: string[] = ['updated_at = ?']
+  const values: unknown[] = [new Date().toISOString()]
+
+  if (params.tags !== undefined) {
+    updates.push('tags = ?')
+    values.push(JSON.stringify(params.tags))
+  }
+  if (params.transcript_path !== undefined) {
+    updates.push('transcript_path = ?')
+    values.push(params.transcript_path)
+  }
+  if (params.transcript_format !== undefined) {
+    updates.push('transcript_format = ?')
+    values.push(params.transcript_format)
+  }
+
+  values.push(id)
+  db.prepare(`UPDATE videos SET ${updates.join(', ')} WHERE id = ?`).run(...values)
+  return getVideoById(id)
+}
+
+export function deleteVideo(id: string): boolean {
+  const db = getDb()
+  const existing = getVideoById(id)
+  if (!existing) return false
+  db.prepare('DELETE FROM videos WHERE id = ?').run(id)
+  return true
+}
+
 export function insertVideo(params: InsertVideoParams): Video {
   const db = getDb()
   const now = new Date().toISOString()
