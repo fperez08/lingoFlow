@@ -36,7 +36,7 @@ export default function VideoCard({
   return (
     <div className="group cursor-pointer" data-testid={`video-card-${id}`}>
       {/* Thumbnail */}
-      <div className="relative aspect-video rounded-xl overflow-hidden mb-4 bg-surface-container-high shadow-sm transition-all group-hover:-translate-y-1">
+      <div className="relative aspect-video rounded-xl overflow-hidden mb-4 bg-surface-container-high dark:bg-slate-800 shadow-sm transition-all group-hover:-translate-y-1">
         <Link href={`/player/${id}`}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={thumbnail_url} alt={title} className="w-full h-full object-cover" />
@@ -84,11 +84,11 @@ export default function VideoCard({
           </div>
         )}
         <Link href={`/player/${id}`}>
-          <h4 className="font-bold text-on-surface group-hover:text-primary transition-colors leading-tight">
+          <h4 className="font-bold text-on-surface dark:text-slate-100 group-hover:text-primary transition-colors leading-tight">
             {title}
           </h4>
         </Link>
-        <p className="text-xs text-on-surface-variant">
+        <p className="text-xs text-on-surface-variant dark:text-slate-400">
           Imported <span>{formatDate(created_at)}</span> &bull; By <span>{author_name}</span>
         </p>
       </div>

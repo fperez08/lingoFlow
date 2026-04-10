@@ -78,11 +78,11 @@ export default function EditVideoModal({ video, onClose, onSave }: EditVideoModa
       onClick={onClose}
     >
       <div
-        className="bg-surface-container-lowest/90 backdrop-blur-[24px] rounded-xl shadow-2xl border border-outline-variant/20 w-full max-w-lg p-8 transition-all duration-300"
+        className="bg-surface-container-lowest/90 dark:bg-slate-900/90 backdrop-blur-[24px] rounded-xl shadow-2xl border border-outline-variant/20 dark:border-slate-700/30 w-full max-w-lg p-8 transition-all duration-300"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-6">
-          <h2 className="font-headline text-2xl font-extrabold text-on-surface">Edit Video</h2>
+          <h2 className="font-headline text-2xl font-extrabold text-on-surface dark:text-slate-100">Edit Video</h2>
           <button
             onClick={onClose}
             aria-label="Close modal"
@@ -152,7 +152,7 @@ export default function EditVideoModal({ video, onClose, onSave }: EditVideoModa
         <div className="flex justify-end gap-3 pt-6">
           <button
             onClick={onClose}
-            className="px-6 py-3 bg-surface-container-high text-on-surface-variant rounded-xl font-bold hover:bg-surface-container-highest transition-colors"
+            className="px-6 py-3 bg-surface-container-high dark:bg-slate-800 text-on-surface-variant dark:text-slate-400 rounded-xl font-bold hover:bg-surface-container-highest dark:hover:bg-slate-700 transition-colors"
           >
             Cancel
           </button>

@@ -52,10 +52,10 @@ export default function VocabularyPage() {
           <span className="inline-block px-3 py-1 rounded-full bg-secondary-container text-on-secondary-container text-[10px] font-bold uppercase tracking-wider mb-3">
             Lexicon Management
           </span>
-          <h2 data-testid="vocab-page-heading" className="text-4xl font-extrabold tracking-tight text-on-surface">
+          <h2 data-testid="vocab-page-heading" className="text-4xl font-extrabold tracking-tight text-on-surface dark:text-slate-100">
             Vocabulary Manager
           </h2>
-          <p className="text-on-surface-variant mt-2 max-w-xl font-body leading-relaxed">
+          <p className="text-on-surface-variant dark:text-slate-400 mt-2 max-w-xl font-body leading-relaxed">
             Refine your cognitive sanctuary by reviewing and organizing the linguistic gems you&apos;ve collected.
           </p>
         </div>
@@ -78,12 +78,12 @@ export default function VocabularyPage() {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           data-testid="vocab-search-input"
-          className="w-full pl-12 pr-4 py-3 bg-surface-container-low rounded-xl border border-outline-variant/30 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/20"
+          className="w-full pl-12 pr-4 py-3 bg-surface-container-low dark:bg-slate-950/50 rounded-xl border border-outline-variant/30 dark:border-slate-700 text-on-surface dark:text-slate-100 placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
       </div>
 
       {/* Tab navigation */}
-      <div className="flex gap-1 border-b border-outline-variant/20 mb-8">
+      <div className="flex gap-1 border-b border-outline-variant/20 dark:border-slate-700 mb-8">
         {(['new', 'learning', 'mastered'] as Tab[]).map((tab) => {
           const isActive = activeTab === tab
           return (
@@ -127,7 +127,7 @@ export default function VocabularyPage() {
                 <div
                   key={word.id}
                   data-testid="vocab-card"
-                  className="bg-surface-container-lowest p-6 rounded-xl hover:bg-surface-bright transition-colors"
+                  className="bg-surface-container-lowest dark:bg-slate-900 p-6 rounded-xl hover:bg-surface-bright dark:hover:bg-slate-800 transition-colors"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
@@ -137,9 +137,9 @@ export default function VocabularyPage() {
                           {word.level}
                         </span>
                       </div>
-                      <p className="text-on-surface-variant text-sm italic mb-3">{word.definition}</p>
-                      <div className="bg-surface-container-low p-4 rounded-lg border-l-4 border-primary/30">
-                        <p className="text-sm text-on-surface leading-relaxed">
+                      <p className="text-on-surface-variant dark:text-slate-400 text-sm italic mb-3">{word.definition}</p>
+                      <div className="bg-surface-container-low dark:bg-slate-950/50 p-4 rounded-lg border-l-4 border-primary/30">
+                        <p className="text-sm text-on-surface dark:text-slate-100 leading-relaxed">
                           &ldquo;{word.contextQuote}&rdquo; —{' '}
                           <span className="text-on-surface-variant text-xs uppercase font-bold">{word.source}</span>
                         </p>
@@ -186,8 +186,8 @@ export default function VocabularyPage() {
           </div>
 
           {/* Filter by Source */}
-          <div className="bg-surface-container-low p-6 rounded-xl mb-6">
-            <h4 className="font-bold text-on-surface mb-4 text-sm uppercase tracking-wider">Filter by Source</h4>
+          <div className="bg-surface-container-low dark:bg-slate-950/50 p-6 rounded-xl mb-6">
+            <h4 className="font-bold text-on-surface dark:text-slate-100 mb-4 text-sm uppercase tracking-wider">Filter by Source</h4>
             <div className="flex flex-wrap gap-2">
               {VOCAB_SOURCES.map((source) => {
                 const isActive = activeSources.includes(source)
@@ -210,8 +210,8 @@ export default function VocabularyPage() {
           </div>
 
           {/* Filter by Difficulty */}
-          <div className="bg-surface-container-low p-6 rounded-xl">
-            <h4 className="font-bold text-on-surface mb-4 text-sm uppercase tracking-wider">Filter by Difficulty</h4>
+          <div className="bg-surface-container-low dark:bg-slate-950/50 p-6 rounded-xl">
+            <h4 className="font-bold text-on-surface dark:text-slate-100 mb-4 text-sm uppercase tracking-wider">Filter by Difficulty</h4>
             <div className="flex flex-wrap gap-2">
               {VOCAB_LEVELS.map((level) => {
                 const isActive = activeLevels.includes(level)

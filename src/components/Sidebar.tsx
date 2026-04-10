@@ -7,12 +7,12 @@ const navLinks = [
 
 export default function Sidebar() {
   return (
-    <aside className="fixed left-0 top-0 h-full w-64 bg-surface-container-low dark:bg-slate-950 flex flex-col py-8 px-4 z-50">
+    <aside className="fixed left-0 top-0 h-full w-64 bg-surface-container-low dark:bg-slate-950 hidden md:flex flex-col py-8 px-4 z-50">
       <div className="mb-8 px-2">
         <h1 className="text-xl font-extrabold text-primary tracking-tighter font-headline">
           LingoFlow
         </h1>
-        <p className="text-xs text-on-surface-variant mt-0.5">The Cognitive Sanctuary</p>
+        <p className="text-xs text-on-surface-variant dark:text-slate-400 mt-0.5">The Cognitive Sanctuary</p>
       </div>
 
       <nav className="flex flex-col gap-1">

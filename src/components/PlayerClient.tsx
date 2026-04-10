@@ -50,9 +50,9 @@ export default function PlayerClient({ video }: { video: Video }) {
   }
 
   return (
-    <div data-testid="player-client" className="ml-64 pt-16 min-h-screen flex bg-surface">
+    <div data-testid="player-client" className="min-h-screen flex flex-col lg:flex-row bg-surface dark:bg-slate-900">
       {/* Main content */}
-      <section className="flex-1 p-8 bg-surface overflow-y-auto">
+      <section className="flex-1 p-8 bg-surface dark:bg-slate-900 overflow-y-auto">
         <div className="aspect-video rounded-xl overflow-hidden shadow-2xl mb-6 bg-black">
           <iframe
             src={`https://www.youtube.com/embed/${video.youtube_id}`}
@@ -72,8 +72,8 @@ export default function PlayerClient({ video }: { video: Video }) {
                 Language Learning
               </span>
             </div>
-            <h1 className="text-2xl font-extrabold text-on-surface font-headline">{video.title}</h1>
-            <p className="text-on-surface-variant mt-1">{video.author_name}</p>
+            <h1 className="text-2xl font-extrabold text-on-surface dark:text-slate-100 font-headline">{video.title}</h1>
+            <p className="text-on-surface-variant dark:text-slate-400 mt-1">{video.author_name}</p>
           </div>
           <button className="flex items-center gap-2 px-6 py-3 bg-gradient-to-br from-primary to-primary-container text-white rounded-xl font-bold hover:scale-[1.02] transition-transform">
             Save Lesson
@@ -82,13 +82,13 @@ export default function PlayerClient({ video }: { video: Video }) {
       </section>
 
       {/* Right transcript/vocab sidebar */}
-      <aside className="w-[420px] bg-surface-container-low flex flex-col border-l border-outline-variant/30 overflow-hidden min-h-screen">
+      <aside className="w-full lg:w-[420px] bg-surface-container-low dark:bg-slate-950/50 flex flex-col border-t lg:border-t-0 lg:border-l border-outline-variant/30 dark:border-slate-700 overflow-hidden min-h-[400px] lg:min-h-screen">
         <div className="p-4 border-b border-outline-variant/20 flex items-center justify-between">
-          <h2 className="font-bold text-on-surface">Interactive Transcript</h2>
+          <h2 className="font-bold text-on-surface dark:text-slate-100">Interactive Transcript</h2>
         </div>
 
         {/* Tab switcher */}
-        <div className="flex border-b border-outline-variant/20">
+        <div className="flex border-b border-outline-variant/20 dark:border-slate-700">
           <button
             className={`flex-1 py-3 text-sm font-bold transition-colors ${
               activeTab === 'transcript'
@@ -118,7 +118,7 @@ export default function PlayerClient({ video }: { video: Video }) {
           {activeTab === 'transcript' && (
             <>
               {loadingTranscript && (
-                <p className="text-sm text-on-surface-variant text-center py-8">
+                <p className="text-sm text-on-surface-variant dark:text-slate-400 text-center py-8">
                   Loading transcript…
                 </p>
               )}
@@ -142,14 +142,14 @@ export default function PlayerClient({ video }: { video: Video }) {
                       data-testid={`cue-${i}`}
                       className={`cursor-pointer transition-all ${
                         isPast
-                          ? 'opacity-40 text-sm text-on-surface-variant px-3 py-2'
+                          ? 'opacity-40 text-sm text-on-surface-variant dark:text-slate-400 px-3 py-2'
                           : isActive
-                          ? 'bg-surface-container rounded-xl p-3 ring-1 ring-primary/10 border-l-4 border-primary'
-                          : 'opacity-60 text-sm text-on-surface px-3 py-2'
+                          ? 'bg-surface-container dark:bg-slate-800 rounded-xl p-3 ring-1 ring-primary/10 border-l-4 border-primary'
+                          : 'opacity-60 text-sm text-on-surface dark:text-slate-100 px-3 py-2'
                       }`}
                     >
                       {isActive ? (
-                        <p className="text-sm text-on-surface leading-relaxed">{cue.text}</p>
+                        <p className="text-sm text-on-surface dark:text-slate-100 leading-relaxed">{cue.text}</p>
                       ) : (
                         cue.text
                       )}
@@ -174,10 +174,10 @@ export default function PlayerClient({ video }: { video: Video }) {
                   <div
                     key={word}
                     data-testid={`vocab-${word}`}
-                    className="bg-surface-container rounded-xl p-4 flex flex-col gap-2"
+                    className="bg-surface-container dark:bg-slate-800 rounded-xl p-4 flex flex-col gap-2"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-on-surface capitalize">{word}</span>
+                      <span className="font-bold text-on-surface dark:text-slate-100 capitalize">{word}</span>
                       {status === 'added' && (
                         <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-secondary-container text-on-secondary-container">
                           Added

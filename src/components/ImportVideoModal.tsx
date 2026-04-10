@@ -36,11 +36,11 @@ export default function ImportVideoModal({ isOpen, onClose, onSuccess }: ImportV
       onClick={onClose}
     >
       <div
-        className="bg-surface-container-lowest/90 backdrop-blur-[24px] rounded-xl shadow-2xl border border-outline-variant/20 w-full max-w-lg p-8 transition-all duration-300"
+        className="bg-surface-container-lowest/90 dark:bg-slate-900/90 backdrop-blur-[24px] rounded-xl shadow-2xl border border-outline-variant/20 dark:border-slate-700/30 w-full max-w-lg p-8 transition-all duration-300"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-6">
-          <h2 className="font-headline text-2xl font-extrabold text-on-surface">Import Video</h2>
+          <h2 className="font-headline text-2xl font-extrabold text-on-surface dark:text-slate-100">Import Video</h2>
           <button
             className="text-on-surface-variant hover:text-on-surface transition-colors rounded-full p-1"
             onClick={onClose}
@@ -72,7 +72,7 @@ export default function ImportVideoModal({ isOpen, onClose, onSuccess }: ImportV
               onChange={(e) => setYoutubeUrl(e.target.value)}
               disabled={isSubmitting}
               required
-              className="w-full px-4 py-3 bg-surface-container-low rounded-xl border border-outline-variant/30 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all duration-300"
+              className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-950/50 rounded-xl border border-outline-variant/30 dark:border-slate-700 text-on-surface dark:text-slate-100 placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all duration-300"
             />
             {isLoadingPreview && (
               <p className="text-sm text-on-surface-variant/70 mt-1">Loading preview...</p>
@@ -109,7 +109,7 @@ export default function ImportVideoModal({ isOpen, onClose, onSuccess }: ImportV
               onChange={(e) => setTranscriptFile(e.target.files?.[0] || null)}
               disabled={isSubmitting}
               required
-              className="w-full px-4 py-3 bg-surface-container-low rounded-xl border border-outline-variant/30 text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all duration-300 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-primary/10 file:text-primary"
+              className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-950/50 rounded-xl border border-outline-variant/30 dark:border-slate-700 text-on-surface dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all duration-300 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-primary/10 file:text-primary"
             />
             {transcriptFile && (
               <p className="text-xs text-on-surface-variant mt-1">{transcriptFile.name}</p>
@@ -128,7 +128,7 @@ export default function ImportVideoModal({ isOpen, onClose, onSuccess }: ImportV
               value={tags}
               onChange={(e) => setTags(e.target.value)}
               disabled={isSubmitting}
-              className="w-full px-4 py-3 bg-surface-container-low rounded-xl border border-outline-variant/30 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all duration-300"
+              className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-950/50 rounded-xl border border-outline-variant/30 dark:border-slate-700 text-on-surface dark:text-slate-100 placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all duration-300"
             />
           </div>
 
@@ -137,7 +137,7 @@ export default function ImportVideoModal({ isOpen, onClose, onSuccess }: ImportV
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="px-6 py-3 bg-surface-container-high text-on-surface-variant rounded-xl font-bold hover:bg-surface-container-highest transition-colors"
+              className="px-6 py-3 bg-surface-container-high dark:bg-slate-800 text-on-surface-variant dark:text-slate-400 rounded-xl font-bold hover:bg-surface-container-highest dark:hover:bg-slate-700 transition-colors"
             >
               Cancel
             </button>
