@@ -53,6 +53,7 @@ describe('ImportVideoModal', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Test Video')).toBeInTheDocument()
+      expect(screen.getByTestId('preview-container')).toBeInTheDocument()
     })
   })
 
