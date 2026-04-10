@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server'
 import { getVideoById, deleteVideo, updateVideo, UpdateVideoParams } from '@/lib/videos'
 import { writeTranscript, deleteTranscript } from '@/lib/transcripts'
 
+export const runtime = 'nodejs'
+
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }

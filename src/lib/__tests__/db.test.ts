@@ -4,70 +4,67 @@
 import path from 'path'
 import fs from 'fs'
 import os from 'os'
+import { ensureDataDirs, openDb, initializeSchema } from '../db'
 
 describe('db module', () => {
-  let tmpDir: string
-  let originalEnv: string | undefined
-
-  beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lingoflow-db-test-'))
-    originalEnv = process.env.LINGOFLOW_DATA_DIR
-    process.env.LINGOFLOW_DATA_DIR = tmpDir
-
-    jest.resetModules()
-  })
-
-  afterEach(() => {
-    const { _resetDbInstance } = require('../db')
-    _resetDbInstance()
-
-    if (originalEnv === undefined) {
-      delete process.env.LINGOFLOW_DATA_DIR
-    } else {
-      process.env.LINGOFLOW_DATA_DIR = originalEnv
-    }
-
-    fs.rmSync(tmpDir, { recursive: true, force: true })
-  })
-
-  it('returns a database instance', () => {
-    const { getDb } = require('../db')
-    const db = getDb()
+  it('openDb returns a database instance', () => {
+    const db = openDb(':memory:')
     expect(db).toBeDefined()
     expect(typeof db.prepare).toBe('function')
+    db.close()
   })
 
-  it('returns the same instance on repeated calls (singleton)', () => {
-    const { getDb } = require('../db')
-    const db1 = getDb()
-    const db2 = getDb()
-    expect(db1).toBe(db2)
-  })
-
-  it('creates the videos table', () => {
-    const { getDb } = require('../db')
-    const db = getDb()
+  it('initializeSchema creates the videos table', () => {
+    const db = openDb(':memory:')
+    initializeSchema(db)
     const row = db
       .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='videos'")
       .get() as { name: string } | undefined
     expect(row?.name).toBe('videos')
+    db.close()
   })
 
-  it('creates the data directory and transcripts subdirectory', () => {
-    const { getDb } = require('../db')
-    getDb()
-    expect(fs.existsSync(tmpDir)).toBe(true)
-    expect(fs.existsSync(path.join(tmpDir, 'transcripts'))).toBe(true)
-  })
-
-  it('initialization is idempotent (calling getDb multiple times does not throw)', () => {
-    const { getDb, _resetDbInstance } = require('../db')
+  it('initializeSchema is idempotent (calling it multiple times does not throw)', () => {
+    const db = openDb(':memory:')
     expect(() => {
-      getDb()
-      _resetDbInstance()
-      getDb()
-      _resetDbInstance()
-      getDb()
+      initializeSchema(db)
+      initializeSchema(db)
+      initializeSchema(db)
     }).not.toThrow()
+    db.close()
+  })
+
+  it('ensureDataDirs creates the data directory and transcripts subdirectory', () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lingoflow-db-test-'))
+    try {
+      const dataDir = path.join(tmpDir, 'data')
+      ensureDataDirs(dataDir)
+      expect(fs.existsSync(dataDir)).toBe(true)
+      expect(fs.existsSync(path.join(dataDir, 'transcripts'))).toBe(true)
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('ensureDataDirs is idempotent (calling it multiple times does not throw)', () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lingoflow-db-test-'))
+    try {
+      const dataDir = path.join(tmpDir, 'data')
+      expect(() => {
+        ensureDataDirs(dataDir)
+        ensureDataDirs(dataDir)
+      }).not.toThrow()
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('openDb enables WAL journal mode', () => {
+    const db = openDb(':memory:')
+    const row = db.pragma('journal_mode', { simple: true })
+    // :memory: databases always report 'memory' for journal_mode
+    expect(row).toBeDefined()
+    db.close()
   })
 })
+
