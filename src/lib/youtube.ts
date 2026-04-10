@@ -47,8 +47,13 @@ export function extractYoutubeId(url: string): string | null {
     return url
   }
 
+  const normalizedUrl =
+    url.startsWith('youtu.be/') || url.startsWith('www.youtu.be/')
+      ? `https://${url}`
+      : url
+
   try {
-    const parsedUrl = new URL(url)
+    const parsedUrl = new URL(normalizedUrl)
     const hostname = parsedUrl.hostname.toLowerCase()
 
     if (hostname === 'youtu.be' || hostname === 'www.youtu.be') {
