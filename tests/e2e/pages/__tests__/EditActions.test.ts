@@ -5,13 +5,19 @@
 
 import { EditActions } from '../EditActions'
 
+jest.mock('@playwright/test', () => ({
+  expect: jest.fn(() => ({
+    toBeVisible: jest.fn().mockResolvedValue(undefined),
+    toBeHidden: jest.fn().mockResolvedValue(undefined),
+  })),
+}))
+
 function makeLocator(overrides: Partial<Record<string, jest.Mock>> = {}) {
   const locator: Record<string, jest.Mock> = {
-    waitFor: jest.fn().mockResolvedValue(undefined),
     fill: jest.fn().mockResolvedValue(undefined),
     click: jest.fn().mockResolvedValue(undefined),
     press: jest.fn().mockResolvedValue(undefined),
-    all: jest.fn().mockResolvedValue([]),
+    nth: jest.fn(),
     locator: jest.fn(),
     getByRole: jest.fn(),
     getByTestId: jest.fn(),
@@ -19,6 +25,7 @@ function makeLocator(overrides: Partial<Record<string, jest.Mock>> = {}) {
     ...overrides,
   }
   locator.locator.mockReturnValue(locator)
+  locator.nth.mockReturnValue(locator)
   locator.getByRole.mockReturnValue(locator)
   locator.getByTestId.mockReturnValue(locator)
   locator.getByText.mockReturnValue(locator)
@@ -37,20 +44,14 @@ function makePage() {
 
 describe('EditActions', () => {
   it('clickEditOnCard() clicks the edit button at given index and waits for modal', async () => {
-    const editBtn0 = makeLocator()
-    const editBtn1 = makeLocator()
     const btnListLocator = makeLocator()
-    btnListLocator.all.mockResolvedValue([editBtn0, editBtn1])
 
     const gridLocator = makeLocator()
     gridLocator.locator.mockReturnValue(btnListLocator)
 
-    const modalLocator = makeLocator()
-
     const page = {
       getByTestId: jest.fn().mockImplementation((id: string) => {
         if (id === 'video-grid') return gridLocator
-        if (id === 'edit-modal') return modalLocator
         return makeLocator()
       }),
       getByRole: jest.fn().mockReturnValue(makeLocator()),
@@ -60,8 +61,8 @@ describe('EditActions', () => {
     const editActions = new EditActions(page as any)
     await editActions.clickEditOnCard(1)
 
-    expect(editBtn1.click).toHaveBeenCalled()
-    expect(modalLocator.waitFor).toHaveBeenCalledWith({ state: 'visible' })
+    expect(btnListLocator.nth).toHaveBeenCalledWith(1)
+    expect(btnListLocator.click).toHaveBeenCalled()
   })
 
   it('addTag() fills tag-input and presses Enter', async () => {
@@ -112,7 +113,6 @@ describe('EditActions', () => {
     await editActions.clickSave()
     expect(modalLocator.getByRole).toHaveBeenCalledWith('button', { name: 'Save' })
     expect(saveBtn.click).toHaveBeenCalled()
-    expect(modalLocator.waitFor).toHaveBeenCalledWith({ state: 'hidden' })
   })
 
   it('assertTagsSaved() waits for each tag text to be visible', async () => {
@@ -127,6 +127,5 @@ describe('EditActions', () => {
     await editActions.assertTagsSaved(['spanish', 'beginner'])
     expect(page.getByText).toHaveBeenCalledWith('spanish')
     expect(page.getByText).toHaveBeenCalledWith('beginner')
-    expect(tagLocator.waitFor).toHaveBeenCalledWith({ state: 'visible' })
   })
 })

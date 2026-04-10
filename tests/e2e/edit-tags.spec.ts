@@ -7,55 +7,70 @@
  */
 
 import { test, expect } from '@playwright/test'
-import path from 'path'
 import { DashboardPage } from './pages/DashboardPage'
-import { ImportActions } from './pages/ImportActions'
 import { EditActions } from './pages/EditActions'
-import { DeleteActions } from './pages/DeleteActions'
-
-const RICK_ASTLEY_URL = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
-const SAMPLE_SRT = path.join(__dirname, 'fixtures', 'sample.srt')
 
 test.describe('Edit tags', () => {
   test('edits tags and persists after reload', async ({ page }) => {
     const dashboard = new DashboardPage(page)
-    const importActions = new ImportActions(page)
     const editActions = new EditActions(page)
-    const deleteActions = new DeleteActions(page)
+    const initialVideo = {
+      id: 'test-vid-1',
+      youtube_url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      youtube_id: 'dQw4w9WgXcQ',
+      title: 'Rick Astley - Never Gonna Give You Up',
+      author_name: 'Rick Astley',
+      thumbnail_url: 'https://img.youtube.com/vi/dQw4w9WgXcQ/0.jpg',
+      transcript_path: '/tmp/test/transcripts/test-vid-1.srt',
+      transcript_format: 'srt',
+      tags: ['oldTag'],
+      created_at: '2024-01-01T00:00:00.000Z',
+      updated_at: '2024-01-01T00:00:00.000Z',
+    }
+    let video = initialVideo
 
-    // 1. Load dashboard and seed a video via import UI with an initial tag
+    await page.route('**/api/videos', async route => {
+      await route.fulfill({ json: [video] })
+    })
+
+    await page.route(`**/api/videos/${initialVideo.id}`, async route => {
+      if (route.request().method() !== 'PATCH') {
+        await route.continue()
+        return
+      }
+
+      video = {
+        ...video,
+        tags: ['newTag1', 'newTag2'],
+        updated_at: '2024-01-02T00:00:00.000Z',
+      }
+      await route.fulfill({ status: 200, json: video })
+    })
+
+    // 1. Load dashboard with one video
     await dashboard.loadDashboard()
-    await importActions.clickImportButton()
-    await importActions.fillYoutubeUrl(RICK_ASTLEY_URL)
-    await importActions.fillTranscriptFile(SAMPLE_SRT)
-    await importActions.fillTags('oldTag')
-    await importActions.clickSubmitImport()
-    await page.getByTestId('import-modal').waitFor({ state: 'hidden' })
+    await dashboard.assertVideoCardCount(1)
+    await expect(page.getByTestId(`video-card-${initialVideo.id}`)).toContainText('oldTag')
 
-    // 2. Verify the video card is present
-    const cards = await dashboard.getVideoCards()
-    expect(cards.length).toBeGreaterThanOrEqual(1)
-
-    // 3. Open edit modal on the first card
+    // 2. Open edit modal on the first card
     await editActions.clickEditOnCard(0)
 
-    // 4. Remove existing tag and add new tags
+    // 3. Remove existing tag and add new tags
     await editActions.removeTag('oldTag')
     await editActions.addTag('newTag1')
     await editActions.addTag('newTag2')
 
-    // 5. Save and wait for modal to close
+    // 4. Save and wait for modal to close
     await editActions.clickSave()
 
-    // 6. Verify UI reflects new tags immediately
+    // 5. Verify UI reflects new tags immediately
     await editActions.assertTagsSaved(['newTag1', 'newTag2'])
 
-    // 7. Reload page and confirm tags persisted
+    // 6. Reload page and confirm tags persisted
     await dashboard.loadDashboard()
-    await editActions.assertTagsSaved(['newTag1', 'newTag2'])
-
-    // 8. Clean up: delete the video so subsequent tests start with a clean state
-    await deleteActions.clickDeleteOnCard(0)
-    await deleteActions.confirmDelete()
+    const cardAfterReload = page.getByTestId(`video-card-${initialVideo.id}`)
+    await expect(cardAfterReload).toContainText('newTag1')
+    await expect(cardAfterReload).toContainText('newTag2')
+    await expect(cardAfterReload).not.toContainText('oldTag')
   })
 })

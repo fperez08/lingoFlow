@@ -11,7 +11,7 @@
  *   await dashboard.assertEmpty()
  */
 
-import type { Page, Locator } from '@playwright/test'
+import { expect, type Page, type Locator } from '@playwright/test'
 
 export class DashboardPage {
   readonly page: Page
@@ -27,12 +27,22 @@ export class DashboardPage {
 
   /** Asserts that the loading indicator is visible. */
   async assertLoading(): Promise<void> {
-    await this.page.getByTestId('loading-indicator').waitFor({ state: 'visible' })
+    await expect(this.page.getByTestId('loading-indicator')).toBeVisible()
   }
 
   /** Asserts that the empty-state placeholder is visible (no videos imported). */
   async assertEmpty(): Promise<void> {
-    await this.page.getByTestId('empty-state').waitFor({ state: 'visible' })
+    await expect(this.page.getByTestId('empty-state')).toBeVisible()
+  }
+
+  /** Returns the video-card locator list in the dashboard grid. */
+  videoCards(): Locator {
+    return this.page.getByTestId('video-grid').locator('[data-testid^="video-card-"]')
+  }
+
+  /** Asserts the exact number of video cards rendered in the grid. */
+  async assertVideoCardCount(count: number): Promise<void> {
+    await expect(this.videoCards()).toHaveCount(count)
   }
 
   /**
@@ -40,9 +50,7 @@ export class DashboardPage {
    * Waits for the grid to be present before querying cards.
    */
   async getVideoCards(): Promise<Locator[]> {
-    const grid = this.page.getByTestId('video-grid')
-    await grid.waitFor({ state: 'visible' })
-    return grid.locator('[data-testid^="video-card-"]').all()
+    return this.videoCards().all()
   }
 
   /** Returns the number of video cards currently visible in the grid. */

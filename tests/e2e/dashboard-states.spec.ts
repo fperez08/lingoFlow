@@ -66,8 +66,7 @@ test.describe('Dashboard states', () => {
     const grid = page.getByTestId('video-grid')
     await expect(grid).toBeVisible()
 
-    const count = await dashboard.getVideoCardCount()
-    expect(count).toBe(1)
+    await dashboard.assertVideoCardCount(1)
   })
 
   test('hides loading indicator after response is received', async ({ page }) => {

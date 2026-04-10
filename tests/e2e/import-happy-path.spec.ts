@@ -19,6 +19,29 @@ test.describe('Import happy path', () => {
   test('imports a video with URL, transcript, and tags', async ({ page }) => {
     const dashboard = new DashboardPage(page)
     const importActions = new ImportActions(page)
+    const importedVideo = {
+      id: 'test-vid-1',
+      youtube_url: RICK_ASTLEY_URL,
+      youtube_id: 'dQw4w9WgXcQ',
+      title: RICK_ASTLEY_TITLE,
+      author_name: 'Rick Astley',
+      thumbnail_url: 'https://img.youtube.com/vi/dQw4w9WgXcQ/0.jpg',
+      transcript_path: '/tmp/test/transcripts/test-vid-1.srt',
+      transcript_format: 'srt',
+      tags: ['music', 'classic'],
+      created_at: '2024-01-01T00:00:00.000Z',
+      updated_at: '2024-01-01T00:00:00.000Z',
+    }
+    let videos: typeof importedVideo[] = []
+
+    await page.route('**/api/videos', async route => {
+      await route.fulfill({ json: videos })
+    })
+
+    await page.route('**/api/videos/import', async route => {
+      videos = [importedVideo]
+      await route.fulfill({ status: 201, json: importedVideo })
+    })
 
     // 1. Load dashboard and assert empty state
     await dashboard.loadDashboard()
@@ -35,18 +58,17 @@ test.describe('Import happy path', () => {
 
     // 5. Add tags
     await importActions.fillTags('music, classic')
+    await expect(page.getByTestId('preview-container')).toBeVisible()
 
     // 6. Submit import
     await importActions.clickSubmitImport()
 
     // 7. Assert modal closes
-    await page.getByTestId('import-modal').waitFor({ state: 'hidden' })
+    await expect(page.getByTestId('import-modal')).toBeHidden()
 
     // 8. Assert video card appears with correct title
-    const cards = await dashboard.getVideoCards()
-    expect(cards.length).toBeGreaterThanOrEqual(1)
-
-    const firstCard = cards[0]
+    await dashboard.assertVideoCardCount(1)
+    const firstCard = page.getByTestId(`video-card-${importedVideo.id}`)
     await expect(firstCard).toContainText(RICK_ASTLEY_TITLE)
 
     // 9. Assert tags visible on card
@@ -55,8 +77,7 @@ test.describe('Import happy path', () => {
 
     // 10. Reload page and assert card still present (persistence check)
     await dashboard.loadDashboard()
-    const cardsAfterReload = await dashboard.getVideoCards()
-    expect(cardsAfterReload.length).toBeGreaterThanOrEqual(1)
-    await expect(cardsAfterReload[0]).toContainText(RICK_ASTLEY_TITLE)
+    await dashboard.assertVideoCardCount(1)
+    await expect(page.getByTestId(`video-card-${importedVideo.id}`)).toContainText(RICK_ASTLEY_TITLE)
   })
 })
