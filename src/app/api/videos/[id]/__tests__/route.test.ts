@@ -35,12 +35,14 @@ jest.mock('@/lib/transcripts', () => ({
 
 import { getVideoById, deleteVideo, updateVideo } from '@/lib/videos'
 import { writeTranscript, deleteTranscript } from '@/lib/transcripts'
+import { createSupabaseServer } from '@/lib/supabase-server'
 
 const mockGetVideoById = getVideoById as jest.Mock
 const mockDeleteVideo = deleteVideo as jest.Mock
 const mockUpdateVideo = updateVideo as jest.Mock
 const mockWriteTranscript = writeTranscript as jest.Mock
 const mockDeleteTranscript = deleteTranscript as jest.Mock
+const mockCreateSupabaseServer = createSupabaseServer as jest.Mock
 
 function makeRequest() {
   return { method: 'DELETE', url: 'http://localhost/api/videos/video-1' } as unknown as Request
