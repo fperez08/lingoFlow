@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>LingoFlow - The Cognitive Sanctuary</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "tertiary": "#874700",
+                    "on-tertiary": "#ffffff",
+                    "on-primary": "#ffffff",
+                    "error-container": "#ffdad6",
+                    "surface-variant": "#e0e3e5",
+                    "primary-fixed": "#aaedff",
+                    "outline": "#6e797c",
+                    "on-secondary-container": "#57676a",
+                    "outline-variant": "#bec8cc",
+                    "secondary-fixed": "#d4e6e9",
+                    "on-tertiary-fixed-variant": "#6e3900",
+                    "on-error-container": "#93000a",
+                    "surface-bright": "#f7f9fb",
+                    "surface-container-high": "#e6e8ea",
+                    "on-secondary": "#ffffff",
+                    "on-error": "#ffffff",
+                    "inverse-surface": "#2d3133",
+                    "secondary-fixed-dim": "#b9cacd",
+                    "on-tertiary-container": "#fff3ec",
+                    "tertiary-container": "#ab5c00",
+                    "secondary": "#516164",
+                    "on-secondary-fixed-variant": "#3a494c",
+                    "on-primary-fixed-variant": "#004e5c",
+                    "surface-dim": "#d8dadc",
+                    "background": "#f7f9fb",
+                    "surface-tint": "#006879",
+                    "inverse-primary": "#7ad3e9",
+                    "on-secondary-fixed": "#0e1e21",
+                    "primary-fixed-dim": "#7ad3e9",
+                    "surface-container-low": "#f2f4f6",
+                    "secondary-container": "#d4e6e9",
+                    "primary": "#006071",
+                    "error": "#ba1a1a",
+                    "on-primary-fixed": "#001f26",
+                    "primary-container": "#007b8f",
+                    "inverse-on-surface": "#eff1f3",
+                    "surface-container": "#eceef0",
+                    "tertiary-fixed-dim": "#ffb77d",
+                    "on-primary-container": "#e3f9ff",
+                    "surface-container-highest": "#e0e3e5",
+                    "on-background": "#191c1e",
+                    "on-surface-variant": "#3e484b",
+                    "on-tertiary-fixed": "#2f1500",
+                    "tertiary-fixed": "#ffdcc3",
+                    "surface-container-lowest": "#ffffff",
+                    "surface": "#f7f9fb",
+                    "on-surface": "#191c1e"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "1rem",
+                    "xl": "1.5rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Manrope"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3, .font-headline { font-family: 'Manrope', sans-serif; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface">
+<!-- SideNavBar Shell -->
+<aside class="fixed left-0 top-0 h-full w-64 bg-slate-100 dark:bg-slate-950 flex flex-col py-8 px-4 font-inter text-sm font-medium z-50">
+<div class="mb-10 px-4">
+<h1 class="text-xl font-extrabold text-cyan-800 tracking-tighter">LingoFlow</h1>
+<p class="text-xs text-slate-500 font-medium tracking-wide">The Cognitive Sanctuary</p>
+</div>
+<nav class="flex-1 space-y-1">
+<!-- Active: Dashboard -->
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-cyan-800 dark:text-cyan-300 font-bold bg-slate-200 dark:bg-slate-900 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span>Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-900 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="movie_edit">movie_edit</span>
+<span>Import</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-900 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="style">style</span>
+<span>Vocabulary</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-900 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="leaderboard">leaderboard</span>
+<span>Progress</span>
+</a>
+<div class="pt-8 pb-4 px-4">
+<span class="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Categories</span>
+</div>
+<a class="flex items-center gap-3 px-4 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-200 transition-all" href="#">
+<span class="material-symbols-outlined text-xs" data-icon="folder">folder</span>
+<span>Travel</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-200 transition-all" href="#">
+<span class="material-symbols-outlined text-xs" data-icon="folder">folder</span>
+<span>Technology</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-200 transition-all" href="#">
+<span class="material-symbols-outlined text-xs" data-icon="sell">sell</span>
+<span>Beginner</span>
+</a>
+</nav>
+<div class="mt-auto space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-900 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+<span>Support</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-900 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+<span>Log out</span>
+</a>
+</div>
+</aside>
+<!-- TopAppBar Shell -->
+<header class="fixed top-0 w-full z-40 bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-xl flex justify-between items-center px-8 h-16 ml-64 font-manrope text-sm tracking-tight border-none">
+<div class="flex items-center gap-6 flex-1">
+<div class="relative w-full max-w-md">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
+<input class="w-full bg-surface-container-high border-none rounded-full py-2 pl-10 pr-4 focus:ring-2 focus:ring-primary/20 text-on-surface-variant" placeholder="Search your library..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4 mr-64">
+<button class="p-2 text-slate-500 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 rounded-full transition-colors">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="p-2 text-slate-500 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 rounded-full transition-colors">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container font-bold ml-2">
+                JD
+            </div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-64 pt-24 pb-12 px-12 min-h-screen bg-surface">
+<!-- Dashboard Header Area -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+<div>
+<h2 class="text-4xl font-extrabold tracking-tight text-on-surface mb-2">My Library</h2>
+<p class="text-on-surface-variant text-lg max-w-xl">Curate your personalized linguistic environment through visual storytelling.</p>
+</div>
+<!-- Import Button (Primary CTA) -->
+<button class="flex items-center gap-3 px-8 py-4 bg-gradient-to-br from-primary to-primary-container text-white rounded-xl font-bold title-sm shadow-lg shadow-primary/20 hover:scale-[1.02] transition-transform">
+<span class="material-symbols-outlined" data-icon="add_circle">add_circle</span>
+                Import New Video
+            </button>
+</div>
+<!-- Featured / Stats Section (Asymmetric) -->
+<div class="grid grid-cols-12 gap-8 mb-12">
+<div class="col-span-12 lg:col-span-8 bg-surface-container-lowest p-8 rounded-xl relative overflow-hidden">
+<div class="relative z-10">
+<span class="inline-block px-3 py-1 bg-tertiary-fixed text-on-tertiary-fixed text-[10px] font-bold uppercase tracking-widest rounded-full mb-4">Continuing Study</span>
+<h3 class="text-2xl font-bold mb-2">Modern Architecture in Tokyo</h3>
+<p class="text-on-surface-variant mb-6 text-sm">You've mastered 42% of the vocabulary in this lesson. Pick up where you left off.</p>
+<div class="w-full bg-surface-container-high h-2 rounded-full mb-8">
+<div class="bg-primary h-2 rounded-full" style="width: 42%"></div>
+</div>
+<button class="text-primary font-bold flex items-center gap-2 hover:underline">
+                        Resume Lesson <span class="material-symbols-outlined text-sm" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+<div class="absolute right-0 top-0 h-full w-1/3 opacity-10 pointer-events-none">
+<img alt="Abstract architectural patterns" class="object-cover h-full w-full" data-alt="Close-up of minimalist modern architecture with sharp shadows and geometric glass patterns in soft teal and white tones" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCWe1E_wgxie2zkEHvlBDpanZQsNqcw_6ighDU4YUzCN22Km5u79imnUzSJasIqGUTOETLt3PwX7CAmst5pqfdHLJ2bwx7VIr49-9KTeC73szhj93kEvt0NF9ufjA2VxAoG8qWoHb31OKU7HCAbW-FRFVRfY-PKB6X08TZdSzotOOhwrg5Zt3Bpo1_hGSRXLiGqoUfZFeUFtqD6tdig9ImAWboSWUHsJR_HIvdE92NFUXxdoA-n7uPDC1OTrrM7dCf2JsxTFHqqF2La"/>
+</div>
+</div>
+<div class="col-span-12 lg:col-span-4 grid grid-cols-1 gap-6">
+<div class="bg-primary-container/10 p-6 rounded-xl flex flex-col justify-center">
+<span class="text-primary font-bold text-3xl mb-1">12</span>
+<span class="text-on-surface-variant text-xs font-bold uppercase tracking-widest">New Words Today</span>
+</div>
+<div class="bg-secondary-container/20 p-6 rounded-xl flex flex-col justify-center">
+<span class="text-secondary font-bold text-3xl mb-1">4.5h</span>
+<span class="text-on-surface-variant text-xs font-bold uppercase tracking-widest">Active Listening</span>
+</div>
+</div>
+</div>
+<!-- Filters Bar -->
+<div class="flex items-center gap-4 mb-8 overflow-x-auto pb-2 scrollbar-hide">
+<button class="px-6 py-2 bg-primary text-white rounded-full text-sm font-bold">All Videos</button>
+<button class="px-6 py-2 bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high rounded-full text-sm font-medium transition-colors">Beginner</button>
+<button class="px-6 py-2 bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high rounded-full text-sm font-medium transition-colors">Intermediate</button>
+<button class="px-6 py-2 bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high rounded-full text-sm font-medium transition-colors">Tech</button>
+<button class="px-6 py-2 bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high rounded-full text-sm font-medium transition-colors">Travel</button>
+<div class="ml-auto flex items-center gap-2 text-on-surface-variant">
+<span class="text-sm font-medium">Sort:</span>
+<button class="flex items-center gap-1 text-sm font-bold text-on-surface">
+                    Recent <span class="material-symbols-outlined text-sm" data-icon="expand_more">expand_more</span>
+</button>
+</div>
+</div>
+<!-- Video Bento Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+<!-- Video Card 1 -->
+<div class="group cursor-pointer">
+<div class="relative aspect-video rounded-xl overflow-hidden mb-4 bg-surface-container-high shadow-sm transition-all group-hover:-translate-y-1">
+<img alt="Parisian cafe" class="w-full h-full object-cover" data-alt="Cinematic shot of a cozy Parisian cafe exterior at dusk with warm golden lighting and blurred street life" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBtcMxtg3gXewc4IRaXnndVmeaUaLPspup5CYtbQR_izO0JMCuLv_roKrHztTYMVU4QdejECigVvEJW5ui54ENfF8Sl6fM9JAL8sxfzBRPyKotZim1OXMEDvYJuawE2EhxHZJf0SuXR6Yf9HkfrVyHedi9EvtzR-uBCDbR1LuSf0qZfHIMRRzBj_DQwG0HydrFcw9JXQ9DSHyXn0U9JlXnrVhU6-lOdGAkHvq7mIrwahsbyQGef2hB13gk3X2gpgZvLgvfwd8YLDWkK"/>
+<div class="absolute bottom-2 right-2 px-2 py-1 bg-black/70 text-white text-[10px] font-bold rounded">12:45</div>
+<div class="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+<div class="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center text-primary shadow-xl">
+<span class="material-symbols-outlined text-3xl" data-icon="play_arrow" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex gap-2">
+<span class="text-[10px] font-bold uppercase tracking-wider text-primary">Travel</span>
+<span class="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">B1</span>
+</div>
+<h4 class="font-bold text-on-surface group-hover:text-primary transition-colors leading-tight">Walking Through the Latin Quarter</h4>
+<p class="text-xs text-on-surface-variant">Imported 2 days ago • 85% Studied</p>
+</div>
+</div>
+<!-- Video Card 2 -->
+<div class="group cursor-pointer">
+<div class="relative aspect-video rounded-xl overflow-hidden mb-4 bg-surface-container-high shadow-sm transition-all group-hover:-translate-y-1">
+<img alt="Silicon Valley office" class="w-full h-full object-cover" data-alt="Interior of a modern high-tech office with minimalist desks, glass walls, and lush indoor plants in bright natural light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA3O5VPMseMus5Zvt2eZOj97XhXA-D4xyz_uThfpQjK0hcqIHuGnS_LPfJuFRjghVRQG-F1WBMzSM9Ax1KRO1L2gs1ZlHUELxes55DnB24sQ7IBhyo2aEMbbxHstRn62WOGW2N3BxZdx_QeF4DHxziZz9Nl--SdGQcHh40AUagO7ABFCodGreUVUyOz1x49Vmy0pgrS5cliAQKqa4W83jIsDAnzLrf5wBoL7yfrlqq9MzLCS31obXYKxx_m-NGbGmrkDPe4nZUdezDl"/>
+<div class="absolute bottom-2 right-2 px-2 py-1 bg-black/70 text-white text-[10px] font-bold rounded">08:20</div>
+<div class="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+<div class="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center text-primary shadow-xl">
+<span class="material-symbols-outlined text-3xl" data-icon="play_arrow" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex gap-2">
+<span class="text-[10px] font-bold uppercase tracking-wider text-primary">Tech</span>
+<span class="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">A2</span>
+</div>
+<h4 class="font-bold text-on-surface group-hover:text-primary transition-colors leading-tight">Future of AI: Software Engineering</h4>
+<p class="text-xs text-on-surface-variant">Imported 5 days ago • 12% Studied</p>
+</div>
+</div>
+<!-- Video Card 3 -->
+<div class="group cursor-pointer">
+<div class="relative aspect-video rounded-xl overflow-hidden mb-4 bg-surface-container-high shadow-sm transition-all group-hover:-translate-y-1">
+<img alt="Japanese sushi chef" class="w-full h-full object-cover" data-alt="Close-up of a skilled sushi chef precisely slicing fresh tuna on a dark wood board with focused warm lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCDEAsZ57BjlIvGAuZIinRRZbF3gw9sIe_5Po-yNbGyZg_ZmAtpDEnzdVFAvCygh5-y9ZC4jCFXOhHbOPvrFHJ8lLxjrF8-mDadQMmmMptCzAeTNigQTfHSqY5nompt886J2jGWIHHCErJnvYZvjiNciqLSbEGJfUmAfD53jat_HByUSs_F0zllEYpg1Yexv8srQ9Ptl74YlGt1QdY6Zk1H6WngLMr3c2mPmsCXzITd5f1w6w6hXcsg5hTvsGf_tEJoYew0e25jwMwS"/>
+<div class="absolute bottom-2 right-2 px-2 py-1 bg-black/70 text-white text-[10px] font-bold rounded">15:10</div>
+<div class="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+<div class="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center text-primary shadow-xl">
+<span class="material-symbols-outlined text-3xl" data-icon="play_arrow" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex gap-2">
+<span class="text-[10px] font-bold uppercase tracking-wider text-primary">Culture</span>
+<span class="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">C1</span>
+</div>
+<h4 class="font-bold text-on-surface group-hover:text-primary transition-colors leading-tight">The Art of Omakase in Kyoto</h4>
+<p class="text-xs text-on-surface-variant">Imported 1 week ago • 0% Studied</p>
+</div>
+</div>
+<!-- Video Card 4 -->
+<div class="group cursor-pointer">
+<div class="relative aspect-video rounded-xl overflow-hidden mb-4 bg-surface-container-high shadow-sm transition-all group-hover:-translate-y-1">
+<img alt="Alpine mountains" class="w-full h-full object-cover" data-alt="Majestic snow-capped alpine peaks at sunrise with a misty valley below in soft blue and orange hues" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCLZ9BfqMddnBobq2rCc0Z3HvSTMZFhgr4-Ez2UdgmczaZ6yqE3Z13wn3PUaO2C3n8OZk57ke5U6aXmS0cgc-RRAH2P3TvzS5rpEG98bxYckttT5uG-7PsN9JKSJP1pFMnxG_8I6c8rayMg5vEjktw0Ba2y0sF3rWzSSoGAJueWAy9C67fAjdBhw3U1B1I9ZWACgwavDRSrN7ygPeCG4cGcM30U3GUiatg-NeorTDeFzAL6AYlJGyFjd4XIl31bd3G9gKVMwUA0HE--"/>
+<div class="absolute bottom-2 right-2 px-2 py-1 bg-black/70 text-white text-[10px] font-bold rounded">22:05</div>
+<div class="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+<div class="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center text-primary shadow-xl">
+<span class="material-symbols-outlined text-3xl" data-icon="play_arrow" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex gap-2">
+<span class="text-[10px] font-bold uppercase tracking-wider text-primary">Nature</span>
+<span class="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Beginner</span>
+</div>
+<h4 class="font-bold text-on-surface group-hover:text-primary transition-colors leading-tight">Swiss Alps: A Winter Documentary</h4>
+<p class="text-xs text-on-surface-variant">Imported 2 weeks ago • 100% Studied</p>
+</div>
+</div>
+<!-- Video Card 5 -->
+<div class="group cursor-pointer">
+<div class="relative aspect-video rounded-xl overflow-hidden mb-4 bg-surface-container-high shadow-sm transition-all group-hover:-translate-y-1">
+<img alt="Stock market charts" class="w-full h-full object-cover" data-alt="Dynamic glowing digital stock market charts and data visualizations on a dark interface with neon accents" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBKA3iL_5lLdzkAAWVhAwtD5Uj1k5LwYdBhXKj_YEldBhLU2W8Wnib6EvrqgZEIyRiTfaoMhbzPJyjkkIb5iaEZObvdt5_Fp0UjNSXFqV7-8DguNnvOmcMePznYrodbmRSqQlpuD-wuePIohRhqoEqwT7fF7Ojaf6nG29vYRCAbuHGVpipDZpLoM9pD-SBqUndkM3-idlNnoxcU9UAwP9qP9YEYYspIcdTgfMEfYwmRQGztvPte1b7C2Sn7HGN3j0-pJJIlKiGrUsO8"/>
+<div class="absolute bottom-2 right-2 px-2 py-1 bg-black/70 text-white text-[10px] font-bold rounded">06:15</div>
+<div class="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+<div class="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center text-primary shadow-xl">
+<span class="material-symbols-outlined text-3xl" data-icon="play_arrow" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex gap-2">
+<span class="text-[10px] font-bold uppercase tracking-wider text-primary">Business</span>
+<span class="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">B2</span>
+</div>
+<h4 class="font-bold text-on-surface group-hover:text-primary transition-colors leading-tight">Global Economy: 2024 Predictions</h4>
+<p class="text-xs text-on-surface-variant">Imported yesterday • 22% Studied</p>
+</div>
+</div>
+<!-- Empty State / Add New Placeholder -->
+<div class="group cursor-pointer">
+<div class="aspect-video rounded-xl border-2 border-dashed border-outline-variant flex flex-col items-center justify-center gap-3 bg-surface-container-low hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-outline text-3xl" data-icon="cloud_upload">cloud_upload</span>
+<span class="text-sm font-bold text-outline">Drop YouTube Link</span>
+</div>
+<div class="mt-4 opacity-0 group-hover:opacity-100 transition-opacity">
+<p class="text-xs text-center text-on-surface-variant">Quickly add to your sanctuary</p>
+</div>
+</div>
+</div>
+<!-- Pagination / Load More -->
+<div class="mt-20 flex justify-center">
+<button class="px-10 py-3 bg-surface-container-lowest border border-outline-variant/30 rounded-xl font-bold text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all">
+                Load More Content
+            </button>
+</div>
+</main>
+<!-- Vocabulary Chip Component Preview (Floating for demonstration) -->
+<div class="fixed bottom-8 right-8 bg-surface-container-lowest p-4 rounded-xl shadow-2xl max-w-xs border border-outline-variant/10 hidden md:block">
+<div class="flex items-center justify-between mb-3">
+<span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Quick Flashcard</span>
+<button class="text-on-surface-variant"><span class="material-symbols-outlined text-sm" data-icon="close">close</span></button>
+</div>
+<div class="bg-tertiary-fixed text-on-tertiary-fixed p-3 rounded-lg font-headline font-bold text-lg text-center mb-4">
+            Santé (n.f)
+        </div>
+<div class="space-y-1 text-xs">
+<p class="text-on-surface font-semibold">"À votre santé!"</p>
+<p class="text-on-surface-variant">Definition: Health, well-being. Used as a toast.</p>
+</div>
+<div class="flex gap-2 mt-4">
+<button class="flex-1 py-2 bg-secondary-container text-on-secondary-container rounded-lg text-[10px] font-bold uppercase tracking-wider hover:brightness-95 transition-all">Review Later</button>
+<button class="flex-1 py-2 bg-primary-container text-on-primary-container rounded-lg text-[10px] font-bold uppercase tracking-wider hover:brightness-95 transition-all">Mastered</button>
+</div>
+</div>
+</body></html>
