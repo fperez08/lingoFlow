@@ -23,30 +23,37 @@ LingoFlow is a web app that lets you import YouTube videos and manage their tran
    cd lingoFlow
    ```
 
-2. **Install dependencies**
+2. **Install dependencies and start**
 
    ```bash
    pnpm install
    ```
 
-## Environment Setup
-
-Create a `.env.local` file in the project root with the following variables:
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://<your-project>.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-anon-key>
-```
-
-Both values can be found in your [Supabase dashboard](https://supabase.com/dashboard) under **Project Settings → API**.
-
-## Running the App
+## Getting Started (one command)
 
 ```bash
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+No environment variables required. Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+## Local Data Storage
+
+All data is stored locally — no cloud services needed:
+
+| Path | Contents |
+|------|----------|
+| `.lingoflow-data/lingoflow.db` | SQLite database |
+| `.lingoflow-data/transcripts/` | Uploaded transcript files |
+
+The `.lingoflow-data/` directory is excluded from git (see `.gitignore`).
+
+## Out of Scope
+
+This app is intentionally local-first and single-user. The following are **not** supported:
+- Multi-user / authentication
+- Cloud deployment
+- Remote database (Supabase or similar)
 
 ## Running Tests
 
