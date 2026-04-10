@@ -2,8 +2,26 @@
 import { NextResponse } from 'next/server'
 import { getVideoById, deleteVideo, updateVideo, UpdateVideoParams } from '@/lib/videos'
 import { writeTranscript, deleteTranscript } from '@/lib/transcripts'
+import { getVideoStore } from '@/lib/server/composition'
 
 export const runtime = 'nodejs'
+
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+    const video = getVideoStore().getById(id)
+    if (!video) {
+      return new NextResponse('Not Found', { status: 404 })
+    }
+    return NextResponse.json(video)
+  } catch (error) {
+    console.error('GET video error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
 
 export async function DELETE(
   request: Request,
