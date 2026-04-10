@@ -1,0 +1,132 @@
+/**
+ * Unit tests for EditActions page-object.
+ * Mocks the Playwright Page API and verifies method→selector mappings.
+ */
+
+import { EditActions } from '../EditActions'
+
+function makeLocator(overrides: Partial<Record<string, jest.Mock>> = {}) {
+  const locator: Record<string, jest.Mock> = {
+    waitFor: jest.fn().mockResolvedValue(undefined),
+    fill: jest.fn().mockResolvedValue(undefined),
+    click: jest.fn().mockResolvedValue(undefined),
+    press: jest.fn().mockResolvedValue(undefined),
+    all: jest.fn().mockResolvedValue([]),
+    locator: jest.fn(),
+    getByRole: jest.fn(),
+    getByTestId: jest.fn(),
+    getByText: jest.fn(),
+    ...overrides,
+  }
+  locator.locator.mockReturnValue(locator)
+  locator.getByRole.mockReturnValue(locator)
+  locator.getByTestId.mockReturnValue(locator)
+  locator.getByText.mockReturnValue(locator)
+  return locator
+}
+
+function makePage() {
+  const locator = makeLocator()
+  const page = {
+    getByTestId: jest.fn().mockReturnValue(locator),
+    getByRole: jest.fn().mockReturnValue(locator),
+    getByText: jest.fn().mockReturnValue(locator),
+  }
+  return { page, locator }
+}
+
+describe('EditActions', () => {
+  it('clickEditOnCard() clicks the edit button at given index and waits for modal', async () => {
+    const editBtn0 = makeLocator()
+    const editBtn1 = makeLocator()
+    const btnListLocator = makeLocator()
+    btnListLocator.all.mockResolvedValue([editBtn0, editBtn1])
+
+    const gridLocator = makeLocator()
+    gridLocator.locator.mockReturnValue(btnListLocator)
+
+    const modalLocator = makeLocator()
+
+    const page = {
+      getByTestId: jest.fn().mockImplementation((id: string) => {
+        if (id === 'video-grid') return gridLocator
+        if (id === 'edit-modal') return modalLocator
+        return makeLocator()
+      }),
+      getByRole: jest.fn().mockReturnValue(makeLocator()),
+      getByText: jest.fn().mockReturnValue(makeLocator()),
+    }
+
+    const editActions = new EditActions(page as any)
+    await editActions.clickEditOnCard(1)
+
+    expect(editBtn1.click).toHaveBeenCalled()
+    expect(modalLocator.waitFor).toHaveBeenCalledWith({ state: 'visible' })
+  })
+
+  it('addTag() fills tag-input and presses Enter', async () => {
+    const tagInputLocator = makeLocator()
+    const page = {
+      getByTestId: jest.fn().mockImplementation((id: string) => {
+        if (id === 'tag-input') return tagInputLocator
+        return makeLocator()
+      }),
+      getByRole: jest.fn().mockReturnValue(makeLocator()),
+      getByText: jest.fn().mockReturnValue(makeLocator()),
+    }
+
+    const editActions = new EditActions(page as any)
+    await editActions.addTag('spanish')
+    expect(page.getByTestId).toHaveBeenCalledWith('tag-input')
+    expect(tagInputLocator.fill).toHaveBeenCalledWith('spanish')
+    expect(tagInputLocator.press).toHaveBeenCalledWith('Enter')
+  })
+
+  it('removeTag() clicks the remove-tag-{tagName} button', async () => {
+    const removeLocator = makeLocator()
+    const page = {
+      getByTestId: jest.fn().mockReturnValue(removeLocator),
+      getByRole: jest.fn().mockReturnValue(makeLocator()),
+      getByText: jest.fn().mockReturnValue(makeLocator()),
+    }
+
+    const editActions = new EditActions(page as any)
+    await editActions.removeTag('spanish')
+    expect(page.getByTestId).toHaveBeenCalledWith('remove-tag-spanish')
+    expect(removeLocator.click).toHaveBeenCalled()
+  })
+
+  it('clickSave() clicks Save button and waits for modal to close', async () => {
+    const saveBtn = makeLocator()
+    const modalLocator = makeLocator()
+    // Override getByRole to return saveBtn (after locator is constructed)
+    modalLocator.getByRole.mockReturnValue(saveBtn)
+
+    const page = {
+      getByTestId: jest.fn().mockReturnValue(modalLocator),
+      getByRole: jest.fn().mockReturnValue(makeLocator()),
+      getByText: jest.fn().mockReturnValue(makeLocator()),
+    }
+
+    const editActions = new EditActions(page as any)
+    await editActions.clickSave()
+    expect(modalLocator.getByRole).toHaveBeenCalledWith('button', { name: 'Save' })
+    expect(saveBtn.click).toHaveBeenCalled()
+    expect(modalLocator.waitFor).toHaveBeenCalledWith({ state: 'hidden' })
+  })
+
+  it('assertTagsSaved() waits for each tag text to be visible', async () => {
+    const tagLocator = makeLocator()
+    const page = {
+      getByTestId: jest.fn().mockReturnValue(makeLocator()),
+      getByRole: jest.fn().mockReturnValue(makeLocator()),
+      getByText: jest.fn().mockReturnValue(tagLocator),
+    }
+
+    const editActions = new EditActions(page as any)
+    await editActions.assertTagsSaved(['spanish', 'beginner'])
+    expect(page.getByText).toHaveBeenCalledWith('spanish')
+    expect(page.getByText).toHaveBeenCalledWith('beginner')
+    expect(tagLocator.waitFor).toHaveBeenCalledWith({ state: 'visible' })
+  })
+})

@@ -123,7 +123,7 @@ export default function ImportVideoModal({ isOpen, onClose, onSuccess }: ImportV
   const canSubmit = !isSubmitting && !isLoadingPreview && !previewError && !!transcriptFile && youtubeUrl.trim()
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div data-testid="import-modal" className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>Import Video</h2>
@@ -133,12 +133,13 @@ export default function ImportVideoModal({ isOpen, onClose, onSuccess }: ImportV
         </div>
 
         <form onSubmit={handleSubmit} className="import-form">
-          {submitError && <div className="error-message">{submitError}</div>}
+          {submitError && <div data-testid="import-error" className="error-message">{submitError}</div>}
 
           <div className="form-field">
             <label htmlFor="youtubeUrl">YouTube URL</label>
             <input
               id="youtubeUrl"
+              data-testid="youtube-url-input"
               type="text"
               placeholder="https://www.youtube.com/watch?v=..."
               value={youtubeUrl}
@@ -165,6 +166,7 @@ export default function ImportVideoModal({ isOpen, onClose, onSuccess }: ImportV
             <label htmlFor="transcript">Transcript File</label>
             <input
               id="transcript"
+              data-testid="transcript-input"
               type="file"
               accept=".srt,.vtt,.txt"
               onChange={(e) => setTranscriptFile(e.target.files?.[0] || null)}
@@ -178,6 +180,7 @@ export default function ImportVideoModal({ isOpen, onClose, onSuccess }: ImportV
             <label htmlFor="tags">Tags (comma-separated)</label>
             <input
               id="tags"
+              data-testid="tags-input"
               type="text"
               placeholder="e.g., spanish, beginner, news"
               value={tags}
@@ -190,7 +193,7 @@ export default function ImportVideoModal({ isOpen, onClose, onSuccess }: ImportV
             <button type="button" onClick={onClose} disabled={isSubmitting}>
               Cancel
             </button>
-            <button type="submit" disabled={!canSubmit}>
+            <button data-testid="submit-import-button" type="submit" disabled={!canSubmit}>
               {isSubmitting ? 'Importing...' : 'Import Video'}
             </button>
           </div>

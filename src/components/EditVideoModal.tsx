@@ -92,6 +92,7 @@ export default function EditVideoModal({ video, onClose, onSave }: EditVideoModa
       </div>
 
       <input
+        data-testid="tag-input"
         type="text"
         value={tagInput}
         onChange={(e) => setTagInput(e.target.value)}
