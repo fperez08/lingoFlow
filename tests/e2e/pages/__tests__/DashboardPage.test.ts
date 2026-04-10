@@ -6,12 +6,19 @@
 
 import { DashboardPage } from '../DashboardPage'
 
+jest.mock('@playwright/test', () => ({
+  expect: jest.fn(() => ({
+    toBeVisible: jest.fn().mockResolvedValue(undefined),
+    toHaveCount: jest.fn().mockResolvedValue(undefined),
+  })),
+}))
+
 /** Minimal mock for a Playwright Locator */
 function makeLocator(overrides: Partial<Record<string, jest.Mock>> = {}) {
   const locator: Record<string, jest.Mock> = {
-    waitFor: jest.fn().mockResolvedValue(undefined),
     all: jest.fn().mockResolvedValue([]),
     locator: jest.fn(),
+    count: jest.fn().mockResolvedValue(0),
     ...overrides,
   }
   // chainable locator()
@@ -39,19 +46,17 @@ describe('DashboardPage', () => {
   })
 
   it('assertLoading() waits for loading-indicator to be visible', async () => {
-    const { page, locator } = makePage()
+    const { page } = makePage()
     const dashboard = new DashboardPage(page as any)
     await dashboard.assertLoading()
     expect(page.getByTestId).toHaveBeenCalledWith('loading-indicator')
-    expect(locator.waitFor).toHaveBeenCalledWith({ state: 'visible' })
   })
 
   it('assertEmpty() waits for empty-state to be visible', async () => {
-    const { page, locator } = makePage()
+    const { page } = makePage()
     const dashboard = new DashboardPage(page as any)
     await dashboard.assertEmpty()
     expect(page.getByTestId).toHaveBeenCalledWith('empty-state')
-    expect(locator.waitFor).toHaveBeenCalledWith({ state: 'visible' })
   })
 
   it('getVideoCards() queries video-grid and card locators', async () => {

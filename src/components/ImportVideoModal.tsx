@@ -148,7 +148,7 @@ export default function ImportVideoModal({ isOpen, onClose, onSuccess }: ImportV
               required
             />
             {isLoadingPreview && <p className="loading-text">Loading preview...</p>}
-            {previewError && <p className="error-text">{previewError}</p>}
+            {previewError && <p data-testid="url-preview-error" className="error-text">{previewError}</p>}
           </div>
 
           {preview && (

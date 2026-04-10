@@ -67,7 +67,7 @@ test.describe('Delete video workflow', () => {
     })
 
     await dashboard.loadDashboard()
-    expect(await dashboard.getVideoCardCount()).toBe(1)
+    await dashboard.assertVideoCardCount(1)
 
     await deleteActions.clickDeleteOnCard(0)
     await deleteActions.confirmDelete()
@@ -98,13 +98,13 @@ test.describe('Delete video workflow', () => {
     })
 
     await dashboard.loadDashboard()
-    expect(await dashboard.getVideoCardCount()).toBe(2)
+    await dashboard.assertVideoCardCount(2)
 
     await deleteActions.clickDeleteOnCard(0)
     await deleteActions.confirmDelete()
 
     await deleteActions.assertCardRemoved(MOCK_VIDEO_1.id)
-    expect(await dashboard.getVideoCardCount()).toBe(1)
+    await dashboard.assertVideoCardCount(1)
     await expect(page.getByTestId(`video-card-${MOCK_VIDEO_2.id}`)).toBeVisible()
   })
 })

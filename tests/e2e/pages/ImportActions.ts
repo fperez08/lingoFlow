@@ -13,7 +13,9 @@
  *   await importActions.clickSubmitImport()
  */
 
-import type { Page } from '@playwright/test'
+import { expect, type Page, type Locator } from '@playwright/test'
+
+type TranscriptInput = Parameters<Locator['setInputFiles']>[0]
 
 export class ImportActions {
   readonly page: Page
@@ -24,9 +26,9 @@ export class ImportActions {
 
   /** Clicks the "Import Video" button on the dashboard to open the modal. */
   async clickImportButton(): Promise<void> {
-    await this.page.getByTestId('import-modal').waitFor({ state: 'hidden' }).catch(() => {})
+    await expect(this.page.getByTestId('import-modal')).toBeHidden()
     await this.page.getByRole('button', { name: 'Import Video' }).click()
-    await this.page.getByTestId('import-modal').waitFor({ state: 'visible' })
+    await expect(this.page.getByTestId('import-modal')).toBeVisible()
   }
 
   /** Fills the YouTube URL field in the import modal. */
@@ -38,8 +40,8 @@ export class ImportActions {
    * Sets the transcript file input using the provided file path.
    * @param filePath - Absolute or project-relative path to the transcript file.
    */
-  async fillTranscriptFile(filePath: string): Promise<void> {
-    await this.page.getByTestId('transcript-input').setInputFiles(filePath)
+  async fillTranscriptFile(file: TranscriptInput): Promise<void> {
+    await this.page.getByTestId('transcript-input').setInputFiles(file)
   }
 
   /** Fills the tags field in the import modal (comma-separated string). */
@@ -59,9 +61,9 @@ export class ImportActions {
    */
   async assertValidationError(message?: string): Promise<void> {
     const errorLocator = this.page.getByTestId('import-error')
-    await errorLocator.waitFor({ state: 'visible' })
+    await expect(errorLocator).toBeVisible()
     if (message !== undefined) {
-      await errorLocator.filter({ hasText: message }).waitFor({ state: 'visible' })
+      await expect(errorLocator).toContainText(message)
     }
   }
 }

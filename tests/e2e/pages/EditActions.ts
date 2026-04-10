@@ -14,7 +14,7 @@
  *   await editActions.assertTagsSaved(['newTag'])
  */
 
-import type { Page } from '@playwright/test'
+import { expect, type Page } from '@playwright/test'
 
 export class EditActions {
   readonly page: Page
@@ -29,12 +29,12 @@ export class EditActions {
    * @param index - Zero-based index of the card in the video grid.
    */
   async clickEditOnCard(index: number): Promise<void> {
-    const editButtons = await this.page
+    await this.page
       .getByTestId('video-grid')
       .locator('[data-testid="edit-button"]')
-      .all()
-    await editButtons[index].click()
-    await this.page.getByTestId('edit-modal').waitFor({ state: 'visible' })
+      .nth(index)
+      .click()
+    await expect(this.page.getByTestId('edit-modal')).toBeVisible()
   }
 
   /**
@@ -58,7 +58,7 @@ export class EditActions {
   /** Clicks the Save button in the edit modal and waits for the modal to close. */
   async clickSave(): Promise<void> {
     await this.page.getByTestId('edit-modal').getByRole('button', { name: 'Save' }).click()
-    await this.page.getByTestId('edit-modal').waitFor({ state: 'hidden' })
+    await expect(this.page.getByTestId('edit-modal')).toBeHidden()
   }
 
   /**
@@ -70,7 +70,7 @@ export class EditActions {
    */
   async assertTagsSaved(expectedTags: string[]): Promise<void> {
     for (const tag of expectedTags) {
-      await this.page.getByText(tag).waitFor({ state: 'visible' })
+      await expect(this.page.getByText(tag)).toBeVisible()
     }
   }
 }

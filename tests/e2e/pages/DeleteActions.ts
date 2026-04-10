@@ -12,7 +12,7 @@
  *   await deleteActions.assertCardRemoved('video-id-123')
  */
 
-import type { Page } from '@playwright/test'
+import { expect, type Page } from '@playwright/test'
 
 export class DeleteActions {
   readonly page: Page
@@ -27,18 +27,18 @@ export class DeleteActions {
    * @param index - Zero-based index of the card in the video grid.
    */
   async clickDeleteOnCard(index: number): Promise<void> {
-    const deleteButtons = await this.page
+    await this.page
       .getByTestId('video-grid')
       .locator('[data-testid="delete-button"]')
-      .all()
-    await deleteButtons[index].click()
-    await this.page.getByTestId('delete-modal').waitFor({ state: 'visible' })
+      .nth(index)
+      .click()
+    await expect(this.page.getByTestId('delete-modal')).toBeVisible()
   }
 
   /** Clicks the confirm-delete button and waits for the modal to close. */
   async confirmDelete(): Promise<void> {
     await this.page.getByTestId('confirm-delete-button').click()
-    await this.page.getByTestId('delete-modal').waitFor({ state: 'hidden' })
+    await expect(this.page.getByTestId('delete-modal')).toBeHidden()
   }
 
   /**
@@ -46,6 +46,6 @@ export class DeleteActions {
    * @param videoId - The video ID used in the `video-card-{id}` testid.
    */
   async assertCardRemoved(videoId: string): Promise<void> {
-    await this.page.getByTestId(`video-card-${videoId}`).waitFor({ state: 'hidden' })
+    await expect(this.page.getByTestId(`video-card-${videoId}`)).toBeHidden()
   }
 }

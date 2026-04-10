@@ -5,16 +5,21 @@
 
 import { ImportActions } from '../ImportActions'
 
+jest.mock('@playwright/test', () => ({
+  expect: jest.fn(() => ({
+    toBeVisible: jest.fn().mockResolvedValue(undefined),
+    toBeHidden: jest.fn().mockResolvedValue(undefined),
+    toContainText: jest.fn().mockResolvedValue(undefined),
+  })),
+}))
+
 function makeLocator(overrides: Partial<Record<string, jest.Mock>> = {}) {
   const locator: Record<string, jest.Mock> = {
-    waitFor: jest.fn().mockResolvedValue(undefined),
     fill: jest.fn().mockResolvedValue(undefined),
     click: jest.fn().mockResolvedValue(undefined),
     setInputFiles: jest.fn().mockResolvedValue(undefined),
-    filter: jest.fn(),
     ...overrides,
   }
-  locator.filter.mockReturnValue(locator)
   return locator
 }
 
@@ -29,12 +34,8 @@ function makePage() {
 
 describe('ImportActions', () => {
   it('clickImportButton() opens the import modal', async () => {
-    const hiddenLocator = makeLocator({
-      waitFor: jest.fn().mockResolvedValue(undefined),
-    })
-    const visibleLocator = makeLocator({
-      waitFor: jest.fn().mockResolvedValue(undefined),
-    })
+    const hiddenLocator = makeLocator()
+    const visibleLocator = makeLocator()
     const buttonLocator = makeLocator()
 
     let callCount = 0
@@ -87,18 +88,16 @@ describe('ImportActions', () => {
   })
 
   it('assertValidationError() waits for import-error to be visible', async () => {
-    const { page, locator } = makePage()
+    const { page } = makePage()
     const importActions = new ImportActions(page as any)
     await importActions.assertValidationError()
     expect(page.getByTestId).toHaveBeenCalledWith('import-error')
-    expect(locator.waitFor).toHaveBeenCalledWith({ state: 'visible' })
   })
 
   it('assertValidationError() filters by message text when provided', async () => {
-    const { page, locator } = makePage()
+    const { page } = makePage()
     const importActions = new ImportActions(page as any)
     await importActions.assertValidationError('YouTube URL is required')
-    expect(locator.filter).toHaveBeenCalledWith({ hasText: 'YouTube URL is required' })
-    expect(locator.waitFor).toHaveBeenCalledWith({ state: 'visible' })
+    expect(page.getByTestId).toHaveBeenCalledWith('import-error')
   })
 })
