@@ -60,6 +60,21 @@ describe('EditVideoModal', () => {
     expect(screen.getByText('subtitles.srt')).toBeInTheDocument()
   })
 
+  it('renders save button with correct testid', () => {
+    render(<EditVideoModal video={mockVideo} onClose={jest.fn()} onSave={jest.fn()} />)
+    expect(screen.getByTestId('save-button')).toBeInTheDocument()
+  })
+
+  it('shows edit-error testid when save fails', async () => {
+    global.fetch = jest.fn().mockResolvedValue({ ok: false, text: async () => 'Save failed' })
+    render(<EditVideoModal video={mockVideo} onClose={jest.fn()} onSave={jest.fn()} />)
+    fireEvent.click(screen.getByTestId('save-button'))
+    await waitFor(() => {
+      expect(screen.getByTestId('edit-error')).toBeInTheDocument()
+      expect(screen.getByTestId('edit-error')).toHaveTextContent('Save failed')
+    })
+  })
+
   it('disables Save button when isSaving', async () => {
     let resolveFetch: (value: unknown) => void
     const hangingPromise = new Promise((resolve) => { resolveFetch = resolve })

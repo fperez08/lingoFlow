@@ -152,7 +152,7 @@ export default function ImportVideoModal({ isOpen, onClose, onSuccess }: ImportV
           </div>
 
           {preview && (
-            <div className="preview-container">
+            <div data-testid="preview-container" className="preview-container">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={preview.thumbnail_url} alt={preview.title} className="preview-image" />
               <div className="preview-text">

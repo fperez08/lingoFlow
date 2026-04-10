@@ -74,7 +74,7 @@ export default function EditVideoModal({ video, onClose, onSave }: EditVideoModa
   return (
     <div data-testid="edit-modal">
       <h2>Edit Video</h2>
-      {error && <p role="alert">{error}</p>}
+      {error && <p data-testid="edit-error" role="alert">{error}</p>}
 
       <div>
         {tags.map((tag) => (
@@ -116,7 +116,7 @@ export default function EditVideoModal({ video, onClose, onSave }: EditVideoModa
         ✕
       </button>
       <button onClick={onClose}>Cancel</button>
-      <button onClick={handleSave} disabled={isSaving}>
+      <button data-testid="save-button" onClick={handleSave} disabled={isSaving}>
         {isSaving ? 'Saving...' : 'Save'}
       </button>
     </div>
