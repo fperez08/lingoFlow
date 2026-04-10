@@ -11,6 +11,8 @@
 import path from 'path'
 import { ensureDataDirs, openDb, initializeSchema } from '@/lib/db'
 import { VideoStore, SqliteVideoStore } from '@/lib/video-store'
+import { TranscriptStore, VideoService } from '@/lib/video-service'
+import { writeTranscript, deleteTranscript } from '@/lib/transcripts'
 
 let videoStore: VideoStore | null = null
 
@@ -23,4 +25,15 @@ export function getVideoStore(): VideoStore {
     videoStore = new SqliteVideoStore(db)
   }
   return videoStore
+}
+
+export function getTranscriptStore(): TranscriptStore {
+  return {
+    write: (videoId, ext, buffer) => writeTranscript(videoId, ext, buffer),
+    delete: (filePath) => deleteTranscript(filePath),
+  }
+}
+
+export function getVideoService(): VideoService {
+  return new VideoService(getVideoStore(), getTranscriptStore())
 }

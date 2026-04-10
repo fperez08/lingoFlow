@@ -1,8 +1,7 @@
 // @jest-environment node
 
 jest.mock('@/lib/youtube')
-jest.mock('@/lib/transcripts')
-jest.mock('@/lib/videos')
+jest.mock('@/lib/server/composition', () => ({ getVideoService: jest.fn() }))
 
 jest.mock('next/server', () => ({
   NextResponse: {
@@ -15,12 +14,16 @@ jest.mock('next/server', () => ({
 
 import { POST, ALLOWED_EXTENSIONS } from '../route'
 import { fetchYoutubeMetadata } from '@/lib/youtube'
-import { writeTranscript } from '@/lib/transcripts'
-import { insertVideo } from '@/lib/videos'
+import { getVideoService } from '@/lib/server/composition'
 
 const mockFetchYoutubeMetadata = fetchYoutubeMetadata as jest.MockedFunction<typeof fetchYoutubeMetadata>
-const mockWriteTranscript = writeTranscript as jest.MockedFunction<typeof writeTranscript>
-const mockInsertVideo = insertVideo as jest.MockedFunction<typeof insertVideo>
+const mockGetVideoService = getVideoService as jest.MockedFunction<typeof getVideoService>
+
+const fakeService = {
+  importVideo: jest.fn(),
+  updateVideo: jest.fn(),
+  deleteVideo: jest.fn(),
+}
 
 const fakeMetadata = {
   youtube_id: 'abc123',
@@ -59,8 +62,9 @@ describe('POST /api/videos/import', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockFetchYoutubeMetadata.mockResolvedValue(fakeMetadata)
-    mockWriteTranscript.mockReturnValue('/data/transcripts/video-uuid.srt')
-    mockInsertVideo.mockReturnValue(fakeVideo)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    mockGetVideoService.mockReturnValue(fakeService as any)
+    fakeService.importVideo.mockResolvedValue(fakeVideo)
   })
 
   it('returns 400 when youtube_url is empty string', async () => {
@@ -105,7 +109,7 @@ describe('POST /api/videos/import', () => {
 
   it('returns 201 with empty tags array when no tags provided', async () => {
     const fakeVideoNoTags = { ...fakeVideo, tags: [] }
-    mockInsertVideo.mockReturnValue(fakeVideoNoTags)
+    fakeService.importVideo.mockResolvedValue(fakeVideoNoTags)
     const content = '1\n00:00:01,000 --> 00:00:02,000\nHello'
     const transcriptFile = Object.assign(
       new File([content], 'transcript.srt', { type: 'text/plain' }),
@@ -121,7 +125,7 @@ describe('POST /api/videos/import', () => {
     expect(res.status).toBe(201)
     const body = await res.json()
     expect(body.tags).toEqual([])
-    expect(mockInsertVideo).toHaveBeenCalledWith(
+    expect(fakeService.importVideo).toHaveBeenCalledWith(
       expect.objectContaining({ tags: [] })
     )
   })
@@ -197,13 +201,13 @@ describe('POST /api/videos/import', () => {
     expect(res.status).toBe(201)
     const body = await res.json()
     expect(body).toEqual(fakeVideo)
-    expect(mockWriteTranscript).toHaveBeenCalled()
-    expect(mockInsertVideo).toHaveBeenCalledWith(
+    expect(fakeService.importVideo).toHaveBeenCalledWith(
       expect.objectContaining({
         youtube_url: 'https://www.youtube.com/watch?v=abc123',
-        transcript_format: 'srt',
+        transcript_ext: 'srt',
         tags: ['language', 'english'],
       })
     )
   })
 })
+
