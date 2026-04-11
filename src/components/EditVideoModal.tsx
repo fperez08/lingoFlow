@@ -72,53 +72,100 @@ export default function EditVideoModal({ video, onClose, onSave }: EditVideoModa
   }
 
   return (
-    <div data-testid="edit-modal">
-      <h2>Edit Video</h2>
-      {error && <p data-testid="edit-error" role="alert">{error}</p>}
+    <div
+      data-testid="edit-modal"
+      className="fixed inset-0 bg-black/40 backdrop-blur-[6px] z-50 flex items-center justify-center"
+      onClick={onClose}
+    >
+      <div
+        className="bg-surface-container-lowest/90 dark:bg-slate-900/90 backdrop-blur-[24px] rounded-xl shadow-2xl border border-outline-variant/20 dark:border-slate-700/30 w-full max-w-lg p-8 transition-all duration-300"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="font-headline text-2xl font-extrabold text-on-surface dark:text-slate-100">Edit Video</h2>
+          <button
+            onClick={onClose}
+            aria-label="Close modal"
+            className="text-on-surface-variant hover:text-on-surface transition-colors rounded-full p-1"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
+          </button>
+        </div>
 
-      <div>
-        {tags.map((tag) => (
-          <span key={tag} className="tag-pill">
-            {tag}
-            <button
-              data-testid={`remove-tag-${tag}`}
-              onClick={() => handleRemoveTag(tag)}
-              aria-label={`Remove tag ${tag}`}
-            >
-              x
-            </button>
-          </span>
-        ))}
+        {error && (
+          <div data-testid="edit-error" role="alert" className="bg-error-container text-on-error-container px-4 py-3 rounded-xl text-sm mb-5">
+            {error}
+          </div>
+        )}
+
+        <div className="space-y-5">
+          <div>
+            <span className="text-sm font-bold text-on-surface-variant mb-2 block">Tags</span>
+            <div className="flex flex-wrap gap-2 p-3 bg-surface-container-low rounded-xl border border-outline-variant/30 min-h-[48px]">
+              {tags.map((tag) => (
+                <span key={tag} className="flex items-center gap-1 px-3 py-1 bg-secondary-container text-on-secondary-container rounded-full text-sm font-medium">
+                  {tag}
+                  <button
+                    data-testid={`remove-tag-${tag}`}
+                    onClick={() => handleRemoveTag(tag)}
+                    aria-label={`Remove tag ${tag}`}
+                    className="ml-1 hover:text-on-surface-variant transition-colors"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </span>
+              ))}
+              <input
+                data-testid="tag-input"
+                type="text"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={handleTagKeyDown}
+                placeholder="Add a tag and press Enter"
+                aria-label="New tag"
+                className="bg-transparent border-none outline-none text-sm text-on-surface placeholder:text-on-surface-variant/50 min-w-[140px] flex-1"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="transcript-input" className="text-sm font-bold text-on-surface-variant mb-1 block">
+              Transcript file
+            </label>
+            <input
+              id="transcript-input"
+              type="file"
+              accept=".srt,.vtt,.txt"
+              onChange={(e) => setTranscript(e.target.files?.[0] ?? null)}
+              className="w-full px-4 py-3 bg-surface-container-low rounded-xl border border-outline-variant/30 text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all duration-300 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-primary/10 file:text-primary"
+            />
+            {transcript && (
+              <span className="text-xs text-on-surface-variant mt-1 block">{transcript.name}</span>
+            )}
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-3 pt-6">
+          <button
+            onClick={onClose}
+            className="px-6 py-3 bg-surface-container-high dark:bg-slate-800 text-on-surface-variant dark:text-slate-400 rounded-xl font-bold hover:bg-surface-container-highest dark:hover:bg-slate-700 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            data-testid="save-button"
+            onClick={handleSave}
+            disabled={isSaving}
+            className="bg-gradient-to-br from-primary to-primary-container text-white rounded-xl font-bold px-6 py-3 hover:scale-[1.02] transition-transform disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+          >
+            {isSaving ? 'Saving...' : 'Save'}
+          </button>
+        </div>
       </div>
-
-      <input
-        data-testid="tag-input"
-        type="text"
-        value={tagInput}
-        onChange={(e) => setTagInput(e.target.value)}
-        onKeyDown={handleTagKeyDown}
-        placeholder="Add a tag and press Enter"
-        aria-label="New tag"
-      />
-
-      <div>
-        <label htmlFor="transcript-input">Transcript file</label>
-        <input
-          id="transcript-input"
-          type="file"
-          accept=".srt,.vtt,.txt"
-          onChange={(e) => setTranscript(e.target.files?.[0] ?? null)}
-        />
-        {transcript && <span>{transcript.name}</span>}
-      </div>
-
-      <button onClick={onClose} aria-label="Close modal">
-        ✕
-      </button>
-      <button onClick={onClose}>Cancel</button>
-      <button data-testid="save-button" onClick={handleSave} disabled={isSaving}>
-        {isSaving ? 'Saving...' : 'Save'}
-      </button>
     </div>
   )
 }
