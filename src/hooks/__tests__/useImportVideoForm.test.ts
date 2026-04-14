@@ -419,4 +419,110 @@ describe('useImportVideoForm', () => {
       expect(formData.get('tags')).toBe('spanish, beginner')
     })
   })
+
+  describe('paste transcript mode', () => {
+    it('defaults transcriptMode to upload', () => {
+      const { result } = renderForm()
+      expect(result.current.transcriptMode).toBe('upload')
+      expect(result.current.pastedTranscript).toBe('')
+    })
+
+    it('setTranscriptMode to paste clears the transcript file', () => {
+      const { result } = renderForm()
+      act(() => {
+        result.current.setTranscriptFile(new File(['content'], 'transcript.srt'))
+      })
+      act(() => {
+        result.current.setTranscriptMode('paste')
+      })
+      expect(result.current.transcriptMode).toBe('paste')
+      expect(result.current.transcriptFile).toBeNull()
+    })
+
+    it('setTranscriptMode to upload clears the pasted transcript', () => {
+      const { result } = renderForm()
+      act(() => {
+        result.current.setTranscriptMode('paste')
+        result.current.setPastedTranscript('This is a long enough transcript')
+      })
+      act(() => {
+        result.current.setTranscriptMode('upload')
+      })
+      expect(result.current.transcriptMode).toBe('upload')
+      expect(result.current.pastedTranscript).toBe('')
+    })
+
+    it('canSubmit is false with fewer than 10 non-whitespace chars in paste mode', async () => {
+      const fetchMetadata = jest.fn().mockResolvedValue(mockMetadata)
+      const { result } = renderHook(() =>
+        useImportVideoForm({ onSuccess: jest.fn(), onClose: jest.fn(), fetchMetadata })
+      )
+      act(() => {
+        result.current.setYoutubeUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ')
+        result.current.setTranscriptMode('paste')
+        result.current.setPastedTranscript('short')
+      })
+      act(() => { jest.runAllTimers() })
+      await waitFor(() => expect(result.current.preview).not.toBeNull())
+      expect(result.current.canSubmit).toBe(false)
+    })
+
+    it('canSubmit is true with 10+ non-whitespace chars in paste mode', async () => {
+      const fetchMetadata = jest.fn().mockResolvedValue(mockMetadata)
+      const { result } = renderHook(() =>
+        useImportVideoForm({ onSuccess: jest.fn(), onClose: jest.fn(), fetchMetadata })
+      )
+      act(() => {
+        result.current.setYoutubeUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ')
+        result.current.setTranscriptMode('paste')
+        result.current.setPastedTranscript('This is a sufficiently long transcript text')
+      })
+      act(() => { jest.runAllTimers() })
+      await waitFor(() => expect(result.current.preview).not.toBeNull())
+      expect(result.current.canSubmit).toBe(true)
+    })
+
+    it('handleSubmit in paste mode creates a synthetic .txt File', async () => {
+      const fetchMetadata = jest.fn().mockResolvedValue(mockMetadata)
+      const onSuccess = jest.fn()
+      const onClose = jest.fn()
+      const { result } = renderHook(() =>
+        useImportVideoForm({ onSuccess, onClose, fetchMetadata })
+      )
+      ;(global.fetch as jest.Mock).mockResolvedValue({ ok: true, json: async () => ({}) })
+
+      act(() => {
+        result.current.setYoutubeUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ')
+        result.current.setTranscriptMode('paste')
+        result.current.setPastedTranscript('This is a sufficiently long transcript text')
+      })
+      act(() => { jest.runAllTimers() })
+      await waitFor(() => expect(result.current.preview).not.toBeNull())
+
+      await act(async () => {
+        await result.current.handleSubmit({ preventDefault: jest.fn() } as unknown as React.FormEvent)
+      })
+
+      expect(onSuccess).toHaveBeenCalledTimes(1)
+      const [, fetchOptions] = (global.fetch as jest.Mock).mock.calls[0]
+      const formData = fetchOptions.body as FormData
+      const transcriptEntry = formData.get('transcript') as File
+      expect(transcriptEntry).toBeInstanceOf(File)
+      expect(transcriptEntry.name).toBe('transcript.txt')
+      expect(transcriptEntry.type).toBe('text/plain')
+    })
+
+    it('handleSubmit in paste mode sets error when text is too short', async () => {
+      const { result } = renderForm()
+      act(() => {
+        result.current.setYoutubeUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ')
+        result.current.setTranscriptMode('paste')
+        result.current.setPastedTranscript('hi')
+      })
+      await act(async () => {
+        await result.current.handleSubmit({ preventDefault: jest.fn() } as unknown as React.FormEvent)
+      })
+      expect(result.current.submitError).toBe('Transcript must contain at least 10 non-whitespace characters')
+    })
+  })
 })

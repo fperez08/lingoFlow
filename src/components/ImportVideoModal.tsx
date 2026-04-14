@@ -14,6 +14,10 @@ export default function ImportVideoModal({ isOpen, onClose, onSuccess }: ImportV
     setYoutubeUrl,
     transcriptFile,
     setTranscriptFile,
+    transcriptMode,
+    setTranscriptMode,
+    pastedTranscript,
+    setPastedTranscript,
     tags,
     setTags,
     preview,
@@ -98,21 +102,64 @@ export default function ImportVideoModal({ isOpen, onClose, onSuccess }: ImportV
           )}
 
           <div>
-            <label htmlFor="transcript" className="text-sm font-bold text-on-surface-variant mb-1 block">
-              Transcript File
+            <label className="text-sm font-bold text-on-surface-variant mb-1 block">
+              Transcript
             </label>
-            <input
-              id="transcript"
-              data-testid="transcript-input"
-              type="file"
-              accept=".srt,.vtt,.txt"
-              onChange={(e) => setTranscriptFile(e.target.files?.[0] || null)}
-              disabled={isSubmitting}
-              required
-              className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-950/50 rounded-xl border border-outline-variant/30 dark:border-slate-700 text-on-surface dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all duration-300 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-primary/10 file:text-primary"
-            />
-            {transcriptFile && (
-              <p className="text-xs text-on-surface-variant mt-1">{transcriptFile.name}</p>
+            <div className="flex rounded-xl overflow-hidden border border-outline-variant/30 dark:border-slate-700 mb-3">
+              <button
+                type="button"
+                data-testid="transcript-mode-upload"
+                onClick={() => setTranscriptMode('upload')}
+                disabled={isSubmitting}
+                className={`flex-1 py-2 text-sm font-bold transition-colors ${
+                  transcriptMode === 'upload'
+                    ? 'bg-primary/10 text-primary'
+                    : 'bg-surface-container-low dark:bg-slate-950/50 text-on-surface-variant hover:bg-surface-container dark:hover:bg-slate-800'
+                }`}
+              >
+                Upload File
+              </button>
+              <button
+                type="button"
+                data-testid="transcript-mode-paste"
+                onClick={() => setTranscriptMode('paste')}
+                disabled={isSubmitting}
+                className={`flex-1 py-2 text-sm font-bold transition-colors ${
+                  transcriptMode === 'paste'
+                    ? 'bg-primary/10 text-primary'
+                    : 'bg-surface-container-low dark:bg-slate-950/50 text-on-surface-variant hover:bg-surface-container dark:hover:bg-slate-800'
+                }`}
+              >
+                Paste Text
+              </button>
+            </div>
+
+            {transcriptMode === 'upload' ? (
+              <>
+                <input
+                  id="transcript"
+                  data-testid="transcript-input"
+                  type="file"
+                  accept=".srt,.vtt,.txt"
+                  onChange={(e) => setTranscriptFile(e.target.files?.[0] || null)}
+                  disabled={isSubmitting}
+                  className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-950/50 rounded-xl border border-outline-variant/30 dark:border-slate-700 text-on-surface dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all duration-300 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-primary/10 file:text-primary"
+                />
+                {transcriptFile && (
+                  <p className="text-xs text-on-surface-variant mt-1">{transcriptFile.name}</p>
+                )}
+              </>
+            ) : (
+              <textarea
+                id="transcript-paste"
+                data-testid="transcript-paste-input"
+                placeholder="Paste your transcript here..."
+                value={pastedTranscript}
+                onChange={(e) => setPastedTranscript(e.target.value)}
+                disabled={isSubmitting}
+                rows={6}
+                className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-950/50 rounded-xl border border-outline-variant/30 dark:border-slate-700 text-on-surface dark:text-slate-100 placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all duration-300 resize-none"
+              />
             )}
           </div>
 
