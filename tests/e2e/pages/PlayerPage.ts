@@ -22,14 +22,16 @@ export class PlayerPage {
     this.vocabTab = page.getByTestId('tab-vocabulary')
   }
 
-  /** Navigates to the player page for the given video id and waits for network idle. */
+  /** Navigates to the player page for the given video id and waits for the player client to attach. */
   async navigateTo(id: string): Promise<void> {
-    await this.page.goto(`/player/${id}`, { waitUntil: 'networkidle' })
+    await this.page.goto(`/player/${id}`)
+    await expect(this.playerClient).toBeAttached({ timeout: 30_000 })
   }
 
-  /** Asserts the player client container is visible. */
+  /** Asserts the player client container is attached and visible. */
   async assertLoaded(): Promise<void> {
-    await expect(this.playerClient).toBeVisible()
+    await expect(this.playerClient).toBeAttached({ timeout: 30_000 })
+    await expect(this.playerClient).toBeVisible({ timeout: 30_000 })
   }
 
   /** Clicks the Vocabulary tab. */
