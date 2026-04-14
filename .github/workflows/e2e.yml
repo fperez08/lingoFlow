@@ -7,7 +7,7 @@ on:
 
 permissions:
   contents: read
-  pull-requests: read
+  pull-requests: write
   issues: write
 
 jobs:
@@ -50,7 +50,18 @@ jobs:
       - name: Run E2E tests
         env:
           E2E_STUB_YOUTUBE: true
-        run: pnpm test:e2e --reporter=html,json
+        run: pnpm test:e2e
+
+      - name: Publish Test Report
+        uses: ctrf-io/github-test-reporter@v1
+        with:
+          report-path: './ctrf/*.json'
+          summary-report: true
+          failed-report: true
+          pull-request-report: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: always()
 
       - name: Upload Playwright report on failure
         if: failure()

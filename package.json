@@ -35,6 +35,7 @@
     "eslint-config-next": "16.2.3",
     "jest": "^30.3.0",
     "jest-environment-jsdom": "^30.3.0",
+    "playwright-ctrf-json-reporter": "^0.0.29",
     "ts-jest": "^29.4.9",
     "ts-node": "^10.9.2",
     "typescript": "^5"
