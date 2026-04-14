@@ -5,6 +5,7 @@ import {
   fetchYoutubeMetadata as defaultFetchMetadata,
   YoutubeMetadataError,
 } from '@/lib/youtube'
+import { detectPastedTranscriptFormat } from '@/lib/detect-transcript-format'
 
 interface YoutubePreview {
   title: string
@@ -134,10 +135,13 @@ export function useImportVideoForm({
     setIsSubmitting(true)
 
     try {
-      const fileToSubmit =
-        transcriptMode === 'paste'
-          ? new File([pastedTranscript], 'transcript.txt', { type: 'text/plain' })
-          : transcriptFile!
+      const fileToSubmit = (() => {
+        if (transcriptMode === 'paste') {
+          const ext = detectPastedTranscriptFormat(pastedTranscript)
+          return new File([pastedTranscript], `transcript.${ext}`, { type: 'text/plain' })
+        }
+        return transcriptFile!
+      })()
 
       const formData = new FormData()
       formData.append('youtube_url', youtubeUrl)
