@@ -47,3 +47,6 @@ package-lock.json
 # Playwright artifacts
 playwright-report/
 
+
+# CTRF test reports (generated)
+ctrf/
