@@ -492,7 +492,6 @@ describe('useImportVideoForm', () => {
       ;(global.fetch as jest.Mock).mockResolvedValue({ ok: true, json: async () => ({}) })
 
       const appendSpy = jest.spyOn(FormData.prototype, 'append')
-
       act(() => {
         result.current.setYoutubeUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ')
         result.current.setTranscriptMode('paste')
