@@ -5,6 +5,7 @@ import {
   fetchYoutubeMetadata as defaultFetchMetadata,
   YoutubeMetadataError,
 } from '@/lib/youtube'
+import { detectPastedTranscriptFormat } from '@/lib/detect-transcript-format'
 
 interface YoutubePreview {
   title: string
@@ -18,11 +19,17 @@ interface UseImportVideoFormOptions {
   fetchMetadata?: typeof defaultFetchMetadata
 }
 
+export type TranscriptMode = 'upload' | 'paste'
+
 export interface UseImportVideoFormResult {
   youtubeUrl: string
   setYoutubeUrl: (url: string) => void
   transcriptFile: File | null
   setTranscriptFile: (file: File | null) => void
+  transcriptMode: TranscriptMode
+  setTranscriptMode: (mode: TranscriptMode) => void
+  pastedTranscript: string
+  setPastedTranscript: (text: string) => void
   tags: string
   setTags: (tags: string) => void
   preview: YoutubePreview | null
@@ -41,12 +48,23 @@ export function useImportVideoForm({
 }: UseImportVideoFormOptions): UseImportVideoFormResult {
   const [youtubeUrl, setYoutubeUrl] = useState('')
   const [transcriptFile, setTranscriptFile] = useState<File | null>(null)
+  const [transcriptMode, setTranscriptModeState] = useState<TranscriptMode>('upload')
+  const [pastedTranscript, setPastedTranscript] = useState('')
   const [tags, setTags] = useState('')
   const [preview, setPreview] = useState<YoutubePreview | null>(null)
   const [previewError, setPreviewError] = useState<string | null>(null)
   const [isLoadingPreview, setIsLoadingPreview] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+
+  const setTranscriptMode = useCallback((mode: TranscriptMode) => {
+    setTranscriptModeState(mode)
+    if (mode === 'paste') {
+      setTranscriptFile(null)
+    } else {
+      setPastedTranscript('')
+    }
+  }, [])
 
   const fetchPreview = useCallback(
     async (url: string) => {
@@ -94,7 +112,12 @@ export function useImportVideoForm({
       return
     }
 
-    if (!transcriptFile) {
+    if (transcriptMode === 'paste') {
+      if (pastedTranscript.replace(/\s/g, '').length < 10) {
+        setSubmitError('Transcript must contain at least 10 non-whitespace characters')
+        return
+      }
+    } else if (!transcriptFile) {
       setSubmitError('Transcript file is required')
       return
     }
@@ -112,9 +135,17 @@ export function useImportVideoForm({
     setIsSubmitting(true)
 
     try {
+      const fileToSubmit = (() => {
+        if (transcriptMode === 'paste') {
+          const ext = detectPastedTranscriptFormat(pastedTranscript)
+          return new File([pastedTranscript], `transcript.${ext}`, { type: 'text/plain' })
+        }
+        return transcriptFile!
+      })()
+
       const formData = new FormData()
       formData.append('youtube_url', youtubeUrl)
-      formData.append('transcript', transcriptFile)
+      formData.append('transcript', fileToSubmit)
       if (tags.trim()) {
         formData.append('tags', tags)
       }
@@ -133,6 +164,8 @@ export function useImportVideoForm({
       onClose()
       setYoutubeUrl('')
       setTranscriptFile(null)
+      setPastedTranscript('')
+      setTranscriptModeState('upload')
       setTags('')
       setPreview(null)
     } catch (error) {
@@ -142,14 +175,21 @@ export function useImportVideoForm({
     }
   }
 
-  const canSubmit =
-    !isSubmitting && !isLoadingPreview && !previewError && !!transcriptFile && !!youtubeUrl.trim()
+  const canSubmit = (() => {
+    if (isSubmitting || isLoadingPreview || !!previewError || !youtubeUrl.trim()) return false
+    if (transcriptMode === 'paste') return pastedTranscript.replace(/\s/g, '').length >= 10
+    return !!transcriptFile
+  })()
 
   return {
     youtubeUrl,
     setYoutubeUrl,
     transcriptFile,
     setTranscriptFile,
+    transcriptMode,
+    setTranscriptMode,
+    pastedTranscript,
+    setPastedTranscript,
     tags,
     setTags,
     preview,

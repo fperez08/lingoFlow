@@ -419,4 +419,182 @@ describe('useImportVideoForm', () => {
       expect(formData.get('tags')).toBe('spanish, beginner')
     })
   })
+
+  describe('paste transcript mode', () => {
+    it('defaults transcriptMode to upload', () => {
+      const { result } = renderForm()
+      expect(result.current.transcriptMode).toBe('upload')
+      expect(result.current.pastedTranscript).toBe('')
+    })
+
+    it('setTranscriptMode to paste clears the transcript file', () => {
+      const { result } = renderForm()
+      act(() => {
+        result.current.setTranscriptFile(new File(['content'], 'transcript.srt'))
+      })
+      act(() => {
+        result.current.setTranscriptMode('paste')
+      })
+      expect(result.current.transcriptMode).toBe('paste')
+      expect(result.current.transcriptFile).toBeNull()
+    })
+
+    it('setTranscriptMode to upload clears the pasted transcript', () => {
+      const { result } = renderForm()
+      act(() => {
+        result.current.setTranscriptMode('paste')
+        result.current.setPastedTranscript('This is a long enough transcript')
+      })
+      act(() => {
+        result.current.setTranscriptMode('upload')
+      })
+      expect(result.current.transcriptMode).toBe('upload')
+      expect(result.current.pastedTranscript).toBe('')
+    })
+
+    it('canSubmit is false with fewer than 10 non-whitespace chars in paste mode', async () => {
+      const fetchMetadata = jest.fn().mockResolvedValue(mockMetadata)
+      const { result } = renderHook(() =>
+        useImportVideoForm({ onSuccess: jest.fn(), onClose: jest.fn(), fetchMetadata })
+      )
+      act(() => {
+        result.current.setYoutubeUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ')
+        result.current.setTranscriptMode('paste')
+        result.current.setPastedTranscript('short')
+      })
+      act(() => { jest.runAllTimers() })
+      await waitFor(() => expect(result.current.preview).not.toBeNull())
+      expect(result.current.canSubmit).toBe(false)
+    })
+
+    it('canSubmit is true with 10+ non-whitespace chars in paste mode', async () => {
+      const fetchMetadata = jest.fn().mockResolvedValue(mockMetadata)
+      const { result } = renderHook(() =>
+        useImportVideoForm({ onSuccess: jest.fn(), onClose: jest.fn(), fetchMetadata })
+      )
+      act(() => {
+        result.current.setYoutubeUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ')
+        result.current.setTranscriptMode('paste')
+        result.current.setPastedTranscript('This is a sufficiently long transcript text')
+      })
+      act(() => { jest.runAllTimers() })
+      await waitFor(() => expect(result.current.preview).not.toBeNull())
+      expect(result.current.canSubmit).toBe(true)
+    })
+
+    it('handleSubmit in paste mode creates a synthetic .txt File for plain text', async () => {
+      const fetchMetadata = jest.fn().mockResolvedValue(mockMetadata)
+      const onSuccess = jest.fn()
+      const onClose = jest.fn()
+      const { result } = renderHook(() =>
+        useImportVideoForm({ onSuccess, onClose, fetchMetadata })
+      )
+      ;(global.fetch as jest.Mock).mockResolvedValue({ ok: true, json: async () => ({}) })
+
+      const appendSpy = jest.spyOn(FormData.prototype, 'append')
+
+      act(() => {
+        result.current.setYoutubeUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ')
+        result.current.setTranscriptMode('paste')
+        result.current.setPastedTranscript('This is a sufficiently long transcript text')
+      })
+      act(() => { jest.runAllTimers() })
+      await waitFor(() => expect(result.current.preview).not.toBeNull())
+
+      await act(async () => {
+        await result.current.handleSubmit({ preventDefault: jest.fn() } as unknown as React.FormEvent)
+      })
+
+      expect(onSuccess).toHaveBeenCalledTimes(1)
+      const transcriptCall = appendSpy.mock.calls.find(([key]) => key === 'transcript')
+      expect(transcriptCall).toBeDefined()
+      const file = transcriptCall![1] as File
+      expect(file).toBeInstanceOf(File)
+      expect(file.name).toBe('transcript.txt')
+      expect(file.type).toBe('text/plain')
+
+      appendSpy.mockRestore()
+    })
+
+    it('handleSubmit in paste mode creates a synthetic .vtt File for VTT content', async () => {
+      const fetchMetadata = jest.fn().mockResolvedValue(mockMetadata)
+      const onSuccess = jest.fn()
+      const onClose = jest.fn()
+      const { result } = renderHook(() =>
+        useImportVideoForm({ onSuccess, onClose, fetchMetadata })
+      )
+      ;(global.fetch as jest.Mock).mockResolvedValue({ ok: true, json: async () => ({}) })
+
+      const appendSpy = jest.spyOn(FormData.prototype, 'append')
+
+      const vttContent = 'WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nHello world'
+      act(() => {
+        result.current.setYoutubeUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ')
+        result.current.setTranscriptMode('paste')
+        result.current.setPastedTranscript(vttContent)
+      })
+      act(() => { jest.runAllTimers() })
+      await waitFor(() => expect(result.current.preview).not.toBeNull())
+
+      await act(async () => {
+        await result.current.handleSubmit({ preventDefault: jest.fn() } as unknown as React.FormEvent)
+      })
+
+      expect(onSuccess).toHaveBeenCalledTimes(1)
+      const transcriptCall = appendSpy.mock.calls.find(([key]) => key === 'transcript')
+      expect(transcriptCall).toBeDefined()
+      const file = transcriptCall![1] as File
+      expect(file).toBeInstanceOf(File)
+      expect(file.name).toBe('transcript.vtt')
+
+      appendSpy.mockRestore()
+    })
+
+    it('handleSubmit in paste mode creates a synthetic .srt File for SRT content', async () => {
+      const fetchMetadata = jest.fn().mockResolvedValue(mockMetadata)
+      const onSuccess = jest.fn()
+      const onClose = jest.fn()
+      const { result } = renderHook(() =>
+        useImportVideoForm({ onSuccess, onClose, fetchMetadata })
+      )
+      ;(global.fetch as jest.Mock).mockResolvedValue({ ok: true, json: async () => ({}) })
+
+      const appendSpy = jest.spyOn(FormData.prototype, 'append')
+
+      const srtContent = '1\n00:00:01,000 --> 00:00:02,000\nHello world\n\n2\n00:00:03,000 --> 00:00:04,000\nFoo bar'
+      act(() => {
+        result.current.setYoutubeUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ')
+        result.current.setTranscriptMode('paste')
+        result.current.setPastedTranscript(srtContent)
+      })
+      act(() => { jest.runAllTimers() })
+      await waitFor(() => expect(result.current.preview).not.toBeNull())
+
+      await act(async () => {
+        await result.current.handleSubmit({ preventDefault: jest.fn() } as unknown as React.FormEvent)
+      })
+
+      expect(onSuccess).toHaveBeenCalledTimes(1)
+      const transcriptCall = appendSpy.mock.calls.find(([key]) => key === 'transcript')
+      expect(transcriptCall).toBeDefined()
+      const file = transcriptCall![1] as File
+      expect(file).toBeInstanceOf(File)
+      expect(file.name).toBe('transcript.srt')
+
+      appendSpy.mockRestore()
+    })
+
+    it('handleSubmit in paste mode sets error when text is too short', async () => {
+      const { result } = renderForm()
+      act(() => {
+        result.current.setYoutubeUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ')
+        result.current.setTranscriptMode('paste')
+        result.current.setPastedTranscript('hi')
+      })
+      await act(async () => {
+        await result.current.handleSubmit({ preventDefault: jest.fn() } as unknown as React.FormEvent)
+      })
+      expect(result.current.submitError).toBe('Transcript must contain at least 10 non-whitespace characters')
+    })
+  })
 })
