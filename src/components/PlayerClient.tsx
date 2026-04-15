@@ -5,6 +5,7 @@ import { Video } from '@/lib/videos'
 import { TranscriptCue } from '@/lib/parse-transcript'
 import LessonHero from '@/components/LessonHero'
 import MiniPlayer from '@/components/MiniPlayer'
+import PlaybackProgress from '@/components/PlaybackProgress'
 
 interface WordCard {
   word: string
@@ -28,6 +29,16 @@ export default function PlayerClient({ video }: { video: Video }) {
   const [activeTab, setActiveTab] = useState<'transcript' | 'vocabulary'>('transcript')
   const [vocabWords, setVocabWords] = useState<WordCard[]>([])
   const [isMiniPlayerOpen, setIsMiniPlayerOpen] = useState(false)
+  const [playbackTime, setPlaybackTime] = useState({ current: 0, duration: 0 })
+
+  function handleTimeUpdate(current: number, duration: number) {
+    setPlaybackTime({ current, duration })
+  }
+
+  function handleClose() {
+    setIsMiniPlayerOpen(false)
+    setPlaybackTime({ current: 0, duration: 0 })
+  }
 
   useEffect(() => {
     fetch(`/api/videos/${video.id}/transcript`)
@@ -57,13 +68,20 @@ export default function PlayerClient({ video }: { video: Video }) {
       {/* Main content */}
       <section className="flex-1 p-8 bg-surface dark:bg-slate-900 overflow-y-auto">
         <LessonHero video={video} onPlay={() => setIsMiniPlayerOpen(true)} />
+        {isMiniPlayerOpen && (
+          <PlaybackProgress
+            currentTime={playbackTime.current}
+            duration={playbackTime.duration}
+          />
+        )}
       </section>
 
       {isMiniPlayerOpen && (
         <MiniPlayer
           youtubeId={video.youtube_id}
           title={video.title}
-          onClose={() => setIsMiniPlayerOpen(false)}
+          onClose={handleClose}
+          onTimeUpdate={handleTimeUpdate}
         />
       )}
 
