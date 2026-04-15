@@ -725,3 +725,411 @@ Use `// @jest-environment jsdom` (default) for all component tests. Mock `fetch`
 | Page indicator | `transcript-page-indicator` |
 
 These follow the existing `data-testid` naming convention (`cue-{i}`, `tab-transcript`, etc.) already used in `PlayerClient`.
+
+---
+
+## 10. Word-level Karaoke Highlighting — Issue #122
+
+### Goal
+
+Within the **active** transcript cue, progressively highlight each word as playback moves through the cue using proportional timing interpolation. Allow clicking any cue (active or not) to seek playback to that cue's start timestamp.
+
+This feature builds on Issue #121: `currentTime` is already threaded into `PlayerClient` via `onTimeUpdate`, and `TranscriptPanel` already receives the active cue index. Issue #122 extends `TranscriptPanel` to also receive `currentTime` for in-cue word highlighting, and wires a `seekTo` imperative handle from `MiniPlayer` up through `PlayerClient` to `TranscriptPanel`.
+
+---
+
+### 10.1 Word Tokenization
+
+Add a `tokenizeWords` utility to `src/lib/parse-transcript.ts` (alongside the existing `parseTimeToSeconds` and `findActiveCueIndex`):
+
+```ts
+// src/lib/parse-transcript.ts
+export function tokenizeWords(text: string): string[] {
+  return text.split(/\s+/).filter(Boolean)
+}
+```
+
+**Design decisions:**
+- Split on whitespace only — punctuation stays attached to the adjacent word (e.g., `"hello,"` is one token). This avoids stripping meaning from abbreviations, hyphenated words, and contractions.
+- The `filter(Boolean)` removes empty strings from leading/trailing whitespace or multiple consecutive spaces.
+- The result is `string[]` — raw display tokens, not normalized. The component renders each token as-is.
+
+---
+
+### 10.2 Proportional Word Index Formula
+
+For the active cue, the highlighted word index is computed from the current playback position within the cue:
+
+```ts
+const cueStart = parseTimeToSeconds(activeCue.startTime)
+const cueEnd   = parseTimeToSeconds(activeCue.endTime)
+const cueDuration = cueEnd - cueStart
+
+const elapsed  = currentTime - cueStart
+const fraction = cueDuration > 0 ? Math.min(Math.max(elapsed / cueDuration, 0), 1) : 0
+
+const highlightedIndex = Math.min(
+  Math.floor(fraction * words.length),
+  words.length - 1
+)
+```
+
+**Edge cases:**
+- `cueDuration === 0` (plain-text cues with empty timestamps) → `fraction` is `0` → first word is highlighted. Acceptable: plain-text transcripts have no timing data.
+- `elapsed < 0` (clock skew or the cue just became active) → clamped to `0` → first word highlighted.
+- `elapsed >= cueDuration` → clamped to `1.0` → last word highlighted.
+- Single-word cue → `highlightedIndex` always `0`.
+
+---
+
+### 10.3 `CueText` Sub-component (New)
+
+Extract the word-level rendering for the active cue into a dedicated component:
+
+```ts
+// src/components/CueText.tsx
+interface CueTextProps {
+  text: string
+  cueStart: number       // parseTimeToSeconds(cue.startTime) — seconds
+  cueEnd: number         // parseTimeToSeconds(cue.endTime) — seconds
+  currentTime: number    // absolute playback time in seconds (from PlayerClient state)
+  onWordClick?: (seekTime: number) => void  // called with cueStart for all words
+}
+```
+
+**Rendering rules:**
+- Words **before** `highlightedIndex`: muted / past styling (`opacity-50 text-on-surface-variant`)
+- Word **at** `highlightedIndex`: active / karaoke styling (`bg-primary text-on-primary rounded px-0.5`)
+- Words **after** `highlightedIndex`: default styling (`text-on-surface`)
+
+```tsx
+// Minimal implementation
+'use client'
+
+import { tokenizeWords, parseTimeToSeconds } from '@/lib/parse-transcript'
+
+export default function CueText({ text, cueStart, cueEnd, currentTime, onWordClick }: CueTextProps) {
+  const words = tokenizeWords(text)
+  const cueDuration = cueEnd - cueStart
+  const elapsed     = currentTime - cueStart
+  const fraction    = cueDuration > 0 ? Math.min(Math.max(elapsed / cueDuration, 0), 1) : 0
+  const highlightedIndex = Math.min(Math.floor(fraction * words.length), words.length - 1)
+
+  return (
+    <p
+      data-testid="cue-text"
+      className="text-sm text-on-surface dark:text-slate-100 leading-relaxed flex flex-wrap gap-x-1"
+    >
+      {words.map((word, i) => (
+        <span
+          key={i}
+          data-testid={`word-${i}`}
+          onClick={() => onWordClick?.(cueStart)}
+          className={`cursor-pointer rounded transition-colors ${
+            i < highlightedIndex
+              ? 'opacity-50 text-on-surface-variant dark:text-slate-400'
+              : i === highlightedIndex
+              ? 'bg-primary text-on-primary px-0.5'
+              : 'text-on-surface dark:text-slate-100'
+          }`}
+        >
+          {word}
+        </span>
+      ))}
+    </p>
+  )
+}
+```
+
+> **Why `onWordClick` always receives `cueStart`:** SRT/VTT transcripts only have cue-level timestamps — individual words have no timestamps. Seeking to the cue's start time is the most useful UX: it rewinds to the beginning of the sentence being clicked.
+
+---
+
+### 10.4 `TranscriptPanel` Changes
+
+Add two new **optional** props to `TranscriptPanel`:
+
+```ts
+interface TranscriptPanelProps {
+  cues: TranscriptCue[]
+  activeCueIndex: number
+  currentPage: number
+  onPageChange: (page: number) => void
+  loading: boolean
+  currentTime?: number                    // NEW — absolute playback time (seconds); drives CueText
+  onSeek?: (seconds: number) => void      // NEW — called when a cue or word is clicked
+}
+```
+
+Both props are optional so `TranscriptPanel` remains usable before `MiniPlayer` is open (when there is no live `currentTime`).
+
+**Changes inside the component:**
+
+1. **Active cue rendering** — replace the current `<p>{cue.text}</p>` inside the active branch with `<CueText>`:
+   ```tsx
+   {isActive ? (
+     <CueText
+       text={cue.text}
+       cueStart={parseTimeToSeconds(cue.startTime)}
+       cueEnd={parseTimeToSeconds(cue.endTime)}
+       currentTime={currentTime ?? 0}
+       onWordClick={onSeek}
+     />
+   ) : (
+     cue.text
+   )}
+   ```
+
+2. **Click-to-seek on all cue rows** — add `onClick` to the cue `<div>`:
+   ```tsx
+   <div
+     key={cue.index}
+     ref={isActive ? activeCueRef : null}
+     data-testid={isActive ? 'cue-active' : `cue-${i}`}
+     onClick={() => onSeek?.(parseTimeToSeconds(cue.startTime))}
+     className={`cursor-pointer transition-all ...`}
+   >
+   ```
+   When `onSeek` is not provided, clicking is a no-op (the handler is absent / does nothing). No `cursor-pointer` style change is needed — it is already in the existing class list.
+
+3. **Import additions** needed in `TranscriptPanel.tsx`:
+   ```ts
+   import { parseTimeToSeconds } from '@/lib/parse-transcript'
+   import CueText from '@/components/CueText'
+   ```
+
+---
+
+### 10.5 `MiniPlayer` — Expose `seekTo` via Imperative Handle
+
+`MiniPlayer` currently creates a `YT.Player` instance inside a `useEffect` in a local variable. To expose `seekTo` externally:
+
+1. Store the player in a **ref** (`playerRef`) instead of a local variable so it survives re-renders and is accessible via `useImperativeHandle`.
+2. Convert `MiniPlayer` to `forwardRef` and expose a `MiniPlayerHandle`.
+
+```ts
+// src/components/MiniPlayer.tsx — additions
+
+export interface MiniPlayerHandle {
+  seekTo: (seconds: number) => void
+}
+
+// Convert default export to forwardRef:
+const MiniPlayer = forwardRef<MiniPlayerHandle, MiniPlayerProps>(
+  function MiniPlayer({ youtubeId, title, onClose, onTimeUpdate }, ref) {
+    const iframeRef = useRef<HTMLIFrameElement>(null)
+    const playerRef = useRef<YT.Player | null>(null)  // ← new ref for YT.Player instance
+
+    useImperativeHandle(ref, () => ({
+      seekTo(seconds: number) {
+        playerRef.current?.seekTo(seconds, true)
+      },
+    }))
+
+    useEffect(() => {
+      // ... existing YT IFrame API setup, but:
+      //   - assign player to playerRef.current instead of a local `player` variable
+      //   - use playerRef.current.getCurrentTime() / getDuration() in the poll interval
+
+      return () => {
+        clearInterval(pollInterval)
+        playerRef.current?.destroy()
+        playerRef.current = null
+      }
+    }, [youtubeId])
+
+    // ... existing JSX unchanged
+  }
+)
+
+export default MiniPlayer
+```
+
+> **Important:** Only the `player` local variable inside `useEffect` needs to move to `playerRef.current`. All other `useEffect` logic (API script injection, `onYouTubeIframeAPIReady`, polling interval) remains identical.
+
+---
+
+### 10.6 `PlayerClient` Changes
+
+```ts
+// Additions to src/components/PlayerClient.tsx
+
+import MiniPlayer, { MiniPlayerHandle } from '@/components/MiniPlayer'
+
+// Inside component:
+const miniPlayerRef = useRef<MiniPlayerHandle>(null)
+
+function handleSeek(seconds: number) {
+  miniPlayerRef.current?.seekTo(seconds)
+}
+```
+
+Thread `ref` and `currentTime` / `onSeek` through to children:
+
+```tsx
+// MiniPlayer — add ref:
+<MiniPlayer
+  ref={miniPlayerRef}
+  youtubeId={video.youtube_id}
+  title={video.title}
+  onClose={handleClose}
+  onTimeUpdate={handleTimeUpdate}
+/>
+
+// TranscriptPanel — add new props:
+<TranscriptPanel
+  cues={cues}
+  activeCueIndex={activeCueIndex}
+  currentPage={currentPage}
+  onPageChange={setCurrentPage}
+  loading={loadingTranscript}
+  currentTime={playbackTime.current}   // ← NEW
+  onSeek={handleSeek}                  // ← NEW
+/>
+```
+
+---
+
+### 10.7 Files to Create / Modify
+
+| File | Action | Change |
+|---|---|---|
+| `src/lib/parse-transcript.ts` | **Modify** | Export `tokenizeWords(text: string): string[]`. |
+| `src/components/CueText.tsx` | **Create** | `'use client'` — renders the active cue text as individually-styled word spans with karaoke highlighting. Props: `text`, `cueStart`, `cueEnd`, `currentTime`, `onWordClick?`. |
+| `src/components/TranscriptPanel.tsx` | **Modify** | Add optional `currentTime?: number` and `onSeek?: (seconds: number) => void` props. Import `parseTimeToSeconds` and `CueText`. Use `<CueText>` for the active cue. Add `onClick` to all cue rows. |
+| `src/components/MiniPlayer.tsx` | **Modify** | Store `YT.Player` in `playerRef` (useRef). Export `MiniPlayerHandle` interface. Convert to `forwardRef`. Add `useImperativeHandle` exposing `seekTo`. |
+| `src/components/PlayerClient.tsx` | **Modify** | Import `MiniPlayerHandle`. Add `miniPlayerRef = useRef<MiniPlayerHandle>(null)`. Add `handleSeek`. Pass `ref={miniPlayerRef}` to `<MiniPlayer>`. Pass `currentTime` and `onSeek` to `<TranscriptPanel>`. |
+
+No API route changes. No DB or store changes. No changes to `LessonHero`, `PlaybackProgress`, `PlayerLoader`, or `PlayerPage`.
+
+---
+
+### 10.8 Data-testid Conventions for New Elements
+
+| Element | `data-testid` |
+|---|---|
+| `CueText` root `<p>` | `cue-text` |
+| Word span at position `i` (0-based) | `word-{i}` |
+
+Existing `data-testid` values from Issue #121 (`cue-active`, `cue-{i}`, `transcript-panel`, etc.) are unchanged.
+
+---
+
+### 10.9 Test Coverage Expectations
+
+#### New utility tests — `tokenizeWords`
+
+Add to `src/lib/__tests__/parse-transcript.test.ts`:
+
+| Scenario | Assertion |
+|---|---|
+| `tokenizeWords("hello, world!")` | `["hello,", "world!"]` — punctuation stays attached |
+| `tokenizeWords("  spaces  ")` | `["spaces"]` — leading/trailing whitespace trimmed |
+| `tokenizeWords("")` | `[]` — empty string returns empty array |
+| `tokenizeWords("single")` | `["single"]` — single word |
+| `tokenizeWords("it's a test")` | `["it's", "a", "test"]` — contractions preserved |
+
+#### New pure formula tests (co-locate in parse-transcript test or CueText test)
+
+| Scenario | Assertion |
+|---|---|
+| `currentTime === cueStart` | `highlightedIndex === 0` (first word) |
+| `currentTime` is exactly halfway through cue | `highlightedIndex === Math.floor(words.length / 2)` |
+| `currentTime >= cueEnd` | `highlightedIndex === words.length - 1` (last word) |
+| `cueStart === cueEnd === 0` (plain-text cue, no timing) | `highlightedIndex === 0` (no crash) |
+| `currentTime < cueStart` | `highlightedIndex === 0` (clamped; no negative index) |
+
+#### New component tests — `CueText`
+
+File: `src/components/__tests__/CueText.test.tsx`
+
+| Scenario | Assertion |
+|---|---|
+| Renders all words as `data-testid="word-{i}"` spans | All tokens present in DOM |
+| First word highlighted at `currentTime === cueStart` | `word-0` has `bg-primary` class; `word-1` (if exists) does not |
+| Middle word highlighted at midpoint | Correct span has `bg-primary`; surrounding spans do not |
+| Clicking any word calls `onWordClick` with `cueStart` | Mock `onWordClick`; click `word-2`; assert called with `cueStart` value |
+| `onWordClick` not provided → no error on click | Click a span; no exception thrown |
+| Empty text | Renders `<p data-testid="cue-text">` with no child spans |
+
+#### Updated component tests — `TranscriptPanel`
+
+File: `src/components/__tests__/TranscriptPanel.test.tsx`
+
+| Scenario | Assertion |
+|---|---|
+| Clicking a non-active cue calls `onSeek` with `parseTimeToSeconds(cue.startTime)` | Mock `onSeek`; click `cue-0` div; assert called with correct seconds value |
+| Clicking active cue word calls `onSeek` with cue start time | Mock `onSeek`; click `word-0` inside `cue-active`; assert called |
+| When `onSeek` is not provided, clicking a cue does not throw | No error when clicking without `onSeek` prop |
+| Active cue renders `CueText` (not plain text) when `currentTime` is provided | `data-testid="cue-text"` is present in DOM when `activeCueIndex >= 0` and `currentTime` prop set |
+| Active cue renders plain `<p>` text when `currentTime` is not provided (no prop) | `data-testid="cue-text"` absent; cue text still visible as string |
+
+#### Updated component tests — `MiniPlayer`
+
+File: `src/components/__tests__/MiniPlayer.test.tsx`
+
+| Scenario | Assertion |
+|---|---|
+| `seekTo` ref method calls `player.seekTo(seconds, true)` | Render with `ref`; call `ref.current.seekTo(42)`; assert mock `player.seekTo` was called with `(42, true)` |
+| `playerRef.current` is nullified on unmount | After unmount, calling `seekTo` does not throw (ref is `null`) |
+
+Use the existing `window.YT` mock pattern from Section 8.5:
+```ts
+const mockSeekTo = jest.fn()
+const mockPlayerInstance = {
+  getCurrentTime: jest.fn().mockReturnValue(10),
+  getDuration: jest.fn().mockReturnValue(120),
+  seekTo: mockSeekTo,
+  destroy: jest.fn(),
+}
+window.YT = {
+  Player: jest.fn().mockImplementation((_el, opts) => {
+    opts.events.onStateChange({ data: window.YT.PlayerState.PLAYING })
+    return mockPlayerInstance
+  }),
+  PlayerState: { PLAYING: 1, PAUSED: 2, ENDED: 0 },
+} as unknown as typeof YT
+```
+
+#### Updated component tests — `PlayerClient`
+
+File: `src/components/__tests__/PlayerClient.test.tsx`
+
+| Scenario | Assertion |
+|---|---|
+| Clicking a non-active cue row calls `miniPlayerRef.current.seekTo` | Spy on `MiniPlayerHandle.seekTo`; click `cue-0`; assert seekTo called with correct time |
+| Clicking a word in the active cue calls `seekTo` with the active cue's start time | Click `word-1` inside `cue-active`; assert `seekTo` called |
+| `TranscriptPanel` receives `currentTime` matching `playbackTime.current` | After `onTimeUpdate(45, 300)` fires, `TranscriptPanel`'s `currentTime` prop is `45` (verify via the highlighted word in an active cue) |
+
+> **Testing `forwardRef` components:** Render `MiniPlayer` with `React.createRef<MiniPlayerHandle>()` and pass it as `ref`. After render (and timer flushes for the YT API setup), call `ref.current.seekTo(42)` to exercise the imperative handle.
+
+---
+
+### 10.10 Full Data-flow Summary (Issues #120 + #121 + #122)
+
+```
+YT.Player (inside MiniPlayer)
+  → polls getCurrentTime() every 250 ms while playing
+  → calls onTimeUpdate(current, duration)          ← MiniPlayer prop
+
+PlayerClient.handleTimeUpdate(current, duration)
+  → setPlaybackTime({ current, duration })         ← #120: drives PlaybackProgress
+  → setActiveCueIndex(findActiveCueIndex(cues, current))  ← #121: drives cue highlight
+  → setCurrentPage(...)                            ← #121: auto-advances page
+
+<TranscriptPanel
+  activeCueIndex={activeCueIndex}
+  currentPage={currentPage}
+  currentTime={playbackTime.current}               ← #122: drives CueText word highlight
+  onSeek={handleSeek}                              ← #122: click-to-seek
+/>
+  → active cue renders <CueText
+      cueStart=... cueEnd=... currentTime=...      ← #122: proportional word highlight
+      onWordClick={onSeek}
+    />
+
+User clicks word / cue
+  → onSeek(cueStartSeconds)
+  → miniPlayerRef.current.seekTo(cueStartSeconds) ← #122: imperative handle
+  → playerRef.current.seekTo(seconds, true)       ← YT.Player seek
+```

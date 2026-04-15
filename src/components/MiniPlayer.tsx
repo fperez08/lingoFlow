@@ -1,6 +1,10 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
+
+export interface MiniPlayerHandle {
+  seekTo: (seconds: number) => void
+}
 
 interface MiniPlayerProps {
   youtubeId: string
@@ -9,12 +13,19 @@ interface MiniPlayerProps {
   onTimeUpdate?: (currentTime: number, duration: number) => void
 }
 
-export default function MiniPlayer({ youtubeId, title, onClose, onTimeUpdate }: MiniPlayerProps) {
+const MiniPlayer = forwardRef<MiniPlayerHandle, MiniPlayerProps>(
+  function MiniPlayer({ youtubeId, title, onClose, onTimeUpdate }, ref) {
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const playerRef = useRef<YT.Player | null>(null)
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const onTimeUpdateRef = useRef(onTimeUpdate)
   onTimeUpdateRef.current = onTimeUpdate
+
+  useImperativeHandle(ref, () => ({
+    seekTo(seconds: number) {
+      playerRef.current?.seekTo(seconds, true)
+    },
+  }))
 
   useEffect(() => {
     let destroyed = false
@@ -108,4 +119,6 @@ export default function MiniPlayer({ youtubeId, title, onClose, onTimeUpdate }: 
       </button>
     </div>
   )
-}
+})
+
+export default MiniPlayer
