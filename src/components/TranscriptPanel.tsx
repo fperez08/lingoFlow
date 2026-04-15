@@ -1,7 +1,8 @@
 'use client'
 
 import { useRef, useEffect } from 'react'
-import { TranscriptCue } from '@/lib/parse-transcript'
+import { TranscriptCue, parseTimeToSeconds } from '@/lib/parse-transcript'
+import CueText from '@/components/CueText'
 
 export const CUES_PER_PAGE = 10
 
@@ -11,6 +12,8 @@ interface TranscriptPanelProps {
   currentPage: number
   onPageChange: (page: number) => void
   loading: boolean
+  currentTime?: number
+  onSeek?: (seconds: number) => void
 }
 
 export default function TranscriptPanel({
@@ -19,6 +22,8 @@ export default function TranscriptPanel({
   currentPage,
   onPageChange,
   loading,
+  currentTime,
+  onSeek,
 }: TranscriptPanelProps) {
   const activeCueRef = useRef<HTMLDivElement | null>(null)
 
@@ -65,6 +70,7 @@ export default function TranscriptPanel({
               key={cue.index}
               ref={isActive ? activeCueRef : null}
               data-testid={isActive ? 'cue-active' : `cue-${i}`}
+              onClick={() => onSeek?.(parseTimeToSeconds(cue.startTime))}
               className={`cursor-pointer transition-all ${
                 isPast
                   ? 'opacity-40 text-sm text-on-surface-variant dark:text-slate-400 px-3 py-2'
@@ -73,7 +79,15 @@ export default function TranscriptPanel({
                   : 'opacity-60 text-sm text-on-surface dark:text-slate-100 px-3 py-2'
               }`}
             >
-              {isActive ? (
+              {isActive && currentTime !== undefined ? (
+                <CueText
+                  text={cue.text}
+                  cueStart={parseTimeToSeconds(cue.startTime)}
+                  cueEnd={parseTimeToSeconds(cue.endTime)}
+                  currentTime={currentTime}
+                  onWordClick={onSeek}
+                />
+              ) : isActive ? (
                 <p className="text-sm text-on-surface dark:text-slate-100 leading-relaxed">{cue.text}</p>
               ) : (
                 cue.text

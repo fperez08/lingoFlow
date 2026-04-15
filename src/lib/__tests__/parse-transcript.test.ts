@@ -1,4 +1,4 @@
-import { parseTimeToSeconds, findActiveCueIndex, TranscriptCue } from '../parse-transcript'
+import { parseTimeToSeconds, findActiveCueIndex, tokenizeWords, TranscriptCue } from '../parse-transcript'
 
 describe('parseTimeToSeconds', () => {
   it('converts SRT timestamp with comma separator', () => {
@@ -59,5 +59,58 @@ describe('findActiveCueIndex', () => {
     // All start times parse to 0, so lastBefore will be the last cue with start <= currentTime
     const result = findActiveCueIndex(plainCues, 5)
     expect(result).toBeGreaterThanOrEqual(-1)
+  })
+})
+
+describe('tokenizeWords', () => {
+  it('splits on whitespace and keeps punctuation attached', () => {
+    expect(tokenizeWords('hello, world!')).toEqual(['hello,', 'world!'])
+  })
+
+  it('trims leading/trailing whitespace', () => {
+    expect(tokenizeWords('  spaces  ')).toEqual(['spaces'])
+  })
+
+  it('returns empty array for empty string', () => {
+    expect(tokenizeWords('')).toEqual([])
+  })
+
+  it('handles single word', () => {
+    expect(tokenizeWords('single')).toEqual(['single'])
+  })
+
+  it('preserves contractions', () => {
+    expect(tokenizeWords("it's a test")).toEqual(["it's", 'a', 'test'])
+  })
+})
+
+describe('proportional word index formula', () => {
+  function highlightedIndex(cueStart: number, cueEnd: number, currentTime: number, wordCount: number): number {
+    const cueDuration = cueEnd - cueStart
+    const elapsed = currentTime - cueStart
+    const fraction = cueDuration > 0 ? Math.min(Math.max(elapsed / cueDuration, 0), 1) : 0
+    return wordCount > 0 ? Math.min(Math.floor(fraction * wordCount), wordCount - 1) : -1
+  }
+
+  it('returns 0 (first word) when currentTime === cueStart', () => {
+    expect(highlightedIndex(10, 14, 10, 4)).toBe(0)
+  })
+
+  it('returns middle word index at midpoint', () => {
+    // 4 words, midpoint = 50% -> floor(0.5 * 4) = 2
+    expect(highlightedIndex(10, 14, 12, 4)).toBe(2)
+  })
+
+  it('returns last word index when currentTime >= cueEnd', () => {
+    expect(highlightedIndex(10, 14, 14, 4)).toBe(3)
+    expect(highlightedIndex(10, 14, 20, 4)).toBe(3)
+  })
+
+  it('handles plain-text cue with no timing (cueStart === cueEnd === 0)', () => {
+    expect(highlightedIndex(0, 0, 0, 4)).toBe(0)
+  })
+
+  it('clamps to first word when currentTime < cueStart', () => {
+    expect(highlightedIndex(10, 14, 5, 4)).toBe(0)
   })
 })

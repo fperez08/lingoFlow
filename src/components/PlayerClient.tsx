@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Video } from '@/lib/videos'
 import { TranscriptCue, findActiveCueIndex } from '@/lib/parse-transcript'
 import LessonHero from '@/components/LessonHero'
-import MiniPlayer from '@/components/MiniPlayer'
+import MiniPlayer, { MiniPlayerHandle } from '@/components/MiniPlayer'
 import PlaybackProgress from '@/components/PlaybackProgress'
 import TranscriptPanel, { CUES_PER_PAGE } from '@/components/TranscriptPanel'
 
@@ -32,6 +32,7 @@ export default function PlayerClient({ video }: { video: Video }) {
   const [vocabWords, setVocabWords] = useState<WordCard[]>([])
   const [isMiniPlayerOpen, setIsMiniPlayerOpen] = useState(false)
   const [playbackTime, setPlaybackTime] = useState({ current: 0, duration: 0 })
+  const miniPlayerRef = useRef<MiniPlayerHandle>(null)
 
   function handleTimeUpdate(current: number, duration: number) {
     setPlaybackTime({ current, duration })
@@ -48,6 +49,10 @@ export default function PlayerClient({ video }: { video: Video }) {
   function handleClose() {
     setIsMiniPlayerOpen(false)
     setPlaybackTime({ current: 0, duration: 0 })
+  }
+
+  function handleSeek(seconds: number) {
+    miniPlayerRef.current?.seekTo(seconds)
   }
 
   useEffect(() => {
@@ -88,6 +93,7 @@ export default function PlayerClient({ video }: { video: Video }) {
 
       {isMiniPlayerOpen && (
         <MiniPlayer
+          ref={miniPlayerRef}
           youtubeId={video.youtube_id}
           title={video.title}
           onClose={handleClose}
@@ -136,6 +142,8 @@ export default function PlayerClient({ video }: { video: Video }) {
               currentPage={currentPage}
               onPageChange={setCurrentPage}
               loading={loadingTranscript}
+              currentTime={playbackTime.current}
+              onSeek={handleSeek}
             />
           )}
 

@@ -16,21 +16,28 @@ const mockVideo: Video = {
   updated_at: '2026-01-01T00:00:00Z',
 }
 
-// Mock MiniPlayer to expose onTimeUpdate for testing.
+// Mock MiniPlayer to expose onTimeUpdate and seekTo for testing.
 // Variable MUST start with "mock" to satisfy babel-jest's hoisting rules for jest.mock factories.
 var mockCapturedOnTimeUpdate: ((current: number, duration: number) => void) | undefined
+var mockSeekTo: jest.Mock = jest.fn()
 
-jest.mock('@/components/MiniPlayer', () => ({
-  __esModule: true,
-  default: ({ onClose, onTimeUpdate }: { onClose: () => void; onTimeUpdate?: (c: number, d: number) => void }) => {
-    mockCapturedOnTimeUpdate = onTimeUpdate
-    return (
-      <div data-testid="mini-player">
-        <button data-testid="mini-player-close" onClick={onClose}>Close</button>
-      </div>
-    )
-  },
-}))
+jest.mock('@/components/MiniPlayer', () => {
+  const React = require('react')
+  return {
+    __esModule: true,
+    default: React.forwardRef(
+      ({ onClose, onTimeUpdate }: { onClose: () => void; onTimeUpdate?: (c: number, d: number) => void }, ref: React.Ref<{ seekTo: (s: number) => void }>) => {
+        mockCapturedOnTimeUpdate = onTimeUpdate
+        React.useImperativeHandle(ref, () => ({ seekTo: mockSeekTo }))
+        return (
+          <div data-testid="mini-player">
+            <button data-testid="mini-player-close" onClick={onClose}>Close</button>
+          </div>
+        )
+      }
+    ),
+  }
+})
 
 // Sample cues spanning 2 pages (12 cues total, page size = 10)
 const sampleCues = Array.from({ length: 12 }, (_, i) => ({
@@ -42,6 +49,7 @@ const sampleCues = Array.from({ length: 12 }, (_, i) => ({
 
 beforeEach(() => {
   mockCapturedOnTimeUpdate = undefined
+  mockSeekTo = jest.fn()
   window.HTMLElement.prototype.scrollIntoView = jest.fn()
   global.fetch = jest.fn().mockResolvedValue({
     ok: true,
@@ -177,3 +185,60 @@ describe('PlayerClient', () => {
   })
 })
 
+
+describe('PlayerClient — seek wiring', () => {
+  const cuesWithTiming = Array.from({ length: 5 }, (_, i) => ({
+    index: i + 1,
+    startTime: `00:00:${String(i * 5).padStart(2, '0')},000`,
+    endTime: `00:00:${String(i * 5 + 4).padStart(2, '0')},000`,
+    text: `Word1 Word2 Word3`,
+  }))
+
+  beforeEach(() => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ cues: cuesWithTiming }),
+    }) as jest.Mock
+  })
+
+  it('clicking a non-active cue calls seekTo with correct time', async () => {
+    render(<PlayerClient video={mockVideo} />)
+    fireEvent.click(screen.getByTestId('play-button'))
+    await waitFor(() => screen.getByTestId('cue-0'))
+
+    // cue-0 startTime = 0s
+    fireEvent.click(screen.getByTestId('cue-0'))
+    expect(mockSeekTo).toHaveBeenCalledWith(0)
+  })
+
+  it('clicking a word in the active cue calls seekTo with the cue start time', async () => {
+    render(<PlayerClient video={mockVideo} />)
+    fireEvent.click(screen.getByTestId('play-button'))
+    await waitFor(() => screen.getByTestId('cue-0'))
+
+    // Activate cue 0 (starts at 0s, ends at 4s) with currentTime=1
+    act(() => {
+      mockCapturedOnTimeUpdate?.(1, 120)
+    })
+
+    await waitFor(() => screen.getByTestId('cue-active'))
+
+    // word-1 inside active cue → should seek to cue 0 start (0s)
+    fireEvent.click(screen.getByTestId('word-1'))
+    expect(mockSeekTo).toHaveBeenCalledWith(0)
+  })
+
+  it('passes currentTime to TranscriptPanel (verified via highlighted word in active cue)', async () => {
+    render(<PlayerClient video={mockVideo} />)
+    fireEvent.click(screen.getByTestId('play-button'))
+    await waitFor(() => screen.getByTestId('cue-0'))
+
+    act(() => {
+      mockCapturedOnTimeUpdate?.(2, 120)
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('cue-text')).toBeInTheDocument()
+    })
+  })
+})

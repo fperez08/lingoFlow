@@ -174,3 +174,86 @@ describe('TranscriptPanel', () => {
     expect(screen.queryByTestId('transcript-next-page')).not.toBeInTheDocument()
   })
 })
+
+describe('TranscriptPanel — click-to-seek and CueText integration', () => {
+  it('calls onSeek with correct seconds when a non-active cue is clicked', () => {
+    const cues = makeCues(5)
+    const onSeek = jest.fn()
+    render(
+      <TranscriptPanel
+        cues={cues}
+        activeCueIndex={2}
+        currentPage={0}
+        onPageChange={noop}
+        loading={false}
+        onSeek={onSeek}
+      />
+    )
+    // cue-0 has startTime 00:00:00,000 → 0 seconds
+    fireEvent.click(screen.getByTestId('cue-0'))
+    expect(onSeek).toHaveBeenCalledWith(0)
+  })
+
+  it('does not throw when onSeek is not provided and a cue is clicked', () => {
+    const cues = makeCues(3)
+    render(
+      <TranscriptPanel
+        cues={cues}
+        activeCueIndex={-1}
+        currentPage={0}
+        onPageChange={noop}
+        loading={false}
+      />
+    )
+    expect(() => fireEvent.click(screen.getByTestId('cue-0'))).not.toThrow()
+  })
+
+  it('renders CueText (data-testid="cue-text") for active cue when currentTime is provided', () => {
+    const cues = makeCues(5)
+    render(
+      <TranscriptPanel
+        cues={cues}
+        activeCueIndex={1}
+        currentPage={0}
+        onPageChange={noop}
+        loading={false}
+        currentTime={4}
+      />
+    )
+    expect(screen.getByTestId('cue-text')).toBeInTheDocument()
+  })
+
+  it('renders plain text (no cue-text) for active cue when currentTime is not provided', () => {
+    const cues = makeCues(5)
+    render(
+      <TranscriptPanel
+        cues={cues}
+        activeCueIndex={1}
+        currentPage={0}
+        onPageChange={noop}
+        loading={false}
+      />
+    )
+    expect(screen.queryByTestId('cue-text')).not.toBeInTheDocument()
+    expect(screen.getByTestId('cue-active')).toHaveTextContent('Cue text 2')
+  })
+
+  it('calls onSeek when a word inside the active cue is clicked', () => {
+    const cues = makeCues(5)
+    const onSeek = jest.fn()
+    render(
+      <TranscriptPanel
+        cues={cues}
+        activeCueIndex={1}
+        currentPage={0}
+        onPageChange={noop}
+        loading={false}
+        currentTime={4}
+        onSeek={onSeek}
+      />
+    )
+    fireEvent.click(screen.getByTestId('word-0'))
+    // cue index 1 startTime = 00:00:03,000 → 3 seconds
+    expect(onSeek).toHaveBeenCalledWith(3)
+  })
+})

@@ -1,3 +1,11 @@
+/**
+ * Split a cue's text into an array of word tokens.
+ * Punctuation stays attached to adjacent words (e.g. "hello," is one token).
+ */
+export function tokenizeWords(text: string): string[] {
+  return text.split(/\s+/).filter(Boolean)
+}
+
 export interface TranscriptCue {
   index: number
   startTime: string

@@ -1,5 +1,6 @@
+import React from 'react'
 import { render, screen, fireEvent, act } from '@testing-library/react'
-import MiniPlayer from '../MiniPlayer'
+import MiniPlayer, { MiniPlayerHandle } from '../MiniPlayer'
 
 let capturedOnStateChange: ((event: { data: number }) => void) | null = null
 
@@ -134,3 +135,74 @@ describe('MiniPlayer', () => {
   })
 })
 
+
+describe('MiniPlayer — seekTo imperative handle', () => {
+  it('exposes seekTo via forwardRef and calls player.seekTo(seconds, true)', () => {
+    const mockSeekTo = jest.fn()
+    Object.defineProperty(window, 'YT', {
+      value: {
+        Player: jest.fn().mockImplementation((_el: unknown, opts: { events: { onStateChange: (e: { data: number }) => void } }) => {
+          capturedOnStateChange = opts.events.onStateChange
+          return {
+            getCurrentTime: mockGetCurrentTime,
+            getDuration: mockGetDuration,
+            destroy: mockDestroy,
+            pauseVideo: mockPauseVideo,
+            seekTo: mockSeekTo,
+          }
+        }),
+        PlayerState: { PLAYING: 1, PAUSED: 2, ENDED: 0, BUFFERING: 3, CUED: 5 },
+      },
+      writable: true,
+      configurable: true,
+    })
+
+    const ref = React.createRef<MiniPlayerHandle>()
+    render(
+      <MiniPlayer
+        ref={ref}
+        youtubeId="test123"
+        title="Test"
+        onClose={jest.fn()}
+      />
+    )
+
+    ref.current?.seekTo(42)
+    expect(mockSeekTo).toHaveBeenCalledWith(42, true)
+  })
+
+  it('does not throw when seekTo is called after unmount (ref is null)', () => {
+    const mockSeekTo = jest.fn()
+    Object.defineProperty(window, 'YT', {
+      value: {
+        Player: jest.fn().mockImplementation((_el: unknown, opts: { events: { onStateChange: (e: { data: number }) => void } }) => {
+          capturedOnStateChange = opts.events.onStateChange
+          return {
+            getCurrentTime: mockGetCurrentTime,
+            getDuration: mockGetDuration,
+            destroy: mockDestroy,
+            pauseVideo: mockPauseVideo,
+            seekTo: mockSeekTo,
+          }
+        }),
+        PlayerState: { PLAYING: 1, PAUSED: 2, ENDED: 0, BUFFERING: 3, CUED: 5 },
+      },
+      writable: true,
+      configurable: true,
+    })
+
+    const ref = React.createRef<MiniPlayerHandle>()
+    const { unmount } = render(
+      <MiniPlayer
+        ref={ref}
+        youtubeId="test123"
+        title="Test"
+        onClose={jest.fn()}
+      />
+    )
+
+    unmount()
+    // After unmount, ref.current is null — optional chain ensures no throw
+    expect(() => ref.current?.seekTo(42)).not.toThrow()
+  })
+})
