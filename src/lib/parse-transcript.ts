@@ -5,6 +5,32 @@ export interface TranscriptCue {
   text: string
 }
 
+/** Convert "HH:MM:SS,mmm" or "HH:MM:SS.mmm" to decimal seconds. Returns 0 for empty strings. */
+export function parseTimeToSeconds(timeStr: string): number {
+  if (!timeStr) return 0
+  const [hms, ms = '0'] = timeStr.split(/[,.]/)
+  const parts = hms.split(':').map(Number)
+  const [h = 0, m = 0, s = 0] = parts
+  return h * 3600 + m * 60 + s + parseInt(ms, 10) / 1000
+}
+
+/**
+ * Find the index of the active cue for a given playback time.
+ * Returns the index of the cue whose window [startTime, endTime) contains currentTime,
+ * or the last cue whose startTime <= currentTime (gap handling).
+ * Returns -1 if currentTime is before all cues.
+ */
+export function findActiveCueIndex(cues: TranscriptCue[], currentTime: number): number {
+  let lastBefore = -1
+  for (let i = 0; i < cues.length; i++) {
+    const start = parseTimeToSeconds(cues[i].startTime)
+    const end = parseTimeToSeconds(cues[i].endTime)
+    if (currentTime >= start && currentTime < end) return i
+    if (currentTime >= start) lastBefore = i
+  }
+  return lastBefore
+}
+
 export function parseTranscript(content: string, format: string | null): TranscriptCue[] {
   const fmt = (format ?? '').toLowerCase()
 
