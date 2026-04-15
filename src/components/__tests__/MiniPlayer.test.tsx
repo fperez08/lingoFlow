@@ -1,5 +1,43 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import MiniPlayer from '../MiniPlayer'
+
+let capturedOnStateChange: ((event: { data: number }) => void) | null = null
+
+const mockGetCurrentTime = jest.fn().mockReturnValue(90)
+const mockGetDuration = jest.fn().mockReturnValue(300)
+const mockDestroy = jest.fn()
+const mockPauseVideo = jest.fn()
+
+beforeEach(() => {
+  jest.useFakeTimers()
+  capturedOnStateChange = null
+  mockGetCurrentTime.mockReturnValue(90)
+  mockGetDuration.mockReturnValue(300)
+  mockDestroy.mockReset()
+  mockPauseVideo.mockReset()
+
+  Object.defineProperty(window, 'YT', {
+    value: {
+      Player: jest.fn().mockImplementation((_el: unknown, opts: { events: { onStateChange: (e: { data: number }) => void } }) => {
+        capturedOnStateChange = opts.events.onStateChange
+        return {
+          getCurrentTime: mockGetCurrentTime,
+          getDuration: mockGetDuration,
+          destroy: mockDestroy,
+          pauseVideo: mockPauseVideo,
+        }
+      }),
+      PlayerState: { PLAYING: 1, PAUSED: 2, ENDED: 0, BUFFERING: 3, CUED: 5 },
+    },
+    writable: true,
+    configurable: true,
+  })
+})
+
+afterEach(() => {
+  jest.useRealTimers()
+  jest.resetAllMocks()
+})
 
 describe('MiniPlayer', () => {
   it('renders the iframe with correct YouTube embed src', () => {
@@ -33,4 +71,66 @@ describe('MiniPlayer', () => {
     render(<MiniPlayer youtubeId="abc123" title="My Video" onClose={jest.fn()} />)
     expect(screen.getByTestId('mini-player')).toBeInTheDocument()
   })
+
+  it('calls onTimeUpdate with current time and duration when polling', () => {
+    const onTimeUpdate = jest.fn()
+    render(
+      <MiniPlayer youtubeId="abc123" title="My Video" onClose={jest.fn()} onTimeUpdate={onTimeUpdate} />
+    )
+
+    // Simulate PLAYING state to start polling
+    act(() => {
+      capturedOnStateChange?.({ data: 1 }) // PLAYING
+    })
+
+    act(() => {
+      jest.advanceTimersByTime(250)
+    })
+
+    expect(onTimeUpdate).toHaveBeenCalledWith(90, 300)
+  })
+
+  it('stops polling when state changes to PAUSED', () => {
+    const onTimeUpdate = jest.fn()
+    render(
+      <MiniPlayer youtubeId="abc123" title="My Video" onClose={jest.fn()} onTimeUpdate={onTimeUpdate} />
+    )
+
+    act(() => {
+      capturedOnStateChange?.({ data: 1 }) // PLAYING
+    })
+    act(() => {
+      jest.advanceTimersByTime(250)
+    })
+    expect(onTimeUpdate).toHaveBeenCalledTimes(1)
+
+    act(() => {
+      capturedOnStateChange?.({ data: 2 }) // PAUSED
+    })
+    act(() => {
+      jest.advanceTimersByTime(500)
+    })
+    // No additional calls after pause
+    expect(onTimeUpdate).toHaveBeenCalledTimes(1)
+  })
+
+  it('clears the interval on unmount', () => {
+    const onTimeUpdate = jest.fn()
+    const { unmount } = render(
+      <MiniPlayer youtubeId="abc123" title="My Video" onClose={jest.fn()} onTimeUpdate={onTimeUpdate} />
+    )
+
+    act(() => {
+      capturedOnStateChange?.({ data: 1 }) // PLAYING
+    })
+
+    unmount()
+
+    act(() => {
+      jest.advanceTimersByTime(500)
+    })
+    // No calls after unmount
+    expect(onTimeUpdate).not.toHaveBeenCalled()
+  })
 })
+

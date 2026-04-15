@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import PlayerClient from '../PlayerClient'
 import { Video } from '@/lib/videos'
 
@@ -16,7 +16,24 @@ const mockVideo: Video = {
   updated_at: '2026-01-01T00:00:00Z',
 }
 
+// Mock MiniPlayer to expose onTimeUpdate for testing.
+// Variable MUST start with "mock" to satisfy babel-jest's hoisting rules for jest.mock factories.
+var mockCapturedOnTimeUpdate: ((current: number, duration: number) => void) | undefined
+
+jest.mock('@/components/MiniPlayer', () => ({
+  __esModule: true,
+  default: ({ onClose, onTimeUpdate }: { onClose: () => void; onTimeUpdate?: (c: number, d: number) => void }) => {
+    mockCapturedOnTimeUpdate = onTimeUpdate
+    return (
+      <div data-testid="mini-player">
+        <button data-testid="mini-player-close" onClick={onClose}>Close</button>
+      </div>
+    )
+  },
+}))
+
 beforeEach(() => {
+  mockCapturedOnTimeUpdate = undefined
   global.fetch = jest.fn().mockResolvedValue({
     ok: true,
     json: async () => ({ cues: [] }),
@@ -67,4 +84,42 @@ describe('PlayerClient', () => {
       expect(global.fetch).toHaveBeenCalledWith('/api/videos/video-1/transcript')
     })
   })
+
+  it('does not render PlaybackProgress before play is clicked', () => {
+    render(<PlayerClient video={mockVideo} />)
+    expect(screen.queryByTestId('playback-progress')).not.toBeInTheDocument()
+  })
+
+  it('renders PlaybackProgress with 0 times after clicking play', () => {
+    render(<PlayerClient video={mockVideo} />)
+    fireEvent.click(screen.getByTestId('play-button'))
+    expect(screen.getByTestId('playback-progress')).toBeInTheDocument()
+    expect(screen.getByTestId('current-time')).toHaveTextContent('0:00')
+  })
+
+  it('updates PlaybackProgress when onTimeUpdate is called', () => {
+    render(<PlayerClient video={mockVideo} />)
+    fireEvent.click(screen.getByTestId('play-button'))
+
+    act(() => {
+      mockCapturedOnTimeUpdate?.(90, 300)
+    })
+
+    expect(screen.getByTestId('current-time')).toHaveTextContent('1:30')
+    expect(screen.getByTestId('duration')).toHaveTextContent('5:00')
+  })
+
+  it('hides PlaybackProgress after closing the mini-player', () => {
+    render(<PlayerClient video={mockVideo} />)
+    fireEvent.click(screen.getByTestId('play-button'))
+
+    act(() => {
+      mockCapturedOnTimeUpdate?.(90, 300)
+    })
+    expect(screen.getByTestId('playback-progress')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByTestId('mini-player-close'))
+    expect(screen.queryByTestId('playback-progress')).not.toBeInTheDocument()
+  })
 })
+
