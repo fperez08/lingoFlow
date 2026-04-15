@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { Video } from '@/lib/videos'
 import { TranscriptCue } from '@/lib/parse-transcript'
+import LessonHero from '@/components/LessonHero'
+import MiniPlayer from '@/components/MiniPlayer'
 
 interface WordCard {
   word: string
@@ -25,6 +27,7 @@ export default function PlayerClient({ video }: { video: Video }) {
   const [activeCueIndex, setActiveCueIndex] = useState(0)
   const [activeTab, setActiveTab] = useState<'transcript' | 'vocabulary'>('transcript')
   const [vocabWords, setVocabWords] = useState<WordCard[]>([])
+  const [isMiniPlayerOpen, setIsMiniPlayerOpen] = useState(false)
 
   useEffect(() => {
     fetch(`/api/videos/${video.id}/transcript`)
@@ -53,33 +56,16 @@ export default function PlayerClient({ video }: { video: Video }) {
     <div data-testid="player-client" className="min-h-screen flex flex-col lg:flex-row bg-surface dark:bg-slate-900">
       {/* Main content */}
       <section className="flex-1 p-8 bg-surface dark:bg-slate-900 overflow-y-auto">
-        <div className="aspect-video rounded-xl overflow-hidden shadow-2xl mb-6 bg-black">
-          <iframe
-            src={`https://www.youtube.com/embed/${video.youtube_id}`}
-            className="w-full h-full"
-            allowFullScreen
-            title={video.title}
-          />
-        </div>
-
-        <div className="flex items-start justify-between gap-4 mb-6">
-          <div>
-            <div className="flex gap-2 mb-2">
-              <span className="px-3 py-1 text-xs font-bold rounded-full bg-secondary-container text-on-secondary-container">
-                Intermediate
-              </span>
-              <span className="px-3 py-1 text-xs font-bold rounded-full bg-surface-container-highest text-on-surface-variant">
-                Language Learning
-              </span>
-            </div>
-            <h1 className="text-2xl font-extrabold text-on-surface dark:text-slate-100 font-headline">{video.title}</h1>
-            <p className="text-on-surface-variant dark:text-slate-400 mt-1">{video.author_name}</p>
-          </div>
-          <button className="flex items-center gap-2 px-6 py-3 bg-gradient-to-br from-primary to-primary-container text-white rounded-xl font-bold hover:scale-[1.02] transition-transform">
-            Save Lesson
-          </button>
-        </div>
+        <LessonHero video={video} onPlay={() => setIsMiniPlayerOpen(true)} />
       </section>
+
+      {isMiniPlayerOpen && (
+        <MiniPlayer
+          youtubeId={video.youtube_id}
+          title={video.title}
+          onClose={() => setIsMiniPlayerOpen(false)}
+        />
+      )}
 
       {/* Right transcript/vocab sidebar */}
       <aside className="w-full lg:w-[420px] bg-surface-container-low dark:bg-slate-950/50 flex flex-col border-t lg:border-t-0 lg:border-l border-outline-variant/30 dark:border-slate-700 overflow-hidden min-h-[400px] lg:min-h-screen">
