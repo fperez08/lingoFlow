@@ -32,8 +32,17 @@ jest.mock('@/components/MiniPlayer', () => ({
   },
 }))
 
+// Sample cues spanning 2 pages (12 cues total, page size = 10)
+const sampleCues = Array.from({ length: 12 }, (_, i) => ({
+  index: i + 1,
+  startTime: `00:00:${String(i * 5).padStart(2, '0')},000`,
+  endTime: `00:00:${String(i * 5 + 4).padStart(2, '0')},000`,
+  text: `Cue text ${i + 1}`,
+}))
+
 beforeEach(() => {
   mockCapturedOnTimeUpdate = undefined
+  window.HTMLElement.prototype.scrollIntoView = jest.fn()
   global.fetch = jest.fn().mockResolvedValue({
     ok: true,
     json: async () => ({ cues: [] }),
@@ -120,6 +129,51 @@ describe('PlayerClient', () => {
 
     fireEvent.click(screen.getByTestId('mini-player-close'))
     expect(screen.queryByTestId('playback-progress')).not.toBeInTheDocument()
+  })
+
+  it('highlights active cue when onTimeUpdate fires a matching time', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ cues: sampleCues }),
+    }) as jest.Mock
+
+    render(<PlayerClient video={mockVideo} />)
+    fireEvent.click(screen.getByTestId('play-button'))
+
+    // Wait for transcript cues to load (loading state clears)
+    await waitFor(() => screen.getByText('Cue text 1'))
+
+    // Fire time update at 2s — falls inside cue 0 (starts 0s, ends 4s)
+    act(() => {
+      mockCapturedOnTimeUpdate?.(2, 300)
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('cue-active')).toBeInTheDocument()
+    })
+  })
+
+  it('auto-advances page when active cue crosses page boundary', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ cues: sampleCues }),
+    }) as jest.Mock
+
+    render(<PlayerClient video={mockVideo} />)
+    fireEvent.click(screen.getByTestId('play-button'))
+
+    // Wait for transcript cues to load
+    await waitFor(() => screen.getByText('Cue text 1'))
+
+    // cue index 10 (0-based) = page 1 (starts at 50s, ends at 54s)
+    act(() => {
+      mockCapturedOnTimeUpdate?.(51, 300)
+    })
+
+    await waitFor(() => {
+      // Page 2 indicator should now show
+      expect(screen.getByTestId('transcript-page-indicator')).toHaveTextContent('2 / 2')
+    })
   })
 })
 

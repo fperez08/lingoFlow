@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { Video } from '@/lib/videos'
-import { TranscriptCue } from '@/lib/parse-transcript'
+import { TranscriptCue, findActiveCueIndex } from '@/lib/parse-transcript'
 import LessonHero from '@/components/LessonHero'
 import MiniPlayer from '@/components/MiniPlayer'
 import PlaybackProgress from '@/components/PlaybackProgress'
+import TranscriptPanel, { CUES_PER_PAGE } from '@/components/TranscriptPanel'
 
 interface WordCard {
   word: string
@@ -25,7 +26,8 @@ function extractVocabWords(cues: TranscriptCue[]): WordCard[] {
 export default function PlayerClient({ video }: { video: Video }) {
   const [cues, setCues] = useState<TranscriptCue[]>([])
   const [loadingTranscript, setLoadingTranscript] = useState(true)
-  const [activeCueIndex, setActiveCueIndex] = useState(0)
+  const [activeCueIndex, setActiveCueIndex] = useState(-1)
+  const [currentPage, setCurrentPage] = useState(0)
   const [activeTab, setActiveTab] = useState<'transcript' | 'vocabulary'>('transcript')
   const [vocabWords, setVocabWords] = useState<WordCard[]>([])
   const [isMiniPlayerOpen, setIsMiniPlayerOpen] = useState(false)
@@ -33,6 +35,14 @@ export default function PlayerClient({ video }: { video: Video }) {
 
   function handleTimeUpdate(current: number, duration: number) {
     setPlaybackTime({ current, duration })
+
+    const newActiveCueIndex = findActiveCueIndex(cues, current)
+    setActiveCueIndex(newActiveCueIndex)
+
+    if (newActiveCueIndex >= 0) {
+      const targetPage = Math.floor(newActiveCueIndex / CUES_PER_PAGE)
+      setCurrentPage((prev) => (targetPage !== prev ? targetPage : prev))
+    }
   }
 
   function handleClose() {
@@ -120,47 +130,13 @@ export default function PlayerClient({ video }: { video: Video }) {
         {/* Tab content */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {activeTab === 'transcript' && (
-            <>
-              {loadingTranscript && (
-                <p className="text-sm text-on-surface-variant dark:text-slate-400 text-center py-8">
-                  Loading transcript…
-                </p>
-              )}
-              {!loadingTranscript && cues.length === 0 && (
-                <div className="flex flex-col items-center justify-center py-12 text-center gap-3">
-                  <span className="text-3xl">📄</span>
-                  <p className="text-on-surface font-semibold">No transcript available</p>
-                  <p className="text-sm text-on-surface-variant">
-                    Upload a transcript file to enable interactive subtitles.
-                  </p>
-                </div>
-              )}
-              {!loadingTranscript &&
-                cues.map((cue, i) => {
-                  const isPast = i < activeCueIndex
-                  const isActive = i === activeCueIndex
-                  return (
-                    <div
-                      key={cue.index}
-                      onClick={() => setActiveCueIndex(i)}
-                      data-testid={`cue-${i}`}
-                      className={`cursor-pointer transition-all ${
-                        isPast
-                          ? 'opacity-40 text-sm text-on-surface-variant dark:text-slate-400 px-3 py-2'
-                          : isActive
-                          ? 'bg-surface-container dark:bg-slate-800 rounded-xl p-3 ring-1 ring-primary/10 border-l-4 border-primary'
-                          : 'opacity-60 text-sm text-on-surface dark:text-slate-100 px-3 py-2'
-                      }`}
-                    >
-                      {isActive ? (
-                        <p className="text-sm text-on-surface dark:text-slate-100 leading-relaxed">{cue.text}</p>
-                      ) : (
-                        cue.text
-                      )}
-                    </div>
-                  )
-                })}
-            </>
+            <TranscriptPanel
+              cues={cues}
+              activeCueIndex={activeCueIndex}
+              currentPage={currentPage}
+              onPageChange={setCurrentPage}
+              loading={loadingTranscript}
+            />
           )}
 
           {activeTab === 'vocabulary' && (
