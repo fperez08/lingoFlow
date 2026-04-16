@@ -50,3 +50,5 @@ playwright-report/
 
 # CTRF test reports (generated)
 ctrf/
+
+.playwright-cli
