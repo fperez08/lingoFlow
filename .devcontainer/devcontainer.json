@@ -20,7 +20,7 @@
 	"containerEnv": {
 		"NEXT_TELEMETRY_DISABLED": "1"
 	},
-	"postCreateCommand": "corepack enable && pnpm install && npm install -g @playwright/cli@latest && pnpm exec playwright install chromium",
+	"postCreateCommand": "corepack pnpm install && sudo npm install -g @playwright/cli@latest && corepack pnpm exec playwright install chromium",
 	"customizations": {
 		"vscode": {
 			"extensions": [
