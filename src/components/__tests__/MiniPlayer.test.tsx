@@ -5,6 +5,7 @@ let capturedOnStateChange: ((event: { data: number }) => void) | null = null
 
 const mockGetCurrentTime = jest.fn().mockReturnValue(90)
 const mockGetDuration = jest.fn().mockReturnValue(300)
+const mockSeekTo = jest.fn()
 const mockDestroy = jest.fn()
 const mockPauseVideo = jest.fn()
 
@@ -13,6 +14,7 @@ beforeEach(() => {
   capturedOnStateChange = null
   mockGetCurrentTime.mockReturnValue(90)
   mockGetDuration.mockReturnValue(300)
+  mockSeekTo.mockReset()
   mockDestroy.mockReset()
   mockPauseVideo.mockReset()
 
@@ -23,6 +25,7 @@ beforeEach(() => {
         return {
           getCurrentTime: mockGetCurrentTime,
           getDuration: mockGetDuration,
+          seekTo: mockSeekTo,
           destroy: mockDestroy,
           pauseVideo: mockPauseVideo,
         }
@@ -132,5 +135,20 @@ describe('MiniPlayer', () => {
     // No calls after unmount
     expect(onTimeUpdate).not.toHaveBeenCalled()
   })
-})
 
+  it('seeks when seekToTime is provided', () => {
+    const onSeekApplied = jest.fn()
+    render(
+      <MiniPlayer
+        youtubeId="abc123"
+        title="My Video"
+        onClose={jest.fn()}
+        seekToTime={42}
+        onSeekApplied={onSeekApplied}
+      />
+    )
+
+    expect(mockSeekTo).toHaveBeenCalledWith(42, true)
+    expect(onSeekApplied).toHaveBeenCalledTimes(1)
+  })
+})

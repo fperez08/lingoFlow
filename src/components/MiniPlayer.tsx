@@ -7,9 +7,18 @@ interface MiniPlayerProps {
   title: string
   onClose: () => void
   onTimeUpdate?: (currentTime: number, duration: number) => void
+  seekToTime?: number | null
+  onSeekApplied?: () => void
 }
 
-export default function MiniPlayer({ youtubeId, title, onClose, onTimeUpdate }: MiniPlayerProps) {
+export default function MiniPlayer({
+  youtubeId,
+  title,
+  onClose,
+  onTimeUpdate,
+  seekToTime,
+  onSeekApplied,
+}: MiniPlayerProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const playerRef = useRef<YT.Player | null>(null)
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -78,6 +87,12 @@ export default function MiniPlayer({ youtubeId, title, onClose, onTimeUpdate }: 
       playerRef.current = null
     }
   }, [youtubeId])
+
+  useEffect(() => {
+    if (seekToTime == null || !playerRef.current) return
+    playerRef.current.seekTo(seekToTime, true)
+    onSeekApplied?.()
+  }, [onSeekApplied, seekToTime])
 
   function handleClose() {
     playerRef.current?.pauseVideo()
