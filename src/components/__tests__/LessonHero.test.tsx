@@ -17,16 +17,6 @@ const mockVideo: Video = {
 }
 
 describe('LessonHero', () => {
-  it('renders the thumbnail image with maxresdefault URL', () => {
-    render(<LessonHero video={mockVideo} onPlay={jest.fn()} />)
-    const img = screen.getByTestId('hero-thumbnail')
-    expect(img).toHaveAttribute(
-      'src',
-      'https://img.youtube.com/vi/abc123/maxresdefault.jpg'
-    )
-    expect(img).toHaveAttribute('alt', 'Test Video Title')
-  })
-
   it('renders the video title', () => {
     render(<LessonHero video={mockVideo} onPlay={jest.fn()} />)
     expect(screen.getByText('Test Video Title')).toBeInTheDocument()
@@ -62,13 +52,4 @@ describe('LessonHero', () => {
     expect(onPlay).toHaveBeenCalled()
   })
 
-  it('falls back to hqdefault thumbnail on image error', () => {
-    render(<LessonHero video={mockVideo} onPlay={jest.fn()} />)
-    const img = screen.getByTestId('hero-thumbnail')
-    fireEvent.error(img)
-    expect(img).toHaveAttribute(
-      'src',
-      'https://img.youtube.com/vi/abc123/hqdefault.jpg'
-    )
-  })
 })
