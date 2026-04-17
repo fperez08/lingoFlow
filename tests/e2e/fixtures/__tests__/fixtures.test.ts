@@ -122,10 +122,9 @@ describe('seedVideo()', () => {
   })
 
   it('inserts a video and returns it', () => {
-    const video = seedVideo({ title: 'My Video', youtube_id: 'abc123' })
+    const video = seedVideo({ title: 'My Video' })
     expect(video).toBeDefined()
     expect(video.title).toBe('My Video')
-    expect(video.youtube_id).toBe('abc123')
   })
 
   it('works with all defaults (no params)', () => {
@@ -179,25 +178,4 @@ describe('seedTranscript()', () => {
   })
 })
 
-describe('setupYoutubeStub / teardownYoutubeStub', () => {
-  it('sets E2E_STUB_YOUTUBE=true', () => {
-    const ctx = setupYoutubeStub()
-    expect(process.env.E2E_STUB_YOUTUBE).toBe('true')
-    teardownYoutubeStub(ctx)
-  })
 
-  it('restores the previous undefined value on teardown', () => {
-    delete process.env.E2E_STUB_YOUTUBE
-    const ctx = setupYoutubeStub()
-    teardownYoutubeStub(ctx)
-    expect(process.env.E2E_STUB_YOUTUBE).toBeUndefined()
-  })
-
-  it('restores a prior truthy value on teardown', () => {
-    process.env.E2E_STUB_YOUTUBE = 'false'
-    const ctx = setupYoutubeStub()
-    expect(process.env.E2E_STUB_YOUTUBE).toBe('true')
-    teardownYoutubeStub(ctx)
-    expect(process.env.E2E_STUB_YOUTUBE).toBe('false')
-  })
-})

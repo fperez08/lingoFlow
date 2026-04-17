@@ -7,7 +7,6 @@ export interface VideoCardProps {
   title: string
   author_name: string
   thumbnail_url: string
-  youtube_url: string
   source_type?: 'youtube' | 'local'
   tags: string[]
   created_at: string
@@ -35,8 +34,7 @@ export default function VideoCard({
   onDelete,
   onEdit,
 }: VideoCardProps) {
-  const displayThumbnail =
-    source_type === 'local' ? `/api/videos/${id}/thumbnail` : thumbnail_url
+  const displayThumbnail = source_type === 'local' ? `/api/videos/${id}/thumbnail` : thumbnail_url
 
   return (
     <div className="group cursor-pointer" data-testid={`video-card-${id}`}>

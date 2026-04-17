@@ -17,7 +17,6 @@ import path from 'path'
 import { DashboardPage } from './pages/DashboardPage'
 import { ImportActions } from './pages/ImportActions'
 
-const RICK_ASTLEY_URL = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
 const SAMPLE_SRT = path.join(__dirname, 'fixtures', 'sample.srt')
 
 test.describe('Import form validation', () => {
@@ -42,8 +41,7 @@ test.describe('Import form validation', () => {
   test('2 — non-YouTube URL shows preview error and disables submit', async ({ page }) => {
     const importActions = new ImportActions(page)
 
-    await importActions.fillYoutubeUrl('https://notyoutube.com/watch?v=abc')
-
+    
     await expect(page.getByTestId('url-preview-error')).toBeVisible()
 
     const submitBtn = page.getByTestId('submit-import-button')
@@ -86,8 +84,7 @@ test.describe('Import form validation', () => {
     await expect(page.getByTestId('url-preview-error')).toBeVisible()
 
     // Fix URL and add valid transcript file
-    await page.getByTestId('youtube-url-input').fill('')
-    await importActions.fillYoutubeUrl(RICK_ASTLEY_URL)
+        await importActions.fillYoutubeUrl(RICK_ASTLEY_URL)
 
     // Wait for preview to load and error to clear
     await expect(page.getByTestId('url-preview-error')).toBeHidden()

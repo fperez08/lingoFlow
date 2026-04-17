@@ -1,26 +1,19 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
-import {
-  fetchYoutubeMetadata as defaultFetchMetadata,
-  YoutubeMetadataError,
-} from '@/lib/youtube'
-import { detectPastedTranscriptFormat } from '@/lib/detect-transcript-format'
+import { useState, useCallback } from 'react'
 
-interface YoutubePreview {
-  title: string
-  author_name: string
-  thumbnail_url: string
-}
+import { detectPastedTranscriptFormat } from '@/lib/detect-transcript-format'
+import { ALLOWED_VIDEO_MIME_TYPES, MAX_VIDEO_SIZE_BYTES } from '@/lib/api-schemas'
+
 
 interface UseImportVideoFormOptions {
   onSuccess: () => void
   onClose: () => void
-  fetchMetadata?: typeof defaultFetchMetadata
+
 }
 
 export type TranscriptMode = 'upload' | 'paste'
-export type ImportMode = 'youtube' | 'local'
+export type ImportMode = 'local'
 
 export interface UseImportVideoFormResult {
   importMode: ImportMode
@@ -31,8 +24,6 @@ export interface UseImportVideoFormResult {
   setTitle: (title: string) => void
   author: string
   setAuthor: (author: string) => void
-  youtubeUrl: string
-  setYoutubeUrl: (url: string) => void
   transcriptFile: File | null
   setTranscriptFile: (file: File | null) => void
   transcriptMode: TranscriptMode
@@ -41,9 +32,6 @@ export interface UseImportVideoFormResult {
   setPastedTranscript: (text: string) => void
   tags: string
   setTags: (tags: string) => void
-  preview: YoutubePreview | null
-  previewError: string | null
-  isLoadingPreview: boolean
   isSubmitting: boolean
   submitError: string | null
   handleSubmit: (e: React.FormEvent) => Promise<void>
@@ -53,20 +41,15 @@ export interface UseImportVideoFormResult {
 export function useImportVideoForm({
   onSuccess,
   onClose,
-  fetchMetadata = defaultFetchMetadata,
 }: UseImportVideoFormOptions): UseImportVideoFormResult {
-  const [importMode, setImportModeState] = useState<ImportMode>('youtube')
+  const [importMode, setImportModeState] = useState<ImportMode>('local')
   const [videoFile, setVideoFile] = useState<File | null>(null)
   const [title, setTitle] = useState('')
   const [author, setAuthor] = useState('')
-  const [youtubeUrl, setYoutubeUrl] = useState('')
   const [transcriptFile, setTranscriptFile] = useState<File | null>(null)
   const [transcriptMode, setTranscriptModeState] = useState<TranscriptMode>('upload')
   const [pastedTranscript, setPastedTranscript] = useState('')
   const [tags, setTags] = useState('')
-  const [preview, setPreview] = useState<YoutubePreview | null>(null)
-  const [previewError, setPreviewError] = useState<string | null>(null)
-  const [isLoadingPreview, setIsLoadingPreview] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
@@ -75,9 +58,6 @@ export function useImportVideoForm({
     setVideoFile(null)
     setTitle('')
     setAuthor('')
-    setYoutubeUrl('')
-    setPreview(null)
-    setPreviewError(null)
   }, [])
 
   const setTranscriptMode = useCallback((mode: TranscriptMode) => {
@@ -89,42 +69,7 @@ export function useImportVideoForm({
     }
   }, [])
 
-  const fetchPreview = useCallback(
-    async (url: string) => {
-      if (!url.trim()) {
-        setPreview(null)
-        setPreviewError(null)
-        return
-      }
 
-      setIsLoadingPreview(true)
-      setPreviewError(null)
-      try {
-        const metadata = await fetchMetadata(url)
-        setPreview({
-          title: metadata.title,
-          author_name: metadata.author_name,
-          thumbnail_url: metadata.thumbnail_url,
-        })
-      } catch (error) {
-        setPreview(null)
-        setPreviewError(
-          error instanceof YoutubeMetadataError ? error.message : 'Failed to load video preview'
-        )
-      } finally {
-        setIsLoadingPreview(false)
-      }
-    },
-    [fetchMetadata]
-  )
-
-  useEffect(() => {
-    if (importMode !== 'youtube') return
-    const timer = setTimeout(() => {
-      fetchPreview(youtubeUrl)
-    }, 500)
-    return () => clearTimeout(timer)
-  }, [youtubeUrl, fetchPreview, importMode])
 
   const hasTranscript = (() => {
     if (transcriptMode === 'paste') return pastedTranscript.replace(/\s/g, '').length >= 10
@@ -135,28 +80,21 @@ export function useImportVideoForm({
     e.preventDefault()
     setSubmitError(null)
 
-    if (importMode === 'local') {
-      if (!videoFile) {
-        setSubmitError('Video file is required')
-        return
-      }
-      if (!title.trim()) {
-        setSubmitError('Title is required')
-        return
-      }
-    } else {
-      if (!youtubeUrl.trim()) {
-        setSubmitError('YouTube URL is required')
-        return
-      }
-      if (isLoadingPreview) {
-        setSubmitError('Please wait for the video preview to finish loading')
-        return
-      }
-      if (previewError) {
-        setSubmitError('Please fix the YouTube URL error before submitting')
-        return
-      }
+    if (!videoFile) {
+      setSubmitError('Video file is required')
+      return
+    }
+    if (!ALLOWED_VIDEO_MIME_TYPES.includes(videoFile.type as typeof ALLOWED_VIDEO_MIME_TYPES[number])) {
+      setSubmitError('Unsupported format. Please use MP4, WebM, or MOV.')
+      return
+    }
+    if (videoFile.size > MAX_VIDEO_SIZE_BYTES) {
+      setSubmitError('File is too large. Maximum size is 500 MB.')
+      return
+    }
+    if (!title.trim()) {
+      setSubmitError('Title is required')
+      return
     }
 
     if (transcriptMode === 'paste') {
@@ -181,15 +119,9 @@ export function useImportVideoForm({
       })()
 
       const formData = new FormData()
-
-      if (importMode === 'local') {
-        formData.append('video', videoFile!)
-        formData.append('title', title.trim())
-        if (author.trim()) formData.append('author', author.trim())
-      } else {
-        formData.append('youtube_url', youtubeUrl)
-      }
-
+      formData.append('video', videoFile!)
+      formData.append('title', title.trim())
+      if (author.trim()) formData.append('author', author.trim())
       formData.append('transcript', fileToSubmit)
       if (tags.trim()) {
         formData.append('tags', tags)
@@ -207,16 +139,14 @@ export function useImportVideoForm({
 
       onSuccess()
       onClose()
-      setImportModeState('youtube')
+      setImportModeState('local')
       setVideoFile(null)
       setTitle('')
       setAuthor('')
-      setYoutubeUrl('')
       setTranscriptFile(null)
       setPastedTranscript('')
       setTranscriptModeState('upload')
       setTags('')
-      setPreview(null)
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : 'Failed to import video')
     } finally {
@@ -226,11 +156,7 @@ export function useImportVideoForm({
 
   const canSubmit = (() => {
     if (isSubmitting) return false
-    if (importMode === 'local') {
-      if (!videoFile || !title.trim()) return false
-    } else {
-      if (isLoadingPreview || !!previewError || !youtubeUrl.trim()) return false
-    }
+    if (!videoFile || !title.trim()) return false
     return hasTranscript
   })()
 
@@ -243,8 +169,6 @@ export function useImportVideoForm({
     setTitle,
     author,
     setAuthor,
-    youtubeUrl,
-    setYoutubeUrl,
     transcriptFile,
     setTranscriptFile,
     transcriptMode,
@@ -253,9 +177,6 @@ export function useImportVideoForm({
     setPastedTranscript,
     tags,
     setTags,
-    preview,
-    previewError,
-    isLoadingPreview,
     isSubmitting,
     submitError,
     handleSubmit,

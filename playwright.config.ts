@@ -27,13 +27,12 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'E2E_STUB_YOUTUBE=true pnpm dev',
+    command: 'pnpm dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
     env: {
-      E2E_STUB_YOUTUBE: 'true',
-      LINGOFLOW_DATA_DIR: e2eDataDir,
+            LINGOFLOW_DATA_DIR: e2eDataDir,
     },
   },
 })

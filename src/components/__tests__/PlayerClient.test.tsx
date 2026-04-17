@@ -4,8 +4,7 @@ import { Video } from '@/lib/videos'
 
 const mockVideo: Video = {
   id: 'video-1',
-  youtube_url: 'https://www.youtube.com/watch?v=abc123',
-  youtube_id: 'abc123',
+
   title: 'Test Lesson',
   author_name: 'Test Channel',
   thumbnail_url: 'https://example.com/thumb.jpg',
@@ -14,24 +13,13 @@ const mockVideo: Video = {
   tags: ['french'],
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',
-  source_type: 'youtube',
+  source_type: 'local',
 }
 
 // Mock MiniPlayer to expose onTimeUpdate for testing.
 // Variable MUST start with "mock" to satisfy babel-jest's hoisting rules for jest.mock factories.
 var mockCapturedOnTimeUpdate: ((current: number, duration: number) => void) | undefined
 
-jest.mock('@/components/MiniPlayer', () => ({
-  __esModule: true,
-  default: ({ onClose, onTimeUpdate }: { onClose: () => void; onTimeUpdate?: (c: number, d: number) => void }) => {
-    mockCapturedOnTimeUpdate = onTimeUpdate
-    return (
-      <div data-testid="mini-player">
-        <button data-testid="mini-player-close" onClick={onClose}>Close</button>
-      </div>
-    )
-  },
-}))
 
 jest.mock('@/components/LocalVideoPlayer', () => ({
   __esModule: true,

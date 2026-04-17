@@ -3,6 +3,13 @@ import { z } from 'zod'
 export const ALLOWED_TRANSCRIPT_FORMATS = ['srt', 'vtt', 'txt'] as const
 export type AllowedTranscriptFormat = typeof ALLOWED_TRANSCRIPT_FORMATS[number]
 
+export const ALLOWED_VIDEO_MIME_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'] as const
+export type AllowedVideoMimeType = typeof ALLOWED_VIDEO_MIME_TYPES[number]
+
+export const ALLOWED_VIDEO_EXTENSIONS = ['.mp4', '.webm', '.mov'] as const
+
+export const MAX_VIDEO_SIZE_BYTES = 524_288_000 // 500 MB
+
 function getFileExtension(filename: string): string {
   return filename.split('.').pop()?.toLowerCase() || ''
 }
@@ -18,17 +25,15 @@ function isFileLike(v: unknown): v is File {
 }
 
 const transcriptFileSchema = z
-  .custom<File>(isFileLike, 'Missing required fields: youtube_url and transcript')
+  .custom<File>(isFileLike, 'Transcript file is required')
   .refine(
     (f) => ALLOWED_TRANSCRIPT_FORMATS.includes(getFileExtension(f.name) as AllowedTranscriptFormat),
     `Invalid file extension. Allowed: ${ALLOWED_TRANSCRIPT_FORMATS.join(', ')}`
   )
 
 export const ImportVideoRequestSchema = z.object({
-  youtube_url: z.preprocess(
-    (v) => (v === null || v === undefined ? '' : v),
-    z.string().trim().min(1, 'Missing required fields: youtube_url and transcript')
-  ),
+  title: z.string().min(1, 'Title is required'),
+  author: z.string().optional(),
   transcript: transcriptFileSchema,
   tags: z
     .custom<string | null | undefined>(
@@ -38,8 +43,19 @@ export const ImportVideoRequestSchema = z.object({
     .transform((v) => (typeof v === 'string' ? v : '')),
 })
 
+const videoFileSchema = z
+  .custom<File>(isFileLike, 'Video file is required')
+  .refine(
+    (f) => ALLOWED_VIDEO_MIME_TYPES.includes((f as File).type as AllowedVideoMimeType),
+    'Unsupported format. Allowed: MP4, WebM, MOV'
+  )
+  .refine(
+    (f) => (f as File).size <= MAX_VIDEO_SIZE_BYTES,
+    'File exceeds 500 MB limit'
+  )
+
 export const ImportLocalVideoRequestSchema = z.object({
-  video: z.custom<File>(isFileLike, 'Video file is required'),
+  video: videoFileSchema,
   title: z.preprocess(
     (v) => (typeof v === 'string' ? v.trim() : ''),
     z.string().min(1, 'Title is required')

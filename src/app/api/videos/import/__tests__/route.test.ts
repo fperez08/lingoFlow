@@ -1,12 +1,7 @@
 // @jest-environment node
 
-jest.mock('@/lib/youtube')
-jest.mock('@/lib/thumbnails', () => ({
-  generateThumbnail: jest.fn().mockResolvedValue(null),
-}))
 jest.mock('@/lib/server/composition', () => ({
   videoService: {
-    importVideo: jest.fn(),
     importLocalVideo: jest.fn(),
     updateVideo: jest.fn(),
     deleteVideo: jest.fn(),
@@ -14,6 +9,10 @@ jest.mock('@/lib/server/composition', () => ({
   videoStore: {
     update: jest.fn(),
   },
+}))
+
+jest.mock('@/lib/thumbnails', () => ({
+  generateThumbnail: jest.fn().mockResolvedValue(null),
 }))
 
 jest.mock('next/server', () => ({
@@ -26,33 +25,28 @@ jest.mock('next/server', () => ({
 }))
 
 import { POST } from '../route'
-import { fetchYoutubeMetadata } from '@/lib/youtube'
-import { videoService } from '@/lib/server/composition'
+import { videoService, videoStore } from '@/lib/server/composition'
 import { ALLOWED_TRANSCRIPT_FORMATS } from '@/lib/api-schemas'
+import { generateThumbnail } from '@/lib/thumbnails'
 
-const mockFetchYoutubeMetadata = fetchYoutubeMetadata as jest.MockedFunction<typeof fetchYoutubeMetadata>
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mockVideoService = videoService as any
+const mockVideoStore = videoStore as any
+const mockGenerateThumbnail = generateThumbnail as jest.MockedFunction<typeof generateThumbnail>
 
-const fakeMetadata = {
-  youtube_id: 'abc123',
-  title: 'Test Video',
-  author_name: 'Test Author',
-  thumbnail_url: 'https://img.youtube.com/vi/abc123/0.jpg',
-}
-
-const fakeVideo = {
-  id: 'video-uuid',
-  youtube_url: 'https://www.youtube.com/watch?v=abc123',
-  youtube_id: 'abc123',
-  title: 'Test Video',
-  author_name: 'Test Author',
-  thumbnail_url: 'https://img.youtube.com/vi/abc123/0.jpg',
-  transcript_path: '/data/transcripts/video-uuid.srt',
+const fakeLocalVideo = {
+  id: 'local-video-uuid',
+  title: 'My Local Video',
+  author_name: 'Local Author',
+  thumbnail_url: '',
+  transcript_path: '/data/transcripts/local-video-uuid.srt',
   transcript_format: 'srt',
-  tags: ['language', 'english'],
+  tags: ['french', 'beginner'],
   created_at: '2024-01-01T00:00:00.000Z',
   updated_at: '2024-01-01T00:00:00.000Z',
+  source_type: 'local' as const,
+  local_video_path: '/data/videos/local-video-uuid.mp4',
+  local_video_filename: 'my-video.mp4',
 }
 
 function makeFormData(fields: Record<string, string | File>): FormData {
@@ -70,78 +64,15 @@ function makeRequest(formData: FormData): { formData: () => Promise<FormData> } 
 describe('POST /api/videos/import', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockFetchYoutubeMetadata.mockResolvedValue(fakeMetadata)
-    mockVideoService.importVideo.mockResolvedValue(fakeVideo)
-  })
-
-  it('returns 400 when youtube_url is empty string', async () => {
-    const transcriptFile = new File(['content'], 'transcript.srt', { type: 'text/plain' })
-    const fd = makeFormData({ youtube_url: '   ', transcript: transcriptFile })
-    const req = makeRequest(fd)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const res = await POST(req as any)
-    expect(res.status).toBe(400)
-    const body = await res.json()
-    expect(body.error).toBe('Missing required fields: youtube_url and transcript')
-  })
-
-  it('returns 400 when transcript has empty filename (no extension)', async () => {
-    const transcriptFile = new File([], '', { type: 'text/plain' })
-    const fd = makeFormData({
-      youtube_url: 'https://www.youtube.com/watch?v=abc123',
-      transcript: transcriptFile,
-    })
-    const req = makeRequest(fd)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const res = await POST(req as any)
-    expect(res.status).toBe(400)
-    const body = await res.json()
-    expect(body.error).toBe('Invalid file extension. Allowed: srt, vtt, txt')
-  })
-
-  it('returns 400 when tags is a non-string (File)', async () => {
-    const transcriptFile = new File(['content'], 'transcript.srt', { type: 'text/plain' })
-    const tagsFile = new File(['tag1'], 'tags.txt', { type: 'text/plain' })
-    const fd = new FormData()
-    fd.append('youtube_url', 'https://www.youtube.com/watch?v=abc123')
-    fd.append('transcript', transcriptFile)
-    fd.append('tags', tagsFile)
-    const req = makeRequest(fd)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const res = await POST(req as any)
-    expect(res.status).toBe(400)
-    const body = await res.json()
-    expect(body.error).toBe('Invalid tags field')
-  })
-
-  it('returns 201 with empty tags array when no tags provided', async () => {
-    const fakeVideoNoTags = { ...fakeVideo, tags: [] }
-    mockVideoService.importVideo.mockResolvedValue(fakeVideoNoTags)
-    const content = '1\n00:00:01,000 --> 00:00:02,000\nHello'
-    const transcriptFile = Object.assign(
-      new File([content], 'transcript.srt', { type: 'text/plain' }),
-      { arrayBuffer: async () => Buffer.from(content).buffer }
-    )
-    const fd = makeFormData({
-      youtube_url: 'https://www.youtube.com/watch?v=abc123',
-      transcript: transcriptFile,
-    })
-    const req = makeRequest(fd)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const res = await POST(req as any)
-    expect(res.status).toBe(201)
-    const body = await res.json()
-    expect(body.tags).toEqual([])
-    expect(mockVideoService.importVideo).toHaveBeenCalledWith(
-      expect.objectContaining({ tags: [] })
-    )
+    mockVideoService.importLocalVideo.mockResolvedValue(fakeLocalVideo)
+    mockGenerateThumbnail.mockResolvedValue(null)
   })
 
   it('exports ALLOWED_TRANSCRIPT_FORMATS with srt, vtt, txt', () => {
     expect(ALLOWED_TRANSCRIPT_FORMATS).toEqual(['srt', 'vtt', 'txt'])
   })
 
-  it('returns 400 when youtube_url is missing', async () => {
+  it('returns 400 when no video file is provided', async () => {
     const transcriptFile = new File(['content'], 'transcript.srt', { type: 'text/plain' })
     const fd = makeFormData({ transcript: transcriptFile })
     const req = makeRequest(fd)
@@ -149,25 +80,17 @@ describe('POST /api/videos/import', () => {
     const res = await POST(req as any)
     expect(res.status).toBe(400)
     const body = await res.json()
-    expect(body.error).toMatch(/Missing required fields/)
+    expect(body.error).toBe('Only local video upload is supported')
   })
 
-  it('returns 400 when transcript file is missing', async () => {
-    const fd = makeFormData({ youtube_url: 'https://www.youtube.com/watch?v=abc123' })
-    const req = makeRequest(fd)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const res = await POST(req as any)
-    expect(res.status).toBe(400)
-    const body = await res.json()
-    expect(body.error).toMatch(/Missing required fields/)
-  })
-
-  it('returns 400 for invalid transcript extension', async () => {
+  it('returns 400 when transcript has invalid extension', async () => {
+    const videoContent = Buffer.from('fake-video-data')
+    const videoFile = Object.assign(
+      new File([videoContent], 'my-video.mp4', { type: 'video/mp4' }),
+      { arrayBuffer: async () => videoContent.buffer }
+    )
     const transcriptFile = new File(['content'], 'transcript.pdf', { type: 'application/pdf' })
-    const fd = makeFormData({
-      youtube_url: 'https://www.youtube.com/watch?v=abc123',
-      transcript: transcriptFile,
-    })
+    const fd = makeFormData({ video: videoFile, title: 'Test', transcript: transcriptFile })
     const req = makeRequest(fd)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const res = await POST(req as any)
@@ -175,53 +98,10 @@ describe('POST /api/videos/import', () => {
     const body = await res.json()
     expect(body.error).toMatch(/Invalid file extension/)
   })
-
-  it('returns 422 when YouTube metadata fetch fails', async () => {
-    mockFetchYoutubeMetadata.mockRejectedValue(new Error('Invalid YouTube URL'))
-    const transcriptFile = new File(['content'], 'transcript.srt', { type: 'text/plain' })
-    const fd = makeFormData({
-      youtube_url: 'https://www.youtube.com/watch?v=abc123',
-      transcript: transcriptFile,
-    })
-    const req = makeRequest(fd)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const res = await POST(req as any)
-    expect(res.status).toBe(422)
-    const body = await res.json()
-    expect(body.error).toBe('Invalid YouTube URL')
-  })
-
-  it('returns 201 with video object on successful import', async () => {
-    const content = '1\n00:00:01,000 --> 00:00:02,000\nHello'
-    const transcriptFile = Object.assign(
-      new File([content], 'transcript.srt', { type: 'text/plain' }),
-      { arrayBuffer: async () => Buffer.from(content).buffer }
-    )
-    const fd = makeFormData({
-      youtube_url: 'https://www.youtube.com/watch?v=abc123',
-      transcript: transcriptFile,
-      tags: 'language, english',
-    })
-    const req = makeRequest(fd)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const res = await POST(req as any)
-    expect(res.status).toBe(201)
-    const body = await res.json()
-    expect(body).toEqual(fakeVideo)
-    expect(mockVideoService.importVideo).toHaveBeenCalledWith(
-      expect.objectContaining({
-        youtube_url: 'https://www.youtube.com/watch?v=abc123',
-        transcript_ext: 'srt',
-        tags: ['language', 'english'],
-      })
-    )
-  })
 })
 
-const fakeLocalVideo = {
+const fakeLocalVideo2 = {
   id: 'local-video-uuid',
-  youtube_url: '',
-  youtube_id: '',
   title: 'My Local Video',
   author_name: 'Local Author',
   thumbnail_url: '',
@@ -238,7 +118,8 @@ const fakeLocalVideo = {
 describe('POST /api/videos/import — local upload path', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockVideoService.importLocalVideo.mockResolvedValue(fakeLocalVideo)
+    mockVideoService.importLocalVideo.mockResolvedValue(fakeLocalVideo2)
+    mockGenerateThumbnail.mockResolvedValue(null)
   })
 
   function makeLocalFormData(overrides: Record<string, string | File> = {}): FormData {
@@ -267,7 +148,7 @@ describe('POST /api/videos/import — local upload path', () => {
     const res = await POST(req as any)
     expect(res.status).toBe(201)
     const body = await res.json()
-    expect(body).toEqual(fakeLocalVideo)
+    expect(body).toEqual(fakeLocalVideo2)
     expect(mockVideoService.importLocalVideo).toHaveBeenCalledWith(
       expect.objectContaining({
         title: 'My Local Video',
@@ -279,7 +160,27 @@ describe('POST /api/videos/import — local upload path', () => {
         source_type: 'local',
       })
     )
-    expect(mockVideoService.importVideo).not.toHaveBeenCalled()
+    expect(mockVideoService.importLocalVideo).toHaveBeenCalled()
+  })
+
+  it('kicks off thumbnail generation after local import', async () => {
+    mockGenerateThumbnail.mockResolvedValue('/data/thumbnails/local-video-uuid.jpg')
+
+    const fd = makeLocalFormData({ tags: 'french, beginner', author: 'Local Author' })
+    const req = makeRequest(fd)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const res = await POST(req as any)
+
+    expect(res.status).toBe(201)
+    await Promise.resolve()
+
+    expect(mockGenerateThumbnail).toHaveBeenCalledWith(
+      '/data/videos/local-video-uuid.mp4',
+      expect.stringContaining('/thumbnails/')
+    )
+    expect(mockVideoStore.update).toHaveBeenCalledWith(expect.any(String), {
+      thumbnail_path: '/data/thumbnails/local-video-uuid.jpg',
+    })
   })
 
   it('returns 400 when video file is present but title is missing', async () => {
@@ -320,6 +221,53 @@ describe('POST /api/videos/import — local upload path', () => {
       expect.objectContaining({ author_name: '' })
     )
   })
+
+  it('returns 400 when video MIME type is not allowed', async () => {
+    const videoContent = Buffer.from('data')
+    const videoFile = Object.assign(
+      new File([videoContent], 'my-video.avi', { type: 'video/avi' }),
+      { arrayBuffer: async () => videoContent.buffer }
+    )
+    const transcriptFile = new File(['content'], 'transcript.srt', { type: 'text/plain' })
+    const fd = makeFormData({ video: videoFile, title: 'Test', transcript: transcriptFile })
+    const req = makeRequest(fd)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const res = await POST(req as any)
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toMatch(/Unsupported format/)
+  })
+
+  it('returns 400 when video file exceeds 500 MB', async () => {
+    class OversizedFile extends File {
+      get size() { return 600_000_000 }
+    }
+    const videoFile = Object.assign(
+      new OversizedFile(['x'], 'big-video.mp4', { type: 'video/mp4' }),
+      { arrayBuffer: async () => Buffer.from('x').buffer }
+    )
+    const transcriptFile = new File(['content'], 'transcript.srt', { type: 'text/plain' })
+    const fd = makeFormData({ video: videoFile, title: 'Test', transcript: transcriptFile })
+    const req = makeRequest(fd)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const res = await POST(req as any)
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toMatch(/500 MB/)
+  })
+
+  it('returns 400 when video is a WebM with unsupported extension alias', async () => {
+    const videoContent = Buffer.from('data')
+    const videoFile = Object.assign(
+      new File([videoContent], 'my-video.webm', { type: 'video/webm' }),
+      { arrayBuffer: async () => videoContent.buffer }
+    )
+    const fakeWebmVideo = { ...fakeLocalVideo, local_video_path: '/data/videos/local.webm' }
+    mockVideoService.importLocalVideo.mockResolvedValue(fakeWebmVideo)
+    const fd = makeLocalFormData({ video: videoFile, title: 'WebM Video' })
+    const req = makeRequest(fd)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const res = await POST(req as any)
+    expect(res.status).toBe(201)
+  })
 })
-
-

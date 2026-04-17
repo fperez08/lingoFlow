@@ -31,10 +31,7 @@ export class ImportActions {
     await expect(this.page.getByTestId('import-modal')).toBeVisible()
   }
 
-  /** Fills the YouTube URL field in the import modal. */
-  async fillYoutubeUrl(url: string): Promise<void> {
-    await this.page.getByTestId('youtube-url-input').fill(url)
-  }
+
 
   /**
    * Sets the transcript file input using the provided file path.

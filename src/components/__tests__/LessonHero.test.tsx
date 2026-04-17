@@ -4,8 +4,7 @@ import { Video } from '@/lib/videos'
 
 const mockVideo: Video = {
   id: 'video-1',
-  youtube_url: 'https://www.youtube.com/watch?v=abc123',
-  youtube_id: 'abc123',
+
   title: 'Test Video Title',
   author_name: 'Test Author',
   thumbnail_url: 'https://example.com/thumb.jpg',

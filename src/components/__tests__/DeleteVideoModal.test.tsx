@@ -7,7 +7,7 @@ const mockVideo: VideoCardProps = {
   title: 'Test Video Title',
   author_name: 'Test Author',
   thumbnail_url: 'https://example.com/thumb.jpg',
-  youtube_url: 'https://www.youtube.com/watch?v=abc123',
+
   tags: ['spanish', 'beginner'],
   created_at: '2026-04-09T12:00:00Z',
 }
