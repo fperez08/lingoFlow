@@ -2,7 +2,7 @@
 name: issue-analyzer
 description: Analyze GitHub issues for issue-orchestrator. Fetch open issues, find PRD + sub-issues, build dependency graph, return prioritized ordered task list. Orchestrator only.
 tools: ["execute"]
-model: gpt-5.4
+model: GPT-5.4 (copilot)
 disable-model-invocation: true
 user-invocable: false
 ---

@@ -2,7 +2,7 @@
 name: task-reporter
 description: Build final delivery report after coding tasks done by `issue-orchestrator`. Take completed task results, make summary table, optional PRD GitHub issue comment. Orchestrator only.
 tools: ["execute", "read"]
-model: gpt-5-mini
+model: GPT-5 mini (copilot)
 disable-model-invocation: true
 user-invocable: false
 ---
