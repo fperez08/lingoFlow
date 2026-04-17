@@ -1,20 +1,17 @@
 ---
 name: api-docs-gatherer
-description: Gathers relevant API documentation for a single issue on behalf of the issue-orchestrator. Detects the project stack, fetches targeted docs with chub, persists them under docs/api, maintains docs/index.md, and reports completion. Called by the orchestrator only.
-tools: ["execute", "read", "write", "edit"]
-model: claude-haiku-4.5
+description: Gathers and maintains API documentation for the project tech stack. Detects installed stack, checks existing docs in docs/, refreshes stack docs with chub, and reports completion. Called by the orchestrator only.
+tools: ["execute", "read", "edit"]
+model: Claude Haiku 4.5 (copilot)
 disable-model-invocation: true
 user-invocable: false
 ---
 
-API documentation collector. Called by `issue-orchestrator` before coding task assignment. Identify external APIs or SDKs relevant to issue, fetch docs with `chub` CLI.
+API documentation collector. Called by `issue-orchestrator` once after issue analysis. Identify project tech stack and keep docs in `docs/` current using `chub` CLI.
 
 ## Input you receive
 
-Orchestrator passes:
-- **Issue number** and **title**
-- **Issue labels** (use as topic keywords)
-- **Issue body** (read for API names, SDK names, service names)
+Orchestrator passes no issue-specific context. This agent works from repository state only.
 
 ## Steps
 
@@ -32,9 +29,7 @@ Read relevant file(s) to extract dependency names. Example:
 - `go.mod` -> read `require` block
 - `Gemfile` -> read gem declarations
 
-Note primary language, framework, and third-party SDKs or API clients present. This narrows doc queries to what is actually installed.
-
-If no manifest files found, rely only on issue body and labels for topic identification.
+Note primary language, framework, and third-party SDKs or API clients present. This is source of truth for documentation topics.
 
 ### 2. Learn how chub works
 
@@ -44,18 +39,25 @@ chub help
 
 Read help output to understand available subcommands and doc query method.
 
-If `chub` not installed or returns error, note this, skip Steps 3–4, create or update `docs/api/chub-unavailable.md` with status, update `docs/index.md`, and continue to Step 5 reporting.
+If `chub` not installed or returns error, note this, skip fetch step, create or update `docs/chub-unavailable.md` with status, and continue to reporting.
 
 ### 3. Identify documentation topics
 
-From issue title, labels, body, and detected stack, extract:
-- API names, SDK names, and framework names explicitly mentioned
-- Module or service names (e.g., `AuthService`, `payments-api`, `webhooks`)
-- Technology keywords that map to installed packages
+From detected stack only, extract:
+- API names, SDK names, and framework names from installed dependencies
+- Runtime/platform tooling that requires external API docs
 
-Produce list of **1–3 documentation queries** (more dilutes context).
+Produce list of **2–6 documentation queries** covering project core stack.
 
-### 4. Fetch API documentation
+### 4. Check existing documentation in docs/
+
+Inspect current markdown files in `docs/` and determine which files already cover stack topics.
+
+- Reuse existing stack doc files when possible.
+- Avoid creating duplicate docs for same technology.
+- Keep project-specific docs untouched unless they are stack API docs that need refresh.
+
+### 5. Fetch and refresh API documentation
 
 For each identified topic, run:
 
@@ -67,16 +69,15 @@ or appropriate `chub` subcommand based on Step 2 help output.
 
 Capture each doc response. If query returns no results, try shorter or broader keyword once, then move on.
 
-### 5. Persist and refresh API documentation
+### 6. Persist and maintain stack documentation
 
 Persist collected docs to files instead of returning full inline package.
 
-1. Ensure folders exist:
+1. Ensure folder exists:
    - `docs/`
-   - `docs/api/`
 
 2. For each documentation topic, write file:
-   - Path: `docs/api/<topic-slug>.md`
+   - Path: `docs/<topic-slug>.md`
    - Include:
      - Topic name
      - Source query used
@@ -88,24 +89,23 @@ Persist collected docs to files instead of returning full inline package.
    - If different, overwrite with refreshed content
    - If unchanged, keep it and mark up to date in final report
 
-4. Maintain `docs/index.md`:
-   - Create file if missing
-   - Ensure it contains `## API Documentation` section
-   - Add/update links to all files currently in `docs/api/`
-   - Edit only this section so other sections (example: project docs) stay preserved
+4. Keep stack docs up to date:
+   - Ensure each core installed stack technology has a current doc file in `docs/`
+   - If existing file is stale or missing key API details, refresh/overwrite
+   - If technology removed from stack, do not auto-delete docs; report as potential stale file
 
 5. Report completion back to orchestrator with concise structured status block:
 
 ---
 
-**API DOCS COMPLETE — Issue #<number>: <title>**
+**API DOCS COMPLETE — Project Stack**
 
-- **Docs folder:** `docs/api/`
+- **Docs folder:** `docs/`
+- **Stack topics covered:** <count>
 - **Files written:** <count>
 - **Files refreshed:** <count>
 - **Files already up to date:** <count>
-- **Index updated:** `docs/index.md`
-- **Notes:** <include chub unavailable note when applicable>
+- **Notes:** <include chub unavailable note when applicable, plus potential stale files>
 
 ---
 

@@ -1,8 +1,8 @@
 ---
 name: coding-subagent
-description: Execute single coding task from issue-orchestrator. Given issue plus pre-generated docs in docs/api and docs/project, write code, update tests/docs, validate build, open and merge PR. Always report back to orchestrator after completion.
+description: Execute single coding task from issue-orchestrator. Given issue plus pre-generated docs in docs/, write code, update tests/docs, validate build, open PR, and report back to orchestrator.
 tools: ["execute", "read", "edit", "search"]
-model: gpt-5.3-codex
+model: GPT-5.3-Codex (copilot)
 disable-model-invocation: true
 user-invocable: false
 ---
@@ -15,8 +15,8 @@ Each task includes:
 - **Issue number, title, full body**
 - Documentation paths:
   - `docs/index.md`
-  - `docs/api/`
-  - `docs/project/`
+  - `docs/` (API docs)
+  - `docs/` (project docs)
 
 Read before coding.
 
@@ -29,25 +29,35 @@ Use `read` and `search` to confirm:
 - Acceptance criteria
 - Likely code and test files
 
-### 2. Review project context
+### 2. Fetch recent git context
 
-Read `docs/index.md`, then only relevant files in `docs/api/` and `docs/project/`. Match existing architecture, naming, test patterns.
+Run and review recent history before coding:
 
-### 3. Create branch
+```bash
+git log --oneline -10
+```
+
+Use this context to avoid duplicating recent work and to align with latest code direction.
+
+### 3. Review project context
+
+Read `docs/index.md`, then only relevant API and project docs in `docs/`. Match existing architecture, naming, test patterns.
+
+### 4. Create branch
 
 ```bash
 git checkout -b feat/issue-<number>-<short-slug>
 ```
 
-### 4. Implement
+### 5. Implement
 
 Apply only issue-scoped changes. No unrelated refactors, fixes, features.
 
-### 5. Update tests
+### 6. Update tests
 
 Add or update tests for every behavior change. Put tests in existing test locations. Follow existing naming conventions.
 
-### 6. Validate
+### 7. Validate
 
 Run real repo build/typecheck/test commands for project stack, example:
 
@@ -59,7 +69,7 @@ npm test
 
 If anything fails, fix and re-run until all required checks pass.
 
-### 7. Commit
+### 8. Commit
 
 Use Conventional Commits. Include required trailer:
 
@@ -72,13 +82,13 @@ git commit -m "feat: <short description> (closes #<issue-number>)
 Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ```
 
-### 8. Push
+### 9. Push
 
 ```bash
 git push origin feat/issue-<number>-<short-slug>
 ```
 
-### 9. Open PR
+### 10. Open PR
 
 ```bash
 gh pr create \
@@ -102,21 +112,9 @@ If default branch not `main`, detect with:
 git remote show origin | grep HEAD
 ```
 
-### 10. Merge PR
-
-```bash
-gh pr merge --squash --auto
-```
-
-Fallback if needed:
-
-```bash
-gh pr merge --squash
-```
-
 ### 11. Report to orchestrator
 
-Only after merge success, return:
+After PR creation (do not merge), return:
 
 ---
 
@@ -125,7 +123,7 @@ Only after merge success, return:
 - **Issue:** #<number> — <title>
 - **Branch:** `feat/issue-<number>-<short-slug>`
 - **PR:** <PR URL>
-- **PR Status:** Merged ✅ / Failed ❌
+- **PR Status:** Open ✅ / Failed ❌
 - **Build:** Passing ✅ / Failing ❌
 - **Tests:** All passing ✅ / N failing ❌
 - **Notes:** <blockers, edge cases, follow-ups>
@@ -135,7 +133,7 @@ Only after merge success, return:
 ## Constraints
 
 - Work on **one assigned issue only**.
-- Never merge with failing checks or unresolved conflicts.
+- Open PR only; do not merge.
 - If behavior documented under `docs/` changes, update relevant docs in same PR.
 - If blocked (missing access, broken environment, ambiguous requirements), stop and report blocker clearly.
 
