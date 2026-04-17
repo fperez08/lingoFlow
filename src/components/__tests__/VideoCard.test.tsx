@@ -23,7 +23,7 @@ describe('VideoCard', () => {
   })
 
   it('renders thumbnail with alt text', () => {
-    render(<VideoCard {...mockVideo} />)
+    render(<VideoCard {...mockVideo} source_type="youtube" />)
     const image = screen.getByAltText('Test Video Title')
     expect(image).toBeInTheDocument()
     expect(image).toHaveAttribute('src', 'https://example.com/thumb.jpg')
@@ -38,6 +38,17 @@ describe('VideoCard', () => {
   it('renders formatted date', () => {
     render(<VideoCard {...mockVideo} />)
     expect(screen.getByText('Apr 9, 2026')).toBeInTheDocument()
+  })
+
+  it('renders placeholder SVG when no thumbnail_url and no source_type', () => {
+    render(<VideoCard {...mockVideo} thumbnail_url="" />)
+    expect(screen.queryByAltText('Test Video Title')).not.toBeInTheDocument()
+  })
+
+  it('uses /api/videos/:id/thumbnail for local videos', () => {
+    render(<VideoCard {...mockVideo} thumbnail_url="" source_type="local" />)
+    const image = screen.getByAltText('Test Video Title')
+    expect(image).toHaveAttribute('src', '/api/videos/video-1/thumbnail')
   })
 
   it('renders without tags when tags array is empty', () => {

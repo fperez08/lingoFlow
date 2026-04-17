@@ -15,6 +15,7 @@ export const VideoSchema = z.object({
   source_type: z.enum(['youtube', 'local']).default('youtube'),
   local_video_path: z.string().nullable().optional(),
   local_video_filename: z.string().nullable().optional(),
+  thumbnail_path: z.string().nullable().optional(),
 })
 
 export const InsertVideoParamsSchema = z.object({
@@ -30,12 +31,14 @@ export const InsertVideoParamsSchema = z.object({
   source_type: z.enum(['youtube', 'local']).optional().default('youtube'),
   local_video_path: z.string().nullable().optional(),
   local_video_filename: z.string().nullable().optional(),
+  thumbnail_path: z.string().nullable().optional(),
 })
 
 export const UpdateVideoParamsSchema = z.object({
   tags: z.array(z.string()).optional(),
   transcript_path: z.string().optional(),
   transcript_format: z.string().optional(),
+  thumbnail_path: z.string().nullable().optional(),
 })
 
 export type Video = z.infer<typeof VideoSchema>

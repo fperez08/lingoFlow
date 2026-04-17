@@ -6,6 +6,7 @@ export function ensureDataDirs(dataDir: string): void {
   fs.mkdirSync(dataDir, { recursive: true })
   fs.mkdirSync(path.join(dataDir, 'transcripts'), { recursive: true })
   fs.mkdirSync(path.join(dataDir, 'videos'), { recursive: true })
+  fs.mkdirSync(path.join(dataDir, 'thumbnails'), { recursive: true })
 }
 
 export function openDb(dbPath: string): Database.Database {
@@ -42,4 +43,5 @@ export function initializeSchema(db: Database.Database): void {
   addColumnIfMissing('source_type', "TEXT NOT NULL DEFAULT 'youtube'")
   addColumnIfMissing('local_video_path', 'TEXT')
   addColumnIfMissing('local_video_filename', 'TEXT')
+  addColumnIfMissing('thumbnail_path', 'TEXT')
 }

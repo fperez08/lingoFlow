@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
+import path from 'path'
 import { fetchYoutubeMetadata } from '@/lib/youtube'
-import { videoService } from '@/lib/server/composition'
+import { videoService, videoStore } from '@/lib/server/composition'
 import { ImportVideoRequestSchema, ImportLocalVideoRequestSchema } from '@/lib/api-schemas'
+import { generateThumbnail } from '@/lib/thumbnails'
 
 export const runtime = 'nodejs'
+
+const dataDir = process.env.LINGOFLOW_DATA_DIR ?? path.join(process.cwd(), '.lingoflow-data')
 
 export async function POST(request: NextRequest) {
   try {
@@ -46,6 +50,18 @@ export async function POST(request: NextRequest) {
         tags,
         source_type: 'local',
       })
+
+      // Non-blocking thumbnail extraction — do not await
+      if (record.local_video_path) {
+        const thumbnailPath = path.join(dataDir, 'thumbnails', `${videoId}.jpg`)
+        void generateThumbnail(record.local_video_path, thumbnailPath)
+          .then((resolvedPath) => {
+            if (resolvedPath) {
+              videoStore.update(videoId, { thumbnail_path: resolvedPath })
+            }
+          })
+          .catch(() => { /* swallow — thumbnail is optional */ })
+      }
 
       return NextResponse.json(record, { status: 201 })
     }

@@ -15,6 +15,7 @@ const contentSecurityPolicy = [
 ].join("; ");
 
 const nextConfig: NextConfig = {
+  serverExternalPackages: ['fluent-ffmpeg', '@ffmpeg-installer/ffmpeg'],
   experimental: {
     serverActions: {
       bodySizeLimit: '500mb',

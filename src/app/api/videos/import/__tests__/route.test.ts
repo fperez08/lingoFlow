@@ -1,12 +1,18 @@
 // @jest-environment node
 
 jest.mock('@/lib/youtube')
+jest.mock('@/lib/thumbnails', () => ({
+  generateThumbnail: jest.fn().mockResolvedValue(null),
+}))
 jest.mock('@/lib/server/composition', () => ({
   videoService: {
     importVideo: jest.fn(),
     importLocalVideo: jest.fn(),
     updateVideo: jest.fn(),
     deleteVideo: jest.fn(),
+  },
+  videoStore: {
+    update: jest.fn(),
   },
 }))
 

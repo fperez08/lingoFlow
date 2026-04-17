@@ -162,6 +162,14 @@ export class VideoService {
       }
     }
 
+    if (existing.thumbnail_path) {
+      try {
+        this.videoFiles.delete(existing.thumbnail_path)
+      } catch (err) {
+        console.error(`Failed to delete thumbnail file for video ${id}:`, err)
+      }
+    }
+
     return true
   }
 }
