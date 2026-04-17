@@ -6,6 +6,11 @@ export interface TranscriptStore {
   delete(filePath: string): void
 }
 
+export interface VideoFileStore {
+  write(videoId: string, ext: string, buffer: Buffer): string
+  delete(filePath: string): void
+}
+
 export interface ImportVideoParams {
   id: string
   youtube_url: string
@@ -18,6 +23,19 @@ export interface ImportVideoParams {
   tags: string[]
 }
 
+export interface ImportLocalVideoParams {
+  id: string
+  title: string
+  author_name: string
+  video_buffer: Buffer
+  video_ext: string
+  video_filename: string
+  transcript_buffer: Buffer
+  transcript_ext: string
+  tags: string[]
+  source_type: 'local'
+}
+
 export interface UpdateVideoServiceParams {
   tags?: string[]
   transcript_ext?: string
@@ -27,7 +45,8 @@ export interface UpdateVideoServiceParams {
 export class VideoService {
   constructor(
     private store: VideoStore,
-    private transcripts: TranscriptStore
+    private transcripts: TranscriptStore,
+    private videoFiles: VideoFileStore,
   ) {}
 
   async importVideo(params: ImportVideoParams): Promise<Video> {
@@ -43,12 +62,48 @@ export class VideoService {
       transcript_path: transcriptPath,
       transcript_format: params.transcript_ext,
       tags: params.tags,
+      source_type: 'youtube',
     }
 
     try {
       return this.store.insert(insertParams)
     } catch (err) {
       this.transcripts.delete(transcriptPath)
+      throw err
+    }
+  }
+
+  async importLocalVideo(params: ImportLocalVideoParams): Promise<Video> {
+    const videoPath = this.videoFiles.write(params.id, params.video_ext, params.video_buffer)
+
+    let transcriptPath: string
+    try {
+      transcriptPath = this.transcripts.write(params.id, params.transcript_ext, params.transcript_buffer)
+    } catch (err) {
+      this.videoFiles.delete(videoPath)
+      throw err
+    }
+
+    const insertParams: InsertVideoParams = {
+      id: params.id,
+      youtube_url: '',
+      youtube_id: '',
+      title: params.title,
+      author_name: params.author_name,
+      thumbnail_url: '',
+      transcript_path: transcriptPath,
+      transcript_format: params.transcript_ext,
+      tags: params.tags,
+      source_type: 'local',
+      local_video_path: videoPath,
+      local_video_filename: params.video_filename,
+    }
+
+    try {
+      return this.store.insert(insertParams)
+    } catch (err) {
+      this.transcripts.delete(transcriptPath)
+      this.videoFiles.delete(videoPath)
       throw err
     }
   }
@@ -97,6 +152,14 @@ export class VideoService {
       this.transcripts.delete(existing.transcript_path)
     } catch (err) {
       console.error(`Failed to delete transcript file for video ${id}:`, err)
+    }
+
+    if (existing.source_type === 'local' && existing.local_video_path) {
+      try {
+        this.videoFiles.delete(existing.local_video_path)
+      } catch (err) {
+        console.error(`Failed to delete video file for ${id}:`, err)
+      }
     }
 
     return true

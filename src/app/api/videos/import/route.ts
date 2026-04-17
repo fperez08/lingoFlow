@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchYoutubeMetadata } from '@/lib/youtube'
 import { videoService } from '@/lib/server/composition'
-import { ImportVideoRequestSchema } from '@/lib/api-schemas'
+import { ImportVideoRequestSchema, ImportLocalVideoRequestSchema } from '@/lib/api-schemas'
 
 export const runtime = 'nodejs'
 
@@ -9,6 +9,48 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
 
+    // Detect local upload path: video field present and non-empty
+    const videoField = formData.get('video')
+    const isLocal = videoField instanceof File && videoField.size > 0
+
+    if (isLocal) {
+      const result = ImportLocalVideoRequestSchema.safeParse({
+        video: formData.get('video'),
+        title: formData.get('title'),
+        author: formData.get('author'),
+        transcript: formData.get('transcript'),
+        tags: formData.get('tags'),
+      })
+
+      if (!result.success) {
+        return NextResponse.json({ error: result.error.issues[0].message }, { status: 400 })
+      }
+
+      const { video, title, author, transcript: transcriptFile, tags: tagsString } = result.data
+      const videoId = crypto.randomUUID()
+      const videoBuffer = Buffer.from(await video.arrayBuffer())
+      const videoExt = video.name.split('.').pop()?.toLowerCase() || 'mp4'
+      const transcriptBuffer = Buffer.from(await transcriptFile.arrayBuffer())
+      const transcriptExt = transcriptFile.name.split('.').pop()?.toLowerCase() || ''
+      const tags = tagsString.split(',').map((t) => t.trim()).filter((t) => t.length > 0)
+
+      const record = await videoService.importLocalVideo({
+        id: videoId,
+        title,
+        author_name: author ?? '',
+        video_buffer: videoBuffer,
+        video_ext: videoExt,
+        video_filename: video.name,
+        transcript_buffer: transcriptBuffer,
+        transcript_ext: transcriptExt,
+        tags,
+        source_type: 'local',
+      })
+
+      return NextResponse.json(record, { status: 201 })
+    }
+
+    // YouTube import path (existing)
     const result = ImportVideoRequestSchema.safeParse({
       youtube_url: formData.get('youtube_url'),
       transcript: formData.get('transcript'),

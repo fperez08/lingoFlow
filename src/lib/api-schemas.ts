@@ -38,6 +38,27 @@ export const ImportVideoRequestSchema = z.object({
     .transform((v) => (typeof v === 'string' ? v : '')),
 })
 
+export const ImportLocalVideoRequestSchema = z.object({
+  video: z.custom<File>(isFileLike, 'Video file is required'),
+  title: z.preprocess(
+    (v) => (typeof v === 'string' ? v.trim() : ''),
+    z.string().min(1, 'Title is required')
+  ),
+  author: z
+    .custom<string | null | undefined>(
+      (v) => v === null || v === undefined || typeof v === 'string'
+    )
+    .transform((v) => (typeof v === 'string' ? v.trim() : ''))
+    .optional(),
+  transcript: transcriptFileSchema,
+  tags: z
+    .custom<string | null | undefined>(
+      (v) => v === null || v === undefined || typeof v === 'string',
+      'Invalid tags field'
+    )
+    .transform((v) => (typeof v === 'string' ? v : '')),
+})
+
 export const UpdateVideoRequestSchema = z.object({
   tags: z
     .string()

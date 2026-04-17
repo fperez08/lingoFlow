@@ -27,6 +27,9 @@ export const InsertVideoParamsSchema = z.object({
   transcript_path: z.string(),
   transcript_format: z.string(),
   tags: z.array(z.string()),
+  source_type: z.enum(['youtube', 'local']).optional().default('youtube'),
+  local_video_path: z.string().nullable().optional(),
+  local_video_filename: z.string().nullable().optional(),
 })
 
 export const UpdateVideoParamsSchema = z.object({
