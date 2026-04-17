@@ -24,6 +24,10 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy",
             value: contentSecurityPolicy,
           },
+          {
+            key: "Permissions-Policy",
+            value: "compute-pressure=*",
+          },
         ],
       },
     ];

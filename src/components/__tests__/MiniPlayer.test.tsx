@@ -36,6 +36,10 @@ beforeEach(() => {
             {
               target: {
                 getIframe: () => mockIframe,
+                getCurrentTime: mockGetCurrentTime,
+                getDuration: mockGetDuration,
+                seekTo: mockSeekTo,
+                pauseVideo: mockPauseVideo,
                 playVideo: mockPlayVideo,
               },
             } as unknown as YT.PlayerEvent

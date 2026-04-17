@@ -25,6 +25,11 @@ export const STUB_VIDEOS: Record<string, Omit<YoutubeMetadata, 'youtube_id'>> = 
     author_name: 'Luis Fonsi',
     thumbnail_url: 'https://img.youtube.com/vi/kJQP7kiw5Fk/0.jpg',
   },
+  gO8N3L_aERg: {
+    title: 'Fire Drill - The Office US',
+    author_name: 'The Office',
+    thumbnail_url: 'https://img.youtube.com/vi/gO8N3L_aERg/0.jpg',
+  },
 }
 
 const STUB_FALLBACK: Omit<YoutubeMetadata, 'youtube_id'> = {

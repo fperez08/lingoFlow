@@ -82,6 +82,7 @@ export default function MiniPlayer({
           onReady(event: YT.PlayerEvent) {
             configureIframe(event.target)
             event.target.playVideo()
+            startPolling(event.target)
           },
           onStateChange(event: YT.OnStateChangeEvent) {
             if (event.data === window.YT.PlayerState.PLAYING) {
