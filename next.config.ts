@@ -15,6 +15,11 @@ const contentSecurityPolicy = [
 ].join("; ");
 
 const nextConfig: NextConfig = {
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '500mb',
+    },
+  },
   async headers() {
     return [
       {

@@ -51,7 +51,10 @@ describe('VideoSchema', () => {
 
 describe('InsertVideoParamsSchema', () => {
   it('parses a valid insert params object', () => {
-    expect(InsertVideoParamsSchema.parse(validInsert)).toEqual(validInsert)
+    expect(InsertVideoParamsSchema.parse(validInsert)).toEqual({
+      ...validInsert,
+      source_type: 'youtube',
+    })
   })
 
   it('rejects missing required fields', () => {

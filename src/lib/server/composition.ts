@@ -13,6 +13,7 @@ import { ensureDataDirs, openDb, initializeSchema } from '@/lib/db'
 import { SqliteVideoStore } from '@/lib/video-store'
 import { VideoService } from '@/lib/video-service'
 import { writeTranscript, deleteTranscript } from '@/lib/transcripts'
+import fs from 'fs'
 
 function createContainer(dataDir: string) {
   ensureDataDirs(dataDir)
@@ -24,7 +25,23 @@ function createContainer(dataDir: string) {
     write: (videoId: string, ext: string, buffer: Buffer) => writeTranscript(videoId, ext, buffer),
     delete: (filePath: string) => deleteTranscript(filePath),
   }
-  const service = new VideoService(store, transcriptStore)
+  const videoFileStore = {
+    write: (videoId: string, ext: string, buffer: Buffer): string => {
+      const videosDir = path.join(dataDir, 'videos')
+      fs.mkdirSync(videosDir, { recursive: true })
+      const filePath = path.join(videosDir, `${videoId}.${ext}`)
+      fs.writeFileSync(filePath, buffer)
+      return filePath
+    },
+    delete: (filePath: string): void => {
+      try {
+        fs.unlinkSync(filePath)
+      } catch (err: unknown) {
+        if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err
+      }
+    },
+  }
+  const service = new VideoService(store, transcriptStore, videoFileStore)
 
   return { videoStore: store, videoService: service }
 }

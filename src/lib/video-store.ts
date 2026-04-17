@@ -52,12 +52,15 @@ export class SqliteVideoStore implements VideoStore {
   insert(params: InsertVideoParams): Video {
     const now = new Date().toISOString()
     this.db.prepare(`
-      INSERT INTO videos (id, youtube_url, youtube_id, title, author_name, thumbnail_url, transcript_path, transcript_format, tags, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO videos (id, youtube_url, youtube_id, title, author_name, thumbnail_url, transcript_path, transcript_format, tags, created_at, updated_at, source_type, local_video_path, local_video_filename)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       params.id, params.youtube_url, params.youtube_id, params.title,
       params.author_name, params.thumbnail_url, params.transcript_path,
-      params.transcript_format, JSON.stringify(params.tags), now, now
+      params.transcript_format, JSON.stringify(params.tags), now, now,
+      params.source_type ?? 'youtube',
+      params.local_video_path ?? null,
+      params.local_video_filename ?? null,
     )
     return this.getById(params.id)!
   }

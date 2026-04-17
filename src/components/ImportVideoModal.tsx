@@ -10,6 +10,14 @@ interface ImportVideoModalProps {
 
 export default function ImportVideoModal({ isOpen, onClose, onSuccess }: ImportVideoModalProps) {
   const {
+    importMode,
+    setImportMode,
+    videoFile,
+    setVideoFile,
+    title,
+    setTitle,
+    author,
+    setAuthor,
     youtubeUrl,
     setYoutubeUrl,
     transcriptFile,
@@ -56,6 +64,36 @@ export default function ImportVideoModal({ isOpen, onClose, onSuccess }: ImportV
           </button>
         </div>
 
+        {/* Source selector */}
+        <div className="flex rounded-xl overflow-hidden border border-outline-variant/30 dark:border-slate-700 mb-5">
+          <button
+            type="button"
+            data-testid="import-mode-youtube"
+            onClick={() => setImportMode('youtube')}
+            disabled={isSubmitting}
+            className={`flex-1 py-2 text-sm font-bold transition-colors ${
+              importMode === 'youtube'
+                ? 'bg-primary/10 text-primary'
+                : 'bg-surface-container-low dark:bg-slate-950/50 text-on-surface-variant hover:bg-surface-container dark:hover:bg-slate-800'
+            }`}
+          >
+            YouTube
+          </button>
+          <button
+            type="button"
+            data-testid="import-mode-local"
+            onClick={() => setImportMode('local')}
+            disabled={isSubmitting}
+            className={`flex-1 py-2 text-sm font-bold transition-colors ${
+              importMode === 'local'
+                ? 'bg-primary/10 text-primary'
+                : 'bg-surface-container-low dark:bg-slate-950/50 text-on-surface-variant hover:bg-surface-container dark:hover:bg-slate-800'
+            }`}
+          >
+            Local File
+          </button>
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-5">
           {submitError && (
             <div data-testid="import-error" className="bg-error-container text-on-error-container px-4 py-3 rounded-xl text-sm">
@@ -63,42 +101,99 @@ export default function ImportVideoModal({ isOpen, onClose, onSuccess }: ImportV
             </div>
           )}
 
-          <div>
-            <label htmlFor="youtubeUrl" className="text-sm font-bold text-on-surface-variant mb-1 block">
-              YouTube URL
-            </label>
-            <input
-              id="youtubeUrl"
-              data-testid="youtube-url-input"
-              type="text"
-              placeholder="https://www.youtube.com/watch?v=..."
-              value={youtubeUrl}
-              onChange={(e) => setYoutubeUrl(e.target.value)}
-              disabled={isSubmitting}
-              required
-              className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-950/50 rounded-xl border border-outline-variant/30 dark:border-slate-700 text-on-surface dark:text-slate-100 placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all duration-300"
-            />
-            {isLoadingPreview && (
-              <p className="text-sm text-on-surface-variant/70 mt-1">Loading preview...</p>
-            )}
-            {previewError && (
-              <p data-testid="url-preview-error" className="text-sm text-error mt-1">{previewError}</p>
-            )}
-          </div>
-
-          {preview && (
-            <div data-testid="preview-container" className="flex gap-4 p-4 bg-surface-container-low rounded-xl border border-outline-variant/20">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={preview.thumbnail_url}
-                alt={preview.title}
-                className="w-24 h-16 object-cover rounded-lg flex-shrink-0"
-              />
-              <div className="min-w-0">
-                <p className="font-headline font-bold text-on-surface text-sm leading-tight truncate">{preview.title}</p>
-                <p className="text-xs text-on-surface-variant mt-1">by {preview.author_name}</p>
+          {importMode === 'youtube' ? (
+            <>
+              <div>
+                <label htmlFor="youtubeUrl" className="text-sm font-bold text-on-surface-variant mb-1 block">
+                  YouTube URL
+                </label>
+                <input
+                  id="youtubeUrl"
+                  data-testid="youtube-url-input"
+                  type="text"
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  value={youtubeUrl}
+                  onChange={(e) => setYoutubeUrl(e.target.value)}
+                  disabled={isSubmitting}
+                  required
+                  className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-950/50 rounded-xl border border-outline-variant/30 dark:border-slate-700 text-on-surface dark:text-slate-100 placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all duration-300"
+                />
+                {isLoadingPreview && (
+                  <p className="text-sm text-on-surface-variant/70 mt-1">Loading preview...</p>
+                )}
+                {previewError && (
+                  <p data-testid="url-preview-error" className="text-sm text-error mt-1">{previewError}</p>
+                )}
               </div>
-            </div>
+
+              {preview && (
+                <div data-testid="preview-container" className="flex gap-4 p-4 bg-surface-container-low rounded-xl border border-outline-variant/20">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={preview.thumbnail_url}
+                    alt={preview.title}
+                    className="w-24 h-16 object-cover rounded-lg flex-shrink-0"
+                  />
+                  <div className="min-w-0">
+                    <p className="font-headline font-bold text-on-surface text-sm leading-tight truncate">{preview.title}</p>
+                    <p className="text-xs text-on-surface-variant mt-1">by {preview.author_name}</p>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <div>
+                <label htmlFor="videoFile" className="text-sm font-bold text-on-surface-variant mb-1 block">
+                  Video File
+                </label>
+                <input
+                  id="videoFile"
+                  data-testid="video-file-input"
+                  type="file"
+                  accept="video/*,.mp4,.webm,.mov,.mkv"
+                  onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
+                  disabled={isSubmitting}
+                  className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-950/50 rounded-xl border border-outline-variant/30 dark:border-slate-700 text-on-surface dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all duration-300 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-primary/10 file:text-primary"
+                />
+                {videoFile && (
+                  <p className="text-xs text-on-surface-variant mt-1">{videoFile.name}</p>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="videoTitle" className="text-sm font-bold text-on-surface-variant mb-1 block">
+                  Title
+                </label>
+                <input
+                  id="videoTitle"
+                  data-testid="local-title-input"
+                  type="text"
+                  placeholder="Enter video title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  disabled={isSubmitting}
+                  required
+                  className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-950/50 rounded-xl border border-outline-variant/30 dark:border-slate-700 text-on-surface dark:text-slate-100 placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all duration-300"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="videoAuthor" className="text-sm font-bold text-on-surface-variant mb-1 block">
+                  Author <span className="font-normal text-on-surface-variant/60">(optional)</span>
+                </label>
+                <input
+                  id="videoAuthor"
+                  data-testid="local-author-input"
+                  type="text"
+                  placeholder="e.g., Channel name"
+                  value={author}
+                  onChange={(e) => setAuthor(e.target.value)}
+                  disabled={isSubmitting}
+                  className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-950/50 rounded-xl border border-outline-variant/30 dark:border-slate-700 text-on-surface dark:text-slate-100 placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all duration-300"
+                />
+              </div>
+            </>
           )}
 
           <div>
@@ -202,3 +297,4 @@ export default function ImportVideoModal({ isOpen, onClose, onSuccess }: ImportV
     </div>
   )
 }
+

@@ -4,6 +4,7 @@ jest.mock('@/lib/youtube')
 jest.mock('@/lib/server/composition', () => ({
   videoService: {
     importVideo: jest.fn(),
+    importLocalVideo: jest.fn(),
     updateVideo: jest.fn(),
     deleteVideo: jest.fn(),
   },
@@ -210,4 +211,109 @@ describe('POST /api/videos/import', () => {
     )
   })
 })
+
+const fakeLocalVideo = {
+  id: 'local-video-uuid',
+  youtube_url: '',
+  youtube_id: '',
+  title: 'My Local Video',
+  author_name: 'Local Author',
+  thumbnail_url: '',
+  transcript_path: '/data/transcripts/local-video-uuid.srt',
+  transcript_format: 'srt',
+  tags: ['french', 'beginner'],
+  created_at: '2024-01-01T00:00:00.000Z',
+  updated_at: '2024-01-01T00:00:00.000Z',
+  source_type: 'local' as const,
+  local_video_path: '/data/videos/local-video-uuid.mp4',
+  local_video_filename: 'my-video.mp4',
+}
+
+describe('POST /api/videos/import — local upload path', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockVideoService.importLocalVideo.mockResolvedValue(fakeLocalVideo)
+  })
+
+  function makeLocalFormData(overrides: Record<string, string | File> = {}): FormData {
+    const videoContent = Buffer.from('fake-video-data')
+    const videoFile = Object.assign(
+      new File([videoContent], 'my-video.mp4', { type: 'video/mp4' }),
+      { arrayBuffer: async () => videoContent.buffer }
+    )
+    const transcriptContent = '1\n00:00:01,000 --> 00:00:02,000\nBonjour'
+    const transcriptFile = Object.assign(
+      new File([transcriptContent], 'transcript.srt', { type: 'text/plain' }),
+      { arrayBuffer: async () => Buffer.from(transcriptContent).buffer }
+    )
+    const defaults: Record<string, string | File> = {
+      video: videoFile,
+      title: 'My Local Video',
+      transcript: transcriptFile,
+    }
+    return makeFormData({ ...defaults, ...overrides })
+  }
+
+  it('returns 201 and calls importLocalVideo when video file is present', async () => {
+    const fd = makeLocalFormData({ tags: 'french, beginner', author: 'Local Author' })
+    const req = makeRequest(fd)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const res = await POST(req as any)
+    expect(res.status).toBe(201)
+    const body = await res.json()
+    expect(body).toEqual(fakeLocalVideo)
+    expect(mockVideoService.importLocalVideo).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'My Local Video',
+        author_name: 'Local Author',
+        video_ext: 'mp4',
+        video_filename: 'my-video.mp4',
+        transcript_ext: 'srt',
+        tags: ['french', 'beginner'],
+        source_type: 'local',
+      })
+    )
+    expect(mockVideoService.importVideo).not.toHaveBeenCalled()
+  })
+
+  it('returns 400 when video file is present but title is missing', async () => {
+    const videoContent = Buffer.from('data')
+    const videoFile = Object.assign(
+      new File([videoContent], 'video.mp4', { type: 'video/mp4' }),
+      { arrayBuffer: async () => videoContent.buffer }
+    )
+    const transcriptFile = new File(['content'], 'transcript.srt', { type: 'text/plain' })
+    const fd = makeFormData({ video: videoFile, transcript: transcriptFile })
+    const req = makeRequest(fd)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const res = await POST(req as any)
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toMatch(/Title is required/)
+  })
+
+  it('returns 201 with empty tags when no tags provided for local upload', async () => {
+    const fakeNoTags = { ...fakeLocalVideo, tags: [] }
+    mockVideoService.importLocalVideo.mockResolvedValue(fakeNoTags)
+    const fd = makeLocalFormData()
+    const req = makeRequest(fd)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const res = await POST(req as any)
+    expect(res.status).toBe(201)
+    expect(mockVideoService.importLocalVideo).toHaveBeenCalledWith(
+      expect.objectContaining({ tags: [] })
+    )
+  })
+
+  it('returns 201 with empty author_name when no author provided', async () => {
+    const fd = makeLocalFormData()
+    const req = makeRequest(fd)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await POST(req as any)
+    expect(mockVideoService.importLocalVideo).toHaveBeenCalledWith(
+      expect.objectContaining({ author_name: '' })
+    )
+  })
+})
+
 
