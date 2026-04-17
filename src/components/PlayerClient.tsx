@@ -67,27 +67,24 @@ export default function PlayerClient({ video }: { video: Video }) {
       .finally(() => setLoadingTranscript(false))
   }, [video.id])
 
-  useEffect(() => {
-    if (!isMiniPlayerOpen || cues.length === 0) return
-
+  const playbackCueIndex = (() => {
+    if (!isMiniPlayerOpen || cues.length === 0) return -1
     const now = playbackTime.current
-    const cueIndex = cues.findIndex((cue) => {
+    return cues.findIndex((cue) => {
       const start = parseTimeToSeconds(cue.startTime)
       const end = parseTimeToSeconds(cue.endTime)
       return now >= start && now < end
     })
+  })()
 
-    if (cueIndex >= 0 && cueIndex !== activeCueIndex) {
-      setActiveCueIndex(cueIndex)
-    }
-  }, [activeCueIndex, cues, isMiniPlayerOpen, playbackTime.current])
+  const highlightedCueIndex = playbackCueIndex >= 0 ? playbackCueIndex : activeCueIndex
 
   useEffect(() => {
-    const activeElement = document.querySelector(`[data-testid="cue-${activeCueIndex}"]`)
+    const activeElement = document.querySelector(`[data-testid="cue-${highlightedCueIndex}"]`)
     if (activeElement) {
       ;(activeElement as HTMLElement).scrollIntoView?.({ block: 'center', behavior: 'smooth' })
     }
-  }, [activeCueIndex])
+  }, [highlightedCueIndex])
 
   function handleWordAction(word: string, action: 'add' | 'master') {
     setVocabWords((prev) =>
@@ -153,8 +150,8 @@ export default function PlayerClient({ video }: { video: Video }) {
                 )}
                 {!loadingTranscript &&
                   cues.map((cue, i) => {
-                    const isPast = i < activeCueIndex
-                    const isActive = i === activeCueIndex
+                    const isPast = i < highlightedCueIndex
+                    const isActive = i === highlightedCueIndex
                     return (
                       <div
                         key={cue.index}

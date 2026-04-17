@@ -4,6 +4,7 @@
  */
 
 import { ImportActions } from '../ImportActions'
+import type { Page } from '@playwright/test'
 
 jest.mock('@playwright/test', () => ({
   expect: jest.fn(() => ({
@@ -48,7 +49,7 @@ describe('ImportActions', () => {
       getByRole: jest.fn().mockReturnValue(buttonLocator),
     }
 
-    const importActions = new ImportActions(page as any)
+    const importActions = new ImportActions(page as unknown as Page)
     await importActions.clickImportButton()
 
     expect(page.getByTestId).toHaveBeenCalledWith('import-modal')
@@ -59,7 +60,7 @@ describe('ImportActions', () => {
 
   it('fillTranscriptFile() calls setInputFiles on transcript-input', async () => {
     const { page, locator } = makePage()
-    const importActions = new ImportActions(page as any)
+    const importActions = new ImportActions(page as unknown as Page)
     await importActions.fillTranscriptFile('/path/to/transcript.srt')
     expect(page.getByTestId).toHaveBeenCalledWith('transcript-input')
     expect(locator.setInputFiles).toHaveBeenCalledWith('/path/to/transcript.srt')
@@ -67,7 +68,7 @@ describe('ImportActions', () => {
 
   it('fillTags() fills the tags-input', async () => {
     const { page, locator } = makePage()
-    const importActions = new ImportActions(page as any)
+    const importActions = new ImportActions(page as unknown as Page)
     await importActions.fillTags('spanish, beginner')
     expect(page.getByTestId).toHaveBeenCalledWith('tags-input')
     expect(locator.fill).toHaveBeenCalledWith('spanish, beginner')
@@ -75,7 +76,7 @@ describe('ImportActions', () => {
 
   it('clickSubmitImport() clicks the submit-import-button', async () => {
     const { page, locator } = makePage()
-    const importActions = new ImportActions(page as any)
+    const importActions = new ImportActions(page as unknown as Page)
     await importActions.clickSubmitImport()
     expect(page.getByTestId).toHaveBeenCalledWith('submit-import-button')
     expect(locator.click).toHaveBeenCalled()
@@ -83,14 +84,14 @@ describe('ImportActions', () => {
 
   it('assertValidationError() waits for import-error to be visible', async () => {
     const { page } = makePage()
-    const importActions = new ImportActions(page as any)
+    const importActions = new ImportActions(page as unknown as Page)
     await importActions.assertValidationError()
     expect(page.getByTestId).toHaveBeenCalledWith('import-error')
   })
 
   it('assertValidationError() filters by message text when provided', async () => {
     const { page } = makePage()
-    const importActions = new ImportActions(page as any)
+    const importActions = new ImportActions(page as unknown as Page)
     await importActions.assertValidationError('YouTube URL is required')
     expect(page.getByTestId).toHaveBeenCalledWith('import-error')
   })
