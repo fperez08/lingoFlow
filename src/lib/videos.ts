@@ -2,8 +2,6 @@ import { z } from 'zod'
 
 export const VideoSchema = z.object({
   id: z.string(),
-  youtube_url: z.string(),
-  youtube_id: z.string(),
   title: z.string(),
   author_name: z.string(),
   thumbnail_url: z.string(),
@@ -12,22 +10,20 @@ export const VideoSchema = z.object({
   tags: z.array(z.string()),
   created_at: z.string(),
   updated_at: z.string(),
-  source_type: z.enum(['youtube', 'local']).default('youtube'),
+  source_type: z.literal('local').default('local'),
   local_video_path: z.string().nullable().optional(),
   local_video_filename: z.string().nullable().optional(),
 })
 
 export const InsertVideoParamsSchema = z.object({
   id: z.string(),
-  youtube_url: z.string(),
-  youtube_id: z.string(),
   title: z.string(),
   author_name: z.string(),
   thumbnail_url: z.string(),
   transcript_path: z.string(),
   transcript_format: z.string(),
   tags: z.array(z.string()),
-  source_type: z.enum(['youtube', 'local']).optional().default('youtube'),
+  source_type: z.literal('local').default('local'),
   local_video_path: z.string().nullable().optional(),
   local_video_filename: z.string().nullable().optional(),
 })

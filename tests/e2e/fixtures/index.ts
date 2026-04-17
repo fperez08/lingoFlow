@@ -76,8 +76,6 @@ export function teardownIsolatedDb(ctx: FixtureContext): void {
 
 export interface SeedVideoParams {
   id?: string
-  youtube_url?: string
-  youtube_id?: string
   title?: string
   author_name?: string
   thumbnail_url?: string
@@ -95,11 +93,9 @@ export function seedVideo(params: SeedVideoParams = {}) {
   const { insertVideo } = require('../../../src/lib/videos')
   return insertVideo({
     id,
-    youtube_url: params.youtube_url ?? `https://www.youtube.com/watch?v=${id}`,
-    youtube_id: params.youtube_id ?? id,
     title: params.title ?? `Test Video ${id}`,
     author_name: params.author_name ?? 'Test Author',
-    thumbnail_url: params.thumbnail_url ?? `https://img.youtube.com/vi/${id}/0.jpg`,
+    thumbnail_url: params.thumbnail_url ?? '',
     transcript_path: params.transcript_path ?? `transcripts/${id}.txt`,
     transcript_format: params.transcript_format ?? 'txt',
     tags: params.tags ?? [],
@@ -115,37 +111,3 @@ export function seedTranscript(videoId: string, ext: string, content: string): s
   return writeTranscript(videoId, ext, Buffer.from(content, 'utf8'))
 }
 
-// ---------------------------------------------------------------------------
-// YouTube stub helpers
-// ---------------------------------------------------------------------------
-
-export interface YoutubeStubContext {
-  /** Original value of E2E_STUB_YOUTUBE (may be undefined) */
-  originalEnv: string | undefined
-}
-
-/**
- * Sets E2E_STUB_YOUTUBE=true so that fetchYoutubeMetadata() returns canned
- * responses instead of calling the real YouTube oEmbed API.
- *
- * Usage:
- *   const ctx = setupYoutubeStub()
- *   // ... run tests that call fetchYoutubeMetadata() ...
- *   teardownYoutubeStub(ctx)
- */
-export function setupYoutubeStub(): YoutubeStubContext {
-  const originalEnv = process.env.E2E_STUB_YOUTUBE
-  process.env.E2E_STUB_YOUTUBE = 'true'
-  return { originalEnv }
-}
-
-/**
- * Restores E2E_STUB_YOUTUBE to its previous value.
- */
-export function teardownYoutubeStub(ctx: YoutubeStubContext): void {
-  if (ctx.originalEnv === undefined) {
-    delete process.env.E2E_STUB_YOUTUBE
-  } else {
-    process.env.E2E_STUB_YOUTUBE = ctx.originalEnv
-  }
-}

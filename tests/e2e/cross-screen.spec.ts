@@ -13,11 +13,9 @@ import { PlayerPage } from './pages/PlayerPage'
 
 const MOCK_VIDEO = {
   id: 'mock-vid-1',
-  youtube_url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-  youtube_id: 'dQw4w9WgXcQ',
-  title: 'Rick Astley - Never Gonna Give You Up',
-  author_name: 'RickAstleyVEVO',
-  thumbnail_url: 'https://img.youtube.com/vi/dQw4w9WgXcQ/0.jpg',
+  title: 'Sample Local Video',
+  author_name: 'Local Author',
+  thumbnail_url: '',
   transcript_path: null,
   transcript_format: null,
   tags: ['music'],

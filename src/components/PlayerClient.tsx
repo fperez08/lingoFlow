@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { Video } from '@/lib/videos'
 import { TranscriptCue } from '@/lib/parse-transcript'
 import LessonHero from '@/components/LessonHero'
-import MiniPlayer from '@/components/MiniPlayer'
 import LocalVideoPlayer from '@/components/LocalVideoPlayer'
 import PlaybackProgress from '@/components/PlaybackProgress'
 
@@ -239,27 +238,14 @@ export default function PlayerClient({ video }: { video: Video }) {
       </section>
 
       {isMiniPlayerOpen && (
-        video.source_type === 'local'
-          ? (
-            <LocalVideoPlayer
-              videoId={video.id}
-              title={video.title}
-              onClose={handleClose}
-              onTimeUpdate={handleTimeUpdate}
-              seekToTime={requestedSeekTime}
-              onSeekApplied={() => setRequestedSeekTime(null)}
-            />
-          )
-          : (
-            <MiniPlayer
-              youtubeId={video.youtube_id}
-              title={video.title}
-              onClose={handleClose}
-              onTimeUpdate={handleTimeUpdate}
-              seekToTime={requestedSeekTime}
-              onSeekApplied={() => setRequestedSeekTime(null)}
-            />
-          )
+        <LocalVideoPlayer
+          videoId={video.id}
+          title={video.title}
+          onClose={handleClose}
+          onTimeUpdate={handleTimeUpdate}
+          seekToTime={requestedSeekTime}
+          onSeekApplied={() => setRequestedSeekTime(null)}
+        />
       )}
     </div>
   )

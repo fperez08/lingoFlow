@@ -25,17 +25,15 @@ function isFileLike(v: unknown): v is File {
 }
 
 const transcriptFileSchema = z
-  .custom<File>(isFileLike, 'Missing required fields: youtube_url and transcript')
+  .custom<File>(isFileLike, 'Transcript file is required')
   .refine(
     (f) => ALLOWED_TRANSCRIPT_FORMATS.includes(getFileExtension(f.name) as AllowedTranscriptFormat),
     `Invalid file extension. Allowed: ${ALLOWED_TRANSCRIPT_FORMATS.join(', ')}`
   )
 
 export const ImportVideoRequestSchema = z.object({
-  youtube_url: z.preprocess(
-    (v) => (v === null || v === undefined ? '' : v),
-    z.string().trim().min(1, 'Missing required fields: youtube_url and transcript')
-  ),
+  title: z.string().min(1, 'Title is required'),
+  author: z.string().optional(),
   transcript: transcriptFileSchema,
   tags: z
     .custom<string | null | undefined>(

@@ -11,8 +11,7 @@ import path from 'path'
 import { DashboardPage } from './pages/DashboardPage'
 import { ImportActions } from './pages/ImportActions'
 
-const RICK_ASTLEY_URL = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
-const RICK_ASTLEY_TITLE = 'Rick Astley - Never Gonna Give You Up'
+const LOCAL_VIDEO_TITLE = 'Sample Local Video'
 const SAMPLE_SRT = path.join(__dirname, 'fixtures', 'sample.srt')
 
 test.describe('Import happy path', () => {
@@ -21,11 +20,9 @@ test.describe('Import happy path', () => {
     const importActions = new ImportActions(page)
     const importedVideo = {
       id: 'test-vid-1',
-      youtube_url: RICK_ASTLEY_URL,
-      youtube_id: 'dQw4w9WgXcQ',
-      title: RICK_ASTLEY_TITLE,
-      author_name: 'Rick Astley',
-      thumbnail_url: 'https://img.youtube.com/vi/dQw4w9WgXcQ/0.jpg',
+      title: LOCAL_VIDEO_TITLE,
+      author_name: 'Local Author',
+      thumbnail_url: '',
       transcript_path: '/tmp/test/transcripts/test-vid-1.srt',
       transcript_format: 'srt',
       tags: ['music', 'classic'],
@@ -51,8 +48,7 @@ test.describe('Import happy path', () => {
     await importActions.clickImportButton()
 
     // 3. Fill YouTube URL
-    await importActions.fillYoutubeUrl(RICK_ASTLEY_URL)
-
+    
     // 4. Upload transcript file
     await importActions.fillTranscriptFile(SAMPLE_SRT)
 
@@ -69,7 +65,7 @@ test.describe('Import happy path', () => {
     // 8. Assert video card appears with correct title
     await dashboard.assertVideoCardCount(1)
     const firstCard = page.getByTestId(`video-card-${importedVideo.id}`)
-    await expect(firstCard).toContainText(RICK_ASTLEY_TITLE)
+    await expect(firstCard).toContainText(LOCAL_VIDEO_TITLE)
 
     // 9. Assert tags visible on card
     await expect(firstCard).toContainText('music')
@@ -78,6 +74,6 @@ test.describe('Import happy path', () => {
     // 10. Reload page and assert card still present (persistence check)
     await dashboard.loadDashboard()
     await dashboard.assertVideoCardCount(1)
-    await expect(page.getByTestId(`video-card-${importedVideo.id}`)).toContainText(RICK_ASTLEY_TITLE)
+    await expect(page.getByTestId(`video-card-${importedVideo.id}`)).toContainText(LOCAL_VIDEO_TITLE)
   })
 })

@@ -13,14 +13,13 @@ export interface VideoFileStore {
 
 export interface ImportVideoParams {
   id: string
-  youtube_url: string
-  youtube_id: string
   title: string
   author_name: string
   thumbnail_url: string
   transcript_ext: string
   transcript_buffer: Buffer
   tags: string[]
+  // No YouTube fields
 }
 
 export interface ImportLocalVideoParams {
@@ -54,15 +53,14 @@ export class VideoService {
 
     const insertParams: InsertVideoParams = {
       id: params.id,
-      youtube_url: params.youtube_url,
-      youtube_id: params.youtube_id,
+
       title: params.title,
       author_name: params.author_name,
       thumbnail_url: params.thumbnail_url,
       transcript_path: transcriptPath,
       transcript_format: params.transcript_ext,
       tags: params.tags,
-      source_type: 'youtube',
+      source_type: 'local',
     }
 
     try {
@@ -86,8 +84,7 @@ export class VideoService {
 
     const insertParams: InsertVideoParams = {
       id: params.id,
-      youtube_url: '',
-      youtube_id: '',
+
       title: params.title,
       author_name: params.author_name,
       thumbnail_url: '',

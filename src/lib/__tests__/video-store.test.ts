@@ -5,14 +5,13 @@ import { InsertVideoParams } from '../videos'
 function makeParams(overrides: Partial<InsertVideoParams> = {}): InsertVideoParams {
   return {
     id: 'test-id-1',
-    youtube_url: 'https://youtube.com/watch?v=abc',
-    youtube_id: 'abc',
     title: 'Test Video',
     author_name: 'Test Author',
-    thumbnail_url: 'https://img.youtube.com/vi/abc/0.jpg',
-    transcript_path: '/transcripts/abc.json',
-    transcript_format: 'json',
+    thumbnail_url: '',
+    transcript_path: '/transcripts/abc.srt',
+    transcript_format: 'srt',
     tags: ['tag1', 'tag2'],
+    source_type: 'local',
     ...overrides,
   }
 }
