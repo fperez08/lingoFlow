@@ -88,7 +88,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 git push origin feat/issue-<number>-<short-slug>
 ```
 
-### 10. Open PR
+### 10. Open PR and enable auto-merge
 
 ```bash
 gh pr create \
@@ -104,6 +104,12 @@ gh pr create \
 
 Closes #<issue-number>" \
   --base main
+```
+
+Immediately after the PR is created, enable auto-merge with squash strategy:
+
+```bash
+gh pr merge --auto --squash
 ```
 
 If default branch not `main`, detect with:

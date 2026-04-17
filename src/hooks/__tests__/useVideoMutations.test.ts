@@ -7,8 +7,12 @@ function createWrapper() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
-  return ({ children }: { children: React.ReactNode }) =>
-    React.createElement(QueryClientProvider, { client: queryClient }, children)
+  function Wrapper({ children }: { children: React.ReactNode }) {
+    return React.createElement(QueryClientProvider, { client: queryClient }, children)
+  }
+
+  Wrapper.displayName = 'QueryClientWrapper'
+  return Wrapper
 }
 
 describe('useVideoMutations', () => {
@@ -64,8 +68,12 @@ describe('useVideoMutations', () => {
         defaultOptions: { queries: { retry: false } },
       })
       const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries')
-      const wrapper = ({ children }: { children: React.ReactNode }) =>
-        React.createElement(QueryClientProvider, { client: queryClient }, children)
+      function Wrapper({ children }: { children: React.ReactNode }) {
+        return React.createElement(QueryClientProvider, { client: queryClient }, children)
+      }
+
+      Wrapper.displayName = 'RefreshVideosWrapper'
+      const wrapper = Wrapper
 
       const { result } = renderHook(() => useVideoMutations(), { wrapper })
 

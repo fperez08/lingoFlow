@@ -4,6 +4,7 @@
  */
 
 import { DeleteActions } from '../DeleteActions'
+import type { Page } from '@playwright/test'
 
 jest.mock('@playwright/test', () => ({
   expect: jest.fn(() => ({
@@ -48,7 +49,7 @@ describe('DeleteActions', () => {
       getByRole: jest.fn().mockReturnValue(makeLocator()),
     }
 
-    const deleteActions = new DeleteActions(page as any)
+    const deleteActions = new DeleteActions(page as unknown as Page)
     await deleteActions.clickDeleteOnCard(0)
 
     expect(page.getByTestId).toHaveBeenCalledWith('video-grid')
@@ -68,7 +69,7 @@ describe('DeleteActions', () => {
       getByRole: jest.fn().mockReturnValue(makeLocator()),
     }
 
-    const deleteActions = new DeleteActions(page as any)
+    const deleteActions = new DeleteActions(page as unknown as Page)
     await deleteActions.confirmDelete()
 
     expect(page.getByTestId).toHaveBeenCalledWith('confirm-delete-button')
@@ -82,7 +83,7 @@ describe('DeleteActions', () => {
       getByRole: jest.fn().mockReturnValue(makeLocator()),
     }
 
-    const deleteActions = new DeleteActions(page as any)
+    const deleteActions = new DeleteActions(page as unknown as Page)
     await deleteActions.assertCardRemoved('abc-123')
 
     expect(page.getByTestId).toHaveBeenCalledWith('video-card-abc-123')

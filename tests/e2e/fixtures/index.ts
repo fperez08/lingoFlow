@@ -12,6 +12,9 @@ import crypto from 'crypto'
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
+import * as dbModule from '../../../src/lib/db'
+import * as videosModule from '../../../src/lib/videos'
+import { writeTranscript } from '../../../src/lib/transcripts'
 
 export interface FixtureContext {
   dataDir: string
@@ -46,9 +49,9 @@ export function setupIsolatedDb(workerIndex?: number): FixtureContext {
   const originalEnv = process.env.LINGOFLOW_DATA_DIR
   process.env.LINGOFLOW_DATA_DIR = dataDir
 
-  // Initialise schema (creates tables, WAL mode, transcripts subdir)
-  const { getDb } = require('../../../src/lib/db')
-  getDb()
+  // Initialise schema if helper exists in current db module implementation.
+  const getDb = Reflect.get(dbModule, 'getDb') as (() => void) | undefined
+  getDb?.()
 
   return { dataDir, originalEnv }
 }
@@ -58,8 +61,8 @@ export function setupIsolatedDb(workerIndex?: number): FixtureContext {
  * LINGOFLOW_DATA_DIR to its previous value.
  */
 export function teardownIsolatedDb(ctx: FixtureContext): void {
-  const { _resetDbInstance } = require('../../../src/lib/db')
-  _resetDbInstance()
+  const resetDb = Reflect.get(dbModule, '_resetDbInstance') as (() => void) | undefined
+  resetDb?.()
 
   if (ctx.originalEnv === undefined) {
     delete process.env.LINGOFLOW_DATA_DIR
@@ -90,7 +93,22 @@ export interface SeedVideoParams {
  */
 export function seedVideo(params: SeedVideoParams = {}) {
   const id = params.id ?? crypto.randomUUID()
-  const { insertVideo } = require('../../../src/lib/videos')
+  const insertVideo = Reflect.get(videosModule, 'insertVideo') as
+    ((video: {
+      id: string
+      title: string
+      author_name: string
+      thumbnail_url: string
+      transcript_path: string
+      transcript_format: string
+      tags: string[]
+    }) => unknown)
+    | undefined
+
+  if (!insertVideo) {
+    throw new Error('insertVideo is not available in src/lib/videos')
+  }
+
   return insertVideo({
     id,
     title: params.title ?? `Test Video ${id}`,
@@ -107,7 +125,6 @@ export function seedVideo(params: SeedVideoParams = {}) {
  * Returns the absolute path of the written file.
  */
 export function seedTranscript(videoId: string, ext: string, content: string): string {
-  const { writeTranscript } = require('../../../src/lib/transcripts')
   return writeTranscript(videoId, ext, Buffer.from(content, 'utf8'))
 }
 

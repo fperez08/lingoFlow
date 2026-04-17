@@ -25,14 +25,14 @@ describe('transcripts module', () => {
     fs.rmSync(tmpDir, { recursive: true, force: true })
   })
 
-  it('buildTranscriptPath returns the correct path', () => {
-    const { buildTranscriptPath } = require('../transcripts')
+  it('buildTranscriptPath returns the correct path', async () => {
+    const { buildTranscriptPath } = await import('../transcripts')
     const result = buildTranscriptPath('abc123', 'txt')
     expect(result).toBe(path.join(tmpDir, 'transcripts', 'abc123.txt'))
   })
 
-  it('writeTranscript creates the file with correct content', () => {
-    const { writeTranscript, buildTranscriptPath } = require('../transcripts')
+  it('writeTranscript creates the file with correct content', async () => {
+    const { writeTranscript, buildTranscriptPath } = await import('../transcripts')
     const content = Buffer.from('hello world')
     const filePath = writeTranscript('vid1', 'txt', content)
     expect(fs.existsSync(filePath)).toBe(true)
@@ -40,22 +40,22 @@ describe('transcripts module', () => {
     expect(filePath).toBe(buildTranscriptPath('vid1', 'txt'))
   })
 
-  it('deleteTranscript removes an existing file', () => {
-    const { writeTranscript, deleteTranscript } = require('../transcripts')
+  it('deleteTranscript removes an existing file', async () => {
+    const { writeTranscript, deleteTranscript } = await import('../transcripts')
     const filePath = writeTranscript('vid2', 'txt', Buffer.from('data'))
     expect(fs.existsSync(filePath)).toBe(true)
     deleteTranscript(filePath)
     expect(fs.existsSync(filePath)).toBe(false)
   })
 
-  it('deleteTranscript does not throw if file does not exist', () => {
-    const { deleteTranscript } = require('../transcripts')
+  it('deleteTranscript does not throw if file does not exist', async () => {
+    const { deleteTranscript } = await import('../transcripts')
     const nonExistentPath = path.join(tmpDir, 'transcripts', 'nonexistent.txt')
     expect(() => deleteTranscript(nonExistentPath)).not.toThrow()
   })
 
-  it('getTranscriptsDir returns path inside the data dir', () => {
-    const { getTranscriptsDir } = require('../transcripts')
+  it('getTranscriptsDir returns path inside the data dir', async () => {
+    const { getTranscriptsDir } = await import('../transcripts')
     expect(getTranscriptsDir()).toBe(path.join(tmpDir, 'transcripts'))
   })
 })

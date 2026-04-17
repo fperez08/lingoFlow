@@ -5,6 +5,7 @@
  */
 
 import { DashboardPage } from '../DashboardPage'
+import type { Page } from '@playwright/test'
 
 jest.mock('@playwright/test', () => ({
   expect: jest.fn(() => ({
@@ -40,21 +41,21 @@ function makePage() {
 describe('DashboardPage', () => {
   it('loadDashboard() navigates to /dashboard with networkidle', async () => {
     const { page } = makePage()
-    const dashboard = new DashboardPage(page as any)
+    const dashboard = new DashboardPage(page as unknown as Page)
     await dashboard.loadDashboard()
     expect(page.goto).toHaveBeenCalledWith('/dashboard', { waitUntil: 'networkidle' })
   })
 
   it('assertLoading() waits for loading-indicator to be visible', async () => {
     const { page } = makePage()
-    const dashboard = new DashboardPage(page as any)
+    const dashboard = new DashboardPage(page as unknown as Page)
     await dashboard.assertLoading()
     expect(page.getByTestId).toHaveBeenCalledWith('loading-indicator')
   })
 
   it('assertEmpty() waits for empty-state to be visible', async () => {
     const { page } = makePage()
-    const dashboard = new DashboardPage(page as any)
+    const dashboard = new DashboardPage(page as unknown as Page)
     await dashboard.assertEmpty()
     expect(page.getByTestId).toHaveBeenCalledWith('empty-state')
   })
@@ -72,7 +73,7 @@ describe('DashboardPage', () => {
       getByTestId: jest.fn().mockReturnValue(gridLocator),
       getByRole: jest.fn(),
     }
-    const dashboard = new DashboardPage(page as any)
+    const dashboard = new DashboardPage(page as unknown as Page)
     const result = await dashboard.getVideoCards()
     expect(page.getByTestId).toHaveBeenCalledWith('video-grid')
     expect(gridLocator.locator).toHaveBeenCalledWith('[data-testid^="video-card-"]')
@@ -91,7 +92,7 @@ describe('DashboardPage', () => {
       getByTestId: jest.fn().mockReturnValue(gridLocator),
       getByRole: jest.fn(),
     }
-    const dashboard = new DashboardPage(page as any)
+    const dashboard = new DashboardPage(page as unknown as Page)
     const count = await dashboard.getVideoCardCount()
     expect(count).toBe(2)
   })
