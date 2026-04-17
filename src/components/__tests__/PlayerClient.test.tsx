@@ -14,6 +14,7 @@ const mockVideo: Video = {
   tags: ['french'],
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',
+  source_type: 'youtube',
 }
 
 // Mock MiniPlayer to expose onTimeUpdate for testing.
@@ -21,6 +22,18 @@ const mockVideo: Video = {
 var mockCapturedOnTimeUpdate: ((current: number, duration: number) => void) | undefined
 
 jest.mock('@/components/MiniPlayer', () => ({
+  __esModule: true,
+  default: ({ onClose, onTimeUpdate }: { onClose: () => void; onTimeUpdate?: (c: number, d: number) => void }) => {
+    mockCapturedOnTimeUpdate = onTimeUpdate
+    return (
+      <div data-testid="mini-player">
+        <button data-testid="mini-player-close" onClick={onClose}>Close</button>
+      </div>
+    )
+  },
+}))
+
+jest.mock('@/components/LocalVideoPlayer', () => ({
   __esModule: true,
   default: ({ onClose, onTimeUpdate }: { onClose: () => void; onTimeUpdate?: (c: number, d: number) => void }) => {
     mockCapturedOnTimeUpdate = onTimeUpdate
@@ -120,6 +133,18 @@ describe('PlayerClient', () => {
 
     fireEvent.click(screen.getByTestId('mini-player-close'))
     expect(screen.queryByTestId('playback-progress')).not.toBeInTheDocument()
+  })
+
+  it('renders mini-player for local video source_type', async () => {
+    const localVideo: Video = {
+      ...mockVideo,
+      source_type: 'local',
+      local_video_path: 'videos/test.mp4',
+      local_video_filename: 'test.mp4',
+    }
+    render(<PlayerClient video={localVideo} />)
+    fireEvent.click(screen.getByTestId('play-button'))
+    expect(screen.getByTestId('mini-player')).toBeInTheDocument()
   })
 })
 

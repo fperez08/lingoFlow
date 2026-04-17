@@ -12,6 +12,9 @@ export const VideoSchema = z.object({
   tags: z.array(z.string()),
   created_at: z.string(),
   updated_at: z.string(),
+  source_type: z.enum(['youtube', 'local']).default('youtube'),
+  local_video_path: z.string().nullable().optional(),
+  local_video_filename: z.string().nullable().optional(),
 })
 
 export const InsertVideoParamsSchema = z.object({
