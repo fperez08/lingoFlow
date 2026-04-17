@@ -6,6 +6,7 @@ import {
   YoutubeMetadataError,
 } from '@/lib/youtube'
 import { detectPastedTranscriptFormat } from '@/lib/detect-transcript-format'
+import { ALLOWED_VIDEO_MIME_TYPES, MAX_VIDEO_SIZE_BYTES } from '@/lib/api-schemas'
 
 interface YoutubePreview {
   title: string
@@ -138,6 +139,14 @@ export function useImportVideoForm({
     if (importMode === 'local') {
       if (!videoFile) {
         setSubmitError('Video file is required')
+        return
+      }
+      if (!ALLOWED_VIDEO_MIME_TYPES.includes(videoFile.type as typeof ALLOWED_VIDEO_MIME_TYPES[number])) {
+        setSubmitError('Unsupported format. Please use MP4, WebM, or MOV.')
+        return
+      }
+      if (videoFile.size > MAX_VIDEO_SIZE_BYTES) {
+        setSubmitError('File is too large. Maximum size is 500 MB.')
         return
       }
       if (!title.trim()) {

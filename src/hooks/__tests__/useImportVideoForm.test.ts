@@ -596,4 +596,70 @@ describe('useImportVideoForm', () => {
       expect(result.current.submitError).toBe('Transcript must contain at least 10 non-whitespace characters')
     })
   })
+
+  describe('local upload video validation', () => {
+    function makeTranscriptFile() {
+      return new File(['1\n00:00:01,000 --> 00:00:02,000\nBonjour'], 'transcript.srt', { type: 'text/plain' })
+    }
+
+    it('sets submitError when video MIME type is not allowed', async () => {
+      const { result } = renderForm()
+      const invalidFile = new File(['data'], 'video.avi', { type: 'video/avi' })
+      act(() => {
+        result.current.setImportMode('local')
+        result.current.setVideoFile(invalidFile)
+        result.current.setTitle('Test')
+        result.current.setTranscriptFile(makeTranscriptFile())
+      })
+      await act(async () => {
+        await result.current.handleSubmit({ preventDefault: jest.fn() } as unknown as React.FormEvent)
+      })
+      expect(result.current.submitError).toMatch(/Unsupported format/)
+    })
+
+    it('sets submitError when video file exceeds 500 MB', async () => {
+      const { result } = renderForm()
+      const oversizedFile = Object.defineProperty(
+        new File(['x'], 'video.mp4', { type: 'video/mp4' }),
+        'size',
+        { value: 600_000_000 }
+      )
+      act(() => {
+        result.current.setImportMode('local')
+        result.current.setVideoFile(oversizedFile)
+        result.current.setTitle('Test')
+        result.current.setTranscriptFile(makeTranscriptFile())
+      })
+      await act(async () => {
+        await result.current.handleSubmit({ preventDefault: jest.fn() } as unknown as React.FormEvent)
+      })
+      expect(result.current.submitError).toMatch(/500 MB/)
+    })
+
+    it('clears submitError for a valid MP4 file and proceeds', async () => {
+      ;(global.fetch as jest.Mock).mockResolvedValue({ ok: true, json: async () => ({}) })
+      const { result, onSuccess } = renderForm()
+      const videoContent = Buffer.from('fake-mp4')
+      const validFile = Object.assign(
+        new File([videoContent], 'video.mp4', { type: 'video/mp4' }),
+        { arrayBuffer: async () => videoContent.buffer }
+      )
+      const transcriptContent = '1\n00:00:01,000 --> 00:00:02,000\nBonjour'
+      const transcriptFile = Object.assign(
+        new File([transcriptContent], 'transcript.srt', { type: 'text/plain' }),
+        { arrayBuffer: async () => Buffer.from(transcriptContent).buffer }
+      )
+      act(() => {
+        result.current.setImportMode('local')
+        result.current.setVideoFile(validFile)
+        result.current.setTitle('My Video')
+        result.current.setTranscriptFile(transcriptFile)
+      })
+      await act(async () => {
+        await result.current.handleSubmit({ preventDefault: jest.fn() } as unknown as React.FormEvent)
+      })
+      expect(result.current.submitError).toBeNull()
+      expect(onSuccess).toHaveBeenCalled()
+    })
+  })
 })

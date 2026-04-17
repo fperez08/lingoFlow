@@ -151,7 +151,7 @@ export default function ImportVideoModal({ isOpen, onClose, onSuccess }: ImportV
                   id="videoFile"
                   data-testid="video-file-input"
                   type="file"
-                  accept="video/*,.mp4,.webm,.mov,.mkv"
+                  accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov"
                   onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
                   disabled={isSubmitting}
                   className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-950/50 rounded-xl border border-outline-variant/30 dark:border-slate-700 text-on-surface dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all duration-300 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-primary/10 file:text-primary"
