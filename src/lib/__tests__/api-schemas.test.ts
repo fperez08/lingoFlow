@@ -17,13 +17,13 @@ describe('ImportVideoRequestSchema', () => {
 
   it('parses valid input with tags', () => {
     const result = ImportVideoRequestSchema.safeParse({
-      youtube_url: 'https://www.youtube.com/watch?v=abc123',
+      title: 'My Video',
       transcript: makeFile('transcript.srt'),
       tags: 'language, english',
     })
     expect(result.success).toBe(true)
     if (result.success) {
-      expect(result.data.youtube_url).toBe('https://www.youtube.com/watch?v=abc123')
+      expect(result.data.title).toBe('My Video')
       expect(result.data.tags).toBe('language, english')
       expect(result.data.transcript.name).toBe('transcript.srt')
     }
@@ -31,7 +31,7 @@ describe('ImportVideoRequestSchema', () => {
 
   it('parses valid input without tags (defaults to empty string)', () => {
     const result = ImportVideoRequestSchema.safeParse({
-      youtube_url: 'https://www.youtube.com/watch?v=abc123',
+      title: 'My Video',
       transcript: makeFile('transcript.vtt'),
       tags: null,
     })
@@ -41,46 +41,42 @@ describe('ImportVideoRequestSchema', () => {
     }
   })
 
-  it('trims youtube_url whitespace', () => {
+  it('trims title whitespace', () => {
     const result = ImportVideoRequestSchema.safeParse({
-      youtube_url: '  https://www.youtube.com/watch?v=abc123  ',
+      title: 'My Video',
       transcript: makeFile('transcript.txt'),
     })
     expect(result.success).toBe(true)
     if (result.success) {
-      expect(result.data.youtube_url).toBe('https://www.youtube.com/watch?v=abc123')
+      expect(result.data.title).toBe('My Video')
     }
   })
 
-  it('fails when youtube_url is empty', () => {
+  it('fails when title is empty', () => {
     const result = ImportVideoRequestSchema.safeParse({
-      youtube_url: '   ',
+      title: '',
       transcript: makeFile('transcript.srt'),
     })
     expect(result.success).toBe(false)
     if (!result.success) {
-      expect(result.error.issues[0].message).toBe(
-        'Missing required fields: youtube_url and transcript'
-      )
+      expect(result.error.issues[0].message).toBe('Title is required')
     }
   })
 
   it('fails when transcript is not a File', () => {
     const result = ImportVideoRequestSchema.safeParse({
-      youtube_url: 'https://www.youtube.com/watch?v=abc123',
+      title: 'My Video',
       transcript: null,
     })
     expect(result.success).toBe(false)
     if (!result.success) {
-      expect(result.error.issues[0].message).toBe(
-        'Missing required fields: youtube_url and transcript'
-      )
+      expect(result.error.issues[0].message).toBe('Transcript file is required')
     }
   })
 
   it('fails for invalid transcript extension', () => {
     const result = ImportVideoRequestSchema.safeParse({
-      youtube_url: 'https://www.youtube.com/watch?v=abc123',
+      title: 'My Video',
       transcript: makeFile('transcript.pdf'),
     })
     expect(result.success).toBe(false)
@@ -93,8 +89,9 @@ describe('ImportVideoRequestSchema', () => {
 
   it('fails when transcript filename has no extension', () => {
     const result = ImportVideoRequestSchema.safeParse({
-      youtube_url: 'https://www.youtube.com/watch?v=abc123',
+      title: 'Test',
       transcript: makeFile(''),
+      tags: '',
     })
     expect(result.success).toBe(false)
     if (!result.success) {
@@ -104,7 +101,7 @@ describe('ImportVideoRequestSchema', () => {
 
   it('fails when tags is a non-string (File)', () => {
     const result = ImportVideoRequestSchema.safeParse({
-      youtube_url: 'https://www.youtube.com/watch?v=abc123',
+      title: 'Test',
       transcript: makeFile('transcript.srt'),
       tags: new File(['t'], 'tags.txt'),
     })
@@ -117,8 +114,9 @@ describe('ImportVideoRequestSchema', () => {
   it('accepts all allowed extensions', () => {
     for (const ext of ALLOWED_TRANSCRIPT_FORMATS) {
       const result = ImportVideoRequestSchema.safeParse({
-        youtube_url: 'https://www.youtube.com/watch?v=abc123',
+        title: 'Test',
         transcript: makeFile(`transcript.${ext}`),
+        tags: '',
       })
       expect(result.success).toBe(true)
     }

@@ -4,8 +4,7 @@ import { DashboardPage } from './pages/DashboardPage'
 import { ImportActions } from './pages/ImportActions'
 import { PlayerPage } from './pages/PlayerPage'
 
-const FIRE_DRILL_URL = 'https://www.youtube.com/watch?v=gO8N3L_aERg'
-const FIRE_DRILL_TITLE = 'Fire Drill - The Office US'
+const LOCAL_VIDEO_TITLE = 'Sample Local Video'
 const FIRE_DRILL_SRT = path.join(__dirname, 'fixtures', 'fire-drill.srt')
 
 test.describe('Import → player → transcript → delete integration', () => {
@@ -27,10 +26,9 @@ test.describe('Import → player → transcript → delete integration', () => {
     await dashboard.loadDashboard()
 
     await importActions.clickImportButton()
-    await importActions.fillYoutubeUrl(FIRE_DRILL_URL)
-    await expect(page.getByTestId('url-preview-error')).toBeHidden()
+        await expect(page.getByTestId('url-preview-error')).toBeHidden()
     await expect(page.getByTestId('preview-container')).toBeVisible()
-    await expect(page.getByTestId('preview-container')).toContainText(FIRE_DRILL_TITLE)
+    await expect(page.getByTestId('preview-container')).toContainText(LOCAL_VIDEO_TITLE)
 
     await importActions.fillTranscriptFile(FIRE_DRILL_SRT)
     await importActions.fillTags(`english, office, ${uniqueTag}`)

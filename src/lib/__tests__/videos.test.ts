@@ -9,29 +9,29 @@ import {
 
 const validVideo: Video = {
   id: 'v1',
-  youtube_url: 'https://youtube.com/watch?v=abc',
-  youtube_id: 'abc',
   title: 'Test Video',
   author_name: 'Author',
-  thumbnail_url: 'https://img.youtube.com/vi/abc/0.jpg',
+  thumbnail_url: '',
   transcript_path: '/transcripts/v1.vtt',
   transcript_format: 'vtt',
   tags: ['tag1', 'tag2'],
-  source_type: 'youtube',
+  source_type: 'local',
   created_at: '2024-01-01T00:00:00.000Z',
   updated_at: '2024-01-01T00:00:00.000Z',
+  local_video_path: '/videos/v1.mp4',
+  local_video_filename: 'video.mp4',
 }
 
 const validInsert: InsertVideoParams = {
   id: 'v1',
-  youtube_url: 'https://youtube.com/watch?v=abc',
-  youtube_id: 'abc',
   title: 'Test Video',
   author_name: 'Author',
-  thumbnail_url: 'https://img.youtube.com/vi/abc/0.jpg',
+  thumbnail_url: '',
   transcript_path: '/transcripts/v1.vtt',
   transcript_format: 'vtt',
   tags: [],
+  local_video_path: '/videos/v1.mp4',
+  local_video_filename: 'video.mp4',
 }
 
 describe('VideoSchema', () => {
@@ -53,7 +53,7 @@ describe('InsertVideoParamsSchema', () => {
   it('parses a valid insert params object', () => {
     expect(InsertVideoParamsSchema.parse(validInsert)).toEqual({
       ...validInsert,
-      source_type: 'youtube',
+      source_type: 'local',
     })
   })
 

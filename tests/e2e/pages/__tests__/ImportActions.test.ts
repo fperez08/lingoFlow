@@ -55,13 +55,7 @@ describe('ImportActions', () => {
     expect(buttonLocator.click).toHaveBeenCalled()
   })
 
-  it('fillYoutubeUrl() fills the youtube-url-input', async () => {
-    const { page, locator } = makePage()
-    const importActions = new ImportActions(page as any)
-    await importActions.fillYoutubeUrl('https://www.youtube.com/watch?v=abc')
-    expect(page.getByTestId).toHaveBeenCalledWith('youtube-url-input')
-    expect(locator.fill).toHaveBeenCalledWith('https://www.youtube.com/watch?v=abc')
-  })
+
 
   it('fillTranscriptFile() calls setInputFiles on transcript-input', async () => {
     const { page, locator } = makePage()

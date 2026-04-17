@@ -7,7 +7,6 @@ export interface VideoCardProps {
   title: string
   author_name: string
   thumbnail_url: string
-  youtube_url: string
   tags: string[]
   created_at: string
   onDelete?: () => void

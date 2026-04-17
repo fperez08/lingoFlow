@@ -3,8 +3,7 @@ import { Video, InsertVideoParams, UpdateVideoParams } from './videos'
 
 interface VideoRow {
   id: string
-  youtube_url: string
-  youtube_id: string
+
   title: string
   author_name: string
   thumbnail_url: string
@@ -22,7 +21,7 @@ function rowToVideo(row: VideoRow): Video {
   return {
     ...row,
     tags: JSON.parse(row.tags) as string[],
-    source_type: ((row.source_type ?? 'youtube') as 'youtube' | 'local'),
+    source_type: 'local',
     local_video_path: row.local_video_path ?? null,
     local_video_filename: row.local_video_filename ?? null,
   }
@@ -52,13 +51,13 @@ export class SqliteVideoStore implements VideoStore {
   insert(params: InsertVideoParams): Video {
     const now = new Date().toISOString()
     this.db.prepare(`
-      INSERT INTO videos (id, youtube_url, youtube_id, title, author_name, thumbnail_url, transcript_path, transcript_format, tags, created_at, updated_at, source_type, local_video_path, local_video_filename)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO videos (id, title, author_name, thumbnail_url, transcript_path, transcript_format, tags, created_at, updated_at, source_type, local_video_path, local_video_filename)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
-      params.id, params.youtube_url, params.youtube_id, params.title,
+      params.id, params.title,
       params.author_name, params.thumbnail_url, params.transcript_path,
       params.transcript_format, JSON.stringify(params.tags), now, now,
-      params.source_type ?? 'youtube',
+      'local',
       params.local_video_path ?? null,
       params.local_video_filename ?? null,
     )
