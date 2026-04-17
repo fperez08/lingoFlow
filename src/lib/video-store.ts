@@ -13,10 +13,19 @@ interface VideoRow {
   tags: string
   created_at: string
   updated_at: string
+  source_type: string
+  local_video_path: string | null
+  local_video_filename: string | null
 }
 
 function rowToVideo(row: VideoRow): Video {
-  return { ...row, tags: JSON.parse(row.tags) }
+  return {
+    ...row,
+    tags: JSON.parse(row.tags) as string[],
+    source_type: ((row.source_type ?? 'youtube') as 'youtube' | 'local'),
+    local_video_path: row.local_video_path ?? null,
+    local_video_filename: row.local_video_filename ?? null,
+  }
 }
 
 export interface VideoStore {

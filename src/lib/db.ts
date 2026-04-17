@@ -5,6 +5,7 @@ import path from 'path'
 export function ensureDataDirs(dataDir: string): void {
   fs.mkdirSync(dataDir, { recursive: true })
   fs.mkdirSync(path.join(dataDir, 'transcripts'), { recursive: true })
+  fs.mkdirSync(path.join(dataDir, 'videos'), { recursive: true })
 }
 
 export function openDb(dbPath: string): Database.Database {
@@ -29,4 +30,16 @@ export function initializeSchema(db: Database.Database): void {
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
   `)
+
+  const addColumnIfMissing = (column: string, definition: string) => {
+    try {
+      db.exec(`ALTER TABLE videos ADD COLUMN ${column} ${definition}`)
+    } catch {
+      // Column already exists — ignore
+    }
+  }
+
+  addColumnIfMissing('source_type', "TEXT NOT NULL DEFAULT 'youtube'")
+  addColumnIfMissing('local_video_path', 'TEXT')
+  addColumnIfMissing('local_video_filename', 'TEXT')
 }

@@ -5,6 +5,7 @@ import { Video } from '@/lib/videos'
 import { TranscriptCue } from '@/lib/parse-transcript'
 import LessonHero from '@/components/LessonHero'
 import MiniPlayer from '@/components/MiniPlayer'
+import LocalVideoPlayer from '@/components/LocalVideoPlayer'
 import PlaybackProgress from '@/components/PlaybackProgress'
 
 interface WordCard {
@@ -238,14 +239,27 @@ export default function PlayerClient({ video }: { video: Video }) {
       </section>
 
       {isMiniPlayerOpen && (
-        <MiniPlayer
-          youtubeId={video.youtube_id}
-          title={video.title}
-          onClose={handleClose}
-          onTimeUpdate={handleTimeUpdate}
-          seekToTime={requestedSeekTime}
-          onSeekApplied={() => setRequestedSeekTime(null)}
-        />
+        video.source_type === 'local'
+          ? (
+            <LocalVideoPlayer
+              videoId={video.id}
+              title={video.title}
+              onClose={handleClose}
+              onTimeUpdate={handleTimeUpdate}
+              seekToTime={requestedSeekTime}
+              onSeekApplied={() => setRequestedSeekTime(null)}
+            />
+          )
+          : (
+            <MiniPlayer
+              youtubeId={video.youtube_id}
+              title={video.title}
+              onClose={handleClose}
+              onTimeUpdate={handleTimeUpdate}
+              seekToTime={requestedSeekTime}
+              onSeekApplied={() => setRequestedSeekTime(null)}
+            />
+          )
       )}
     </div>
   )
