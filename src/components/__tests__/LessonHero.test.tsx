@@ -44,12 +44,4 @@ describe('LessonHero', () => {
     fireEvent.click(screen.getByTestId('play-button'))
     expect(onPlay).toHaveBeenCalledTimes(1)
   })
-
-  it('calls onPlay when the hero area is clicked', () => {
-    const onPlay = jest.fn()
-    render(<LessonHero video={mockVideo} onPlay={onPlay} />)
-    fireEvent.click(screen.getByTestId('hero-play-area'))
-    expect(onPlay).toHaveBeenCalled()
-  })
-
 })

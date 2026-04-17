@@ -28,30 +28,17 @@ export default function LessonHero({ video, onPlay }: LessonHeroProps) {
             {video.title}
           </h1>
           <p className="text-on-surface-variant dark:text-slate-400 mt-1">{video.author_name}</p>
-          <div
-            className="inline-flex mt-auto rounded-full"
-            onClick={onPlay}
-            role="button"
-            aria-label="Play video"
-            data-testid="hero-play-area"
-          >
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                onPlay()
-              }}
-              aria-label="Play"
-              data-testid="play-button"
-              className="flex items-center justify-center w-14 h-14 rounded-full bg-primary hover:opacity-90 text-on-primary transition"
-            >
-              <svg className="w-7 h-7 ml-0.5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M8 5v14l11-7z" />
-              </svg>
-            </button>
-          </div>
         </div>
-        <button className="flex items-center gap-2 px-6 py-3 bg-gradient-to-br from-primary to-primary-container text-white rounded-xl font-bold hover:scale-[1.02] transition-transform whitespace-nowrap">
-          Save Lesson
+        <button
+          onClick={onPlay}
+          aria-label="Play video"
+          data-testid="play-button"
+          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-br from-primary to-primary-container text-white rounded-xl font-bold hover:scale-[1.02] transition-transform whitespace-nowrap"
+        >
+          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M8 5v14l11-7z" />
+          </svg>
+          Play Lesson
         </button>
       </div>
     </div>

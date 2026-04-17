@@ -19,14 +19,14 @@ export default function MiniPlayer({
   seekToTime,
   onSeekApplied,
 }: MiniPlayerProps) {
-  const iframeRef = useRef<HTMLIFrameElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
   const playerRef = useRef<YT.Player | null>(null)
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const onTimeUpdateRef = useRef(onTimeUpdate)
-  onTimeUpdateRef.current = onTimeUpdate
+  const configureIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
     let destroyed = false
+    const prevReady = window.onYouTubeIframeAPIReady
 
     function startPolling(player: YT.Player) {
       if (pollIntervalRef.current) return
@@ -34,7 +34,7 @@ export default function MiniPlayer({
         if (destroyed) return
         const current = player.getCurrentTime()
         const total = player.getDuration()
-        if (total > 0) onTimeUpdateRef.current?.(current, total)
+        if (total > 0) onTimeUpdate?.(current, total)
       }, 250)
     }
 
@@ -45,10 +45,44 @@ export default function MiniPlayer({
       }
     }
 
+    function stopConfigureRetry() {
+      if (configureIntervalRef.current) {
+        clearInterval(configureIntervalRef.current)
+        configureIntervalRef.current = null
+      }
+    }
+
+    function configureIframe(player: YT.Player) {
+      const iframe = player.getIframe()
+      iframe.className = 'w-full h-full'
+      iframe.setAttribute('title', title)
+      iframe.setAttribute('data-testid', 'mini-player-iframe')
+    }
+
+    function tryConfigureIframe(player: YT.Player): boolean {
+      try {
+        configureIframe(player)
+        return true
+      } catch {
+        return false
+      }
+    }
+
     function initPlayer() {
-      if (!iframeRef.current) return
-      const player = new window.YT.Player(iframeRef.current, {
+      if (!containerRef.current) return
+
+      const player = new window.YT.Player(containerRef.current, {
+        videoId: youtubeId,
+        playerVars: {
+          autoplay: 1,
+          rel: 0,
+          modestbranding: 1,
+        },
         events: {
+          onReady(event: YT.PlayerEvent) {
+            configureIframe(event.target)
+            event.target.playVideo()
+          },
           onStateChange(event: YT.OnStateChangeEvent) {
             if (event.data === window.YT.PlayerState.PLAYING) {
               startPolling(player)
@@ -56,19 +90,27 @@ export default function MiniPlayer({
               stopPolling()
               if (event.data === window.YT.PlayerState.ENDED) {
                 const total = player.getDuration()
-                if (total > 0) onTimeUpdateRef.current?.(total, total)
+                if (total > 0) onTimeUpdate?.(total, total)
               }
             }
           },
         },
       })
       playerRef.current = player
+
+      if (!tryConfigureIframe(player)) {
+        configureIntervalRef.current = setInterval(() => {
+          if (destroyed) return
+          if (tryConfigureIframe(player)) {
+            stopConfigureRetry()
+          }
+        }, 200)
+      }
     }
 
     if (window.YT?.Player) {
       initPlayer()
     } else {
-      const prevReady = window.onYouTubeIframeAPIReady
       window.onYouTubeIframeAPIReady = () => {
         prevReady?.()
         if (!destroyed) initPlayer()
@@ -82,37 +124,35 @@ export default function MiniPlayer({
 
     return () => {
       destroyed = true
+      window.onYouTubeIframeAPIReady = prevReady
       stopPolling()
+      stopConfigureRetry()
       playerRef.current?.destroy()
       playerRef.current = null
     }
-  }, [youtubeId])
+  }, [onTimeUpdate, title, youtubeId])
 
   useEffect(() => {
-    if (seekToTime == null || !playerRef.current) return
-    playerRef.current.seekTo(seekToTime, true)
+    const player = playerRef.current
+    if (seekToTime == null || !player || typeof player.seekTo !== 'function') return
+    player.seekTo(seekToTime, true)
     onSeekApplied?.()
   }, [onSeekApplied, seekToTime])
 
   function handleClose() {
-    playerRef.current?.pauseVideo()
+    const player = playerRef.current
+    if (player && typeof player.pauseVideo === 'function') {
+      player.pauseVideo()
+    }
     onClose()
   }
 
   return (
     <div
       data-testid="mini-player"
-      className="fixed bottom-4 right-4 z-50 w-80 aspect-video shadow-2xl rounded-xl overflow-hidden bg-black"
+      className="fixed bottom-4 right-4 z-50 w-80 aspect-video shadow-2xl rounded-xl overflow-hidden bg-black md:bottom-auto md:top-20"
     >
-      <iframe
-        ref={iframeRef}
-        src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&enablejsapi=1&rel=0&modestbranding=1`}
-        className="w-full h-full"
-        allow="autoplay; encrypted-media; fullscreen"
-        allowFullScreen
-        title={title}
-        data-testid="mini-player-iframe"
-      />
+      <div ref={containerRef} className="w-full h-full" />
       <button
         onClick={handleClose}
         aria-label="Close mini player"
