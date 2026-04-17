@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: read
+  statuses: write
 
 concurrency:
   group: pr-checks-${{ github.event.pull_request.number }}
@@ -23,6 +24,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
+      - name: Emit pending status
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            /repos/${{ github.repository }}/statuses/${{ github.event.pull_request.head.sha }} \
+            -f state=pending \
+            -f context="ci/pr-checks" \
+            -f description="Lint and unit tests running…" \
+            -f target_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -45,3 +59,31 @@ jobs:
 
       - name: Run unit tests
         run: pnpm test
+
+      - name: Emit success status
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            /repos/${{ github.repository }}/statuses/${{ github.event.pull_request.head.sha }} \
+            -f state=success \
+            -f context="ci/pr-checks" \
+            -f description="Lint and unit tests passed." \
+            -f target_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+      - name: Emit failure status
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            /repos/${{ github.repository }}/statuses/${{ github.event.pull_request.head.sha }} \
+            -f state=failure \
+            -f context="ci/pr-checks" \
+            -f description="Lint or unit tests failed." \
+            -f target_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
