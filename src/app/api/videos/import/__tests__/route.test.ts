@@ -314,6 +314,53 @@ describe('POST /api/videos/import — local upload path', () => {
       expect.objectContaining({ author_name: '' })
     )
   })
+
+  it('returns 400 when video MIME type is not allowed', async () => {
+    const videoContent = Buffer.from('data')
+    const videoFile = Object.assign(
+      new File([videoContent], 'my-video.avi', { type: 'video/avi' }),
+      { arrayBuffer: async () => videoContent.buffer }
+    )
+    const transcriptFile = new File(['content'], 'transcript.srt', { type: 'text/plain' })
+    const fd = makeFormData({ video: videoFile, title: 'Test', transcript: transcriptFile })
+    const req = makeRequest(fd)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const res = await POST(req as any)
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toMatch(/Unsupported format/)
+  })
+
+  it('returns 400 when video file exceeds 500 MB', async () => {
+    class OversizedFile extends File {
+      get size() { return 600_000_000 }
+    }
+    const videoFile = Object.assign(
+      new OversizedFile(['x'], 'big-video.mp4', { type: 'video/mp4' }),
+      { arrayBuffer: async () => Buffer.from('x').buffer }
+    )
+    const transcriptFile = new File(['content'], 'transcript.srt', { type: 'text/plain' })
+    const fd = makeFormData({ video: videoFile, title: 'Test', transcript: transcriptFile })
+    const req = makeRequest(fd)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const res = await POST(req as any)
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toMatch(/500 MB/)
+  })
+
+  it('returns 400 when video is a WebM with unsupported extension alias', async () => {
+    const videoContent = Buffer.from('data')
+    const videoFile = Object.assign(
+      new File([videoContent], 'my-video.webm', { type: 'video/webm' }),
+      { arrayBuffer: async () => videoContent.buffer }
+    )
+    const fakeWebmVideo = { ...fakeLocalVideo, local_video_path: '/data/videos/local.webm' }
+    mockVideoService.importLocalVideo.mockResolvedValue(fakeWebmVideo)
+    const fd = makeLocalFormData({ video: videoFile, title: 'WebM Video' })
+    const req = makeRequest(fd)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const res = await POST(req as any)
+    expect(res.status).toBe(201)
+  })
 })
-
-
