@@ -48,6 +48,8 @@ export default function PlayerClient({ video }: { video: Video }) {
   function handleClose() {
     setIsMiniPlayerOpen(false)
     setPlaybackTime({ current: 0, duration: 0 })
+    setActiveCueIndex(0)
+    setRequestedSeekTime(null)
   }
 
   useEffect(() => {
@@ -132,7 +134,7 @@ export default function PlayerClient({ video }: { video: Video }) {
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          <div className={`flex-1 overflow-y-auto p-4 space-y-3 ${isMiniPlayerOpen ? 'pb-52' : ''}`}>
             {activeTab === 'transcript' && (
               <>
                 {loadingTranscript && (
