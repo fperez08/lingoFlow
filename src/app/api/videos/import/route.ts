@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
+import path from 'path'
 
-import { videoService } from '@/lib/server/composition'
-import { ImportVideoRequestSchema, ImportLocalVideoRequestSchema } from '@/lib/api-schemas'
+import { videoService, videoStore } from '@/lib/server/composition'
+import { ImportLocalVideoRequestSchema } from '@/lib/api-schemas'
+import { generateThumbnail } from '@/lib/thumbnails'
 
 export const runtime = 'nodejs'
+
+const dataDir = process.env.LINGOFLOW_DATA_DIR ?? path.join(process.cwd(), '.lingoflow-data')
 
 export async function POST(request: NextRequest) {
   try {
@@ -49,6 +53,19 @@ export async function POST(request: NextRequest) {
       tags,
       source_type: 'local',
     })
+
+    if (record.local_video_path) {
+      const thumbnailPath = path.join(dataDir, 'thumbnails', `${videoId}.jpg`)
+      void generateThumbnail(record.local_video_path, thumbnailPath)
+        .then((resolvedPath) => {
+          if (resolvedPath) {
+            videoStore.update(videoId, { thumbnail_path: resolvedPath })
+          }
+        })
+        .catch((thumbnailError) => {
+          console.error(`Failed to generate thumbnail for video ${videoId}:`, thumbnailError)
+        })
+    }
 
     return NextResponse.json(record, { status: 201 })
   } catch (error) {

@@ -7,6 +7,7 @@ export interface VideoCardProps {
   title: string
   author_name: string
   thumbnail_url: string
+  source_type?: 'youtube' | 'local'
   tags: string[]
   created_at: string
   onDelete?: () => void
@@ -27,19 +28,27 @@ export default function VideoCard({
   title,
   author_name,
   thumbnail_url,
+  source_type,
   tags,
   created_at,
   onDelete,
   onEdit,
 }: VideoCardProps) {
+  const displayThumbnail = source_type === 'local' ? `/api/videos/${id}/thumbnail` : thumbnail_url
+
   return (
     <div className="group cursor-pointer" data-testid={`video-card-${id}`}>
       {/* Thumbnail */}
       <div className="relative aspect-video rounded-xl overflow-hidden mb-4 bg-surface-container-high dark:bg-slate-800 shadow-sm transition-all group-hover:-translate-y-1">
         <Link href={`/player/${id}`}>
-          {thumbnail_url ? (
+          {displayThumbnail ? (
             /* eslint-disable-next-line @next/next/no-img-element */
-            <img src={thumbnail_url} alt={title} className="w-full h-full object-cover" />
+            <img
+              src={displayThumbnail}
+              alt={title}
+              className="w-full h-full object-cover"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+            />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-surface-container-high dark:bg-slate-800">
               <svg xmlns="http://www.w3.org/2000/svg" className="w-12 h-12 text-on-surface-variant/30" fill="currentColor" viewBox="0 0 24 24">

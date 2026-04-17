@@ -15,6 +15,7 @@ interface VideoRow {
   source_type: string
   local_video_path: string | null
   local_video_filename: string | null
+  thumbnail_path: string | null
 }
 
 function rowToVideo(row: VideoRow): Video {
@@ -24,6 +25,7 @@ function rowToVideo(row: VideoRow): Video {
     source_type: 'local',
     local_video_path: row.local_video_path ?? null,
     local_video_filename: row.local_video_filename ?? null,
+    thumbnail_path: row.thumbnail_path ?? null,
   }
 }
 
@@ -51,15 +53,16 @@ export class SqliteVideoStore implements VideoStore {
   insert(params: InsertVideoParams): Video {
     const now = new Date().toISOString()
     this.db.prepare(`
-      INSERT INTO videos (id, title, author_name, thumbnail_url, transcript_path, transcript_format, tags, created_at, updated_at, source_type, local_video_path, local_video_filename)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO videos (id, title, author_name, thumbnail_url, transcript_path, transcript_format, tags, created_at, updated_at, source_type, local_video_path, local_video_filename, thumbnail_path)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       params.id, params.title,
       params.author_name, params.thumbnail_url, params.transcript_path,
       params.transcript_format, JSON.stringify(params.tags), now, now,
-      'local',
+      params.source_type,
       params.local_video_path ?? null,
       params.local_video_filename ?? null,
+      params.thumbnail_path ?? null,
     )
     return this.getById(params.id)!
   }
@@ -82,6 +85,10 @@ export class SqliteVideoStore implements VideoStore {
     if (params.transcript_format !== undefined) {
       updates.push('transcript_format = ?')
       values.push(params.transcript_format)
+    }
+    if (params.thumbnail_path !== undefined) {
+      updates.push('thumbnail_path = ?')
+      values.push(params.thumbnail_path)
     }
 
     values.push(id)

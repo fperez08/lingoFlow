@@ -6,6 +6,13 @@ jest.mock('@/lib/server/composition', () => ({
     updateVideo: jest.fn(),
     deleteVideo: jest.fn(),
   },
+  videoStore: {
+    update: jest.fn(),
+  },
+}))
+
+jest.mock('@/lib/thumbnails', () => ({
+  generateThumbnail: jest.fn().mockResolvedValue(null),
 }))
 
 jest.mock('next/server', () => ({
@@ -18,11 +25,14 @@ jest.mock('next/server', () => ({
 }))
 
 import { POST } from '../route'
-import { videoService } from '@/lib/server/composition'
+import { videoService, videoStore } from '@/lib/server/composition'
 import { ALLOWED_TRANSCRIPT_FORMATS } from '@/lib/api-schemas'
+import { generateThumbnail } from '@/lib/thumbnails'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mockVideoService = videoService as any
+const mockVideoStore = videoStore as any
+const mockGenerateThumbnail = generateThumbnail as jest.MockedFunction<typeof generateThumbnail>
 
 const fakeLocalVideo = {
   id: 'local-video-uuid',
@@ -55,6 +65,7 @@ describe('POST /api/videos/import', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockVideoService.importLocalVideo.mockResolvedValue(fakeLocalVideo)
+    mockGenerateThumbnail.mockResolvedValue(null)
   })
 
   it('exports ALLOWED_TRANSCRIPT_FORMATS with srt, vtt, txt', () => {
@@ -108,6 +119,7 @@ describe('POST /api/videos/import — local upload path', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockVideoService.importLocalVideo.mockResolvedValue(fakeLocalVideo2)
+    mockGenerateThumbnail.mockResolvedValue(null)
   })
 
   function makeLocalFormData(overrides: Record<string, string | File> = {}): FormData {
@@ -149,6 +161,26 @@ describe('POST /api/videos/import — local upload path', () => {
       })
     )
     expect(mockVideoService.importLocalVideo).toHaveBeenCalled()
+  })
+
+  it('kicks off thumbnail generation after local import', async () => {
+    mockGenerateThumbnail.mockResolvedValue('/data/thumbnails/local-video-uuid.jpg')
+
+    const fd = makeLocalFormData({ tags: 'french, beginner', author: 'Local Author' })
+    const req = makeRequest(fd)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const res = await POST(req as any)
+
+    expect(res.status).toBe(201)
+    await Promise.resolve()
+
+    expect(mockGenerateThumbnail).toHaveBeenCalledWith(
+      '/data/videos/local-video-uuid.mp4',
+      expect.stringContaining('/thumbnails/')
+    )
+    expect(mockVideoStore.update).toHaveBeenCalledWith(expect.any(String), {
+      thumbnail_path: '/data/thumbnails/local-video-uuid.jpg',
+    })
   })
 
   it('returns 400 when video file is present but title is missing', async () => {
