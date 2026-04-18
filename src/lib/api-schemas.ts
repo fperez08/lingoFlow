@@ -75,6 +75,10 @@ export const ImportLocalVideoRequestSchema = z.object({
     .transform((v) => (typeof v === 'string' ? v : '')),
 })
 
+export const UpdateVocabRequestSchema = z.object({
+  status: z.enum(['new', 'learning', 'mastered']),
+})
+
 export const UpdateVideoRequestSchema = z.object({
   tags: z
     .string()

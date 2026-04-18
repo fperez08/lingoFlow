@@ -1,15 +1,15 @@
 'use client'
 
 import { tokenizeCueText } from '@/lib/tokenize-transcript'
-import { VocabWord } from '@/lib/vocabulary'
+import { VocabInfo } from '@/lib/vocabulary'
 
 interface CueTextProps {
   text: string
-  vocabMap: Map<string, VocabWord>
+  vocabMap: Map<string, VocabInfo>
   onWordClick: (word: string, sentence: string) => void
 }
 
-const STATUS_WORD_STYLES: Record<VocabWord['status'], string> = {
+const STATUS_WORD_STYLES: Record<VocabInfo['status'], string> = {
   mastered: 'text-green-600 bg-green-50 rounded cursor-pointer hover:bg-green-100 transition-colors',
   learning: 'text-yellow-600 bg-yellow-50 rounded cursor-pointer hover:bg-yellow-100 transition-colors',
   new: 'text-red-600 bg-red-50 rounded cursor-pointer hover:bg-red-100 transition-colors',

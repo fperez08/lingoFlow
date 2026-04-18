@@ -1,13 +1,10 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import WordSidebar from '../WordSidebar'
-import { VocabWord } from '@/lib/vocabulary'
+import { VocabInfo } from '@/lib/vocabulary'
 
-const mockVocabEntry: VocabWord = {
-  id: '4',
-  word: 'Serendipity',
+const mockVocabEntry: VocabInfo = {
   level: 'B2',
   definition: 'The occurrence and development of events by chance in a happy or beneficial way',
-  contextQuote: 'It was pure serendipity',
   source: 'Cinema',
   status: 'learning',
 }
@@ -74,7 +71,7 @@ describe('WordSidebar', () => {
         onClose={jest.fn()}
       />
     )
-    expect(screen.getByText(mockVocabEntry.definition)).toBeInTheDocument()
+    expect(screen.getByText(mockVocabEntry.definition!)).toBeInTheDocument()
   })
 
   it('does not render definition when no vocab entry', () => {
@@ -87,5 +84,89 @@ describe('WordSidebar', () => {
       />
     )
     expect(screen.queryByText(/The occurrence/)).not.toBeInTheDocument()
+  })
+
+  it('does not render toggle button when onStatusChange is not provided', () => {
+    render(
+      <WordSidebar
+        word="serendipity"
+        contextSentence="context"
+        vocabEntry={mockVocabEntry}
+        onClose={jest.fn()}
+      />
+    )
+    expect(screen.queryByTestId('status-toggle')).not.toBeInTheDocument()
+  })
+
+  it('renders "Mark as known" when status is not mastered', () => {
+    render(
+      <WordSidebar
+        word="serendipity"
+        contextSentence="context"
+        vocabEntry={mockVocabEntry}
+        onClose={jest.fn()}
+        onStatusChange={jest.fn()}
+      />
+    )
+    expect(screen.getByTestId('status-toggle')).toHaveTextContent('Mark as known')
+  })
+
+  it('renders "Mark as unknown" when status is mastered', () => {
+    render(
+      <WordSidebar
+        word="serendipity"
+        contextSentence="context"
+        vocabEntry={{ ...mockVocabEntry, status: 'mastered' }}
+        onClose={jest.fn()}
+        onStatusChange={jest.fn()}
+      />
+    )
+    expect(screen.getByTestId('status-toggle')).toHaveTextContent('Mark as unknown')
+  })
+
+  it('calls onStatusChange with mastered when clicking Mark as known', () => {
+    const onStatusChange = jest.fn()
+    render(
+      <WordSidebar
+        word="serendipity"
+        contextSentence="context"
+        vocabEntry={mockVocabEntry}
+        onClose={jest.fn()}
+        onStatusChange={onStatusChange}
+      />
+    )
+    fireEvent.click(screen.getByTestId('status-toggle'))
+    expect(onStatusChange).toHaveBeenCalledWith('serendipity', 'mastered')
+  })
+
+  it('calls onStatusChange with new when clicking Mark as unknown', () => {
+    const onStatusChange = jest.fn()
+    render(
+      <WordSidebar
+        word="serendipity"
+        contextSentence="context"
+        vocabEntry={{ ...mockVocabEntry, status: 'mastered' }}
+        onClose={jest.fn()}
+        onStatusChange={onStatusChange}
+      />
+    )
+    fireEvent.click(screen.getByTestId('status-toggle'))
+    expect(onStatusChange).toHaveBeenCalledWith('serendipity', 'new')
+  })
+
+  it('disables toggle and shows Saving when isUpdating is true', () => {
+    render(
+      <WordSidebar
+        word="serendipity"
+        contextSentence="context"
+        vocabEntry={mockVocabEntry}
+        onClose={jest.fn()}
+        onStatusChange={jest.fn()}
+        isUpdating={true}
+      />
+    )
+    const btn = screen.getByTestId('status-toggle')
+    expect(btn).toBeDisabled()
+    expect(btn).toHaveTextContent('Saving…')
   })
 })
