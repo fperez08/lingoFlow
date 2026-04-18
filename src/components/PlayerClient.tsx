@@ -3,14 +3,26 @@
 import { useEffect, useState } from 'react'
 import { Video } from '@/lib/videos'
 import { TranscriptCue } from '@/lib/parse-transcript'
+import { MOCK_VOCAB, VocabWord } from '@/lib/vocabulary'
 import LessonHero from '@/components/LessonHero'
 import LocalVideoPlayer from '@/components/LocalVideoPlayer'
 import PlaybackProgress from '@/components/PlaybackProgress'
+import CueText from '@/components/CueText'
+import WordSidebar from '@/components/WordSidebar'
 
 interface WordCard {
   word: string
   status: 'new' | 'added' | 'mastered'
 }
+
+interface SelectedWord {
+  word: string
+  contextSentence: string
+}
+
+const vocabMap: Map<string, VocabWord> = new Map(
+  MOCK_VOCAB.map((entry) => [entry.word.toLowerCase(), entry])
+)
 
 function parseTimeToSeconds(timestamp: string): number {
   const normalized = timestamp.trim().replace(',', '.')
@@ -40,6 +52,7 @@ export default function PlayerClient({ video }: { video: Video }) {
   const [isMiniPlayerOpen, setIsMiniPlayerOpen] = useState(false)
   const [playbackTime, setPlaybackTime] = useState({ current: 0, duration: 0 })
   const [requestedSeekTime, setRequestedSeekTime] = useState<number | null>(null)
+  const [selectedWord, setSelectedWord] = useState<SelectedWord | null>(null)
 
   function handleTimeUpdate(current: number, duration: number) {
     setPlaybackTime({ current, duration })
@@ -169,9 +182,19 @@ export default function PlayerClient({ video }: { video: Video }) {
                         }`}
                       >
                         {isActive ? (
-                          <p className="text-sm text-on-surface dark:text-slate-100 leading-relaxed">{cue.text}</p>
+                          <p className="text-sm text-on-surface dark:text-slate-100 leading-relaxed">
+                            <CueText
+                              text={cue.text}
+                              vocabMap={vocabMap}
+                              onWordClick={(word, sentence) => setSelectedWord({ word, contextSentence: sentence })}
+                            />
+                          </p>
                         ) : (
-                          cue.text
+                          <CueText
+                            text={cue.text}
+                            vocabMap={vocabMap}
+                            onWordClick={(word, sentence) => setSelectedWord({ word, contextSentence: sentence })}
+                          />
                         )}
                       </div>
                     )
@@ -242,6 +265,15 @@ export default function PlayerClient({ video }: { video: Video }) {
           onTimeUpdate={handleTimeUpdate}
           seekToTime={requestedSeekTime}
           onSeekApplied={() => setRequestedSeekTime(null)}
+        />
+      )}
+
+      {selectedWord && (
+        <WordSidebar
+          word={selectedWord.word}
+          contextSentence={selectedWord.contextSentence}
+          vocabEntry={vocabMap.get(selectedWord.word.toLowerCase())}
+          onClose={() => setSelectedWord(null)}
         />
       )}
     </div>
