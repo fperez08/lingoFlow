@@ -18,6 +18,10 @@ interface VideoRow {
   thumbnail_path: string | null
 }
 
+interface VideoTableInfoRow {
+  name: string
+}
+
 function rowToVideo(row: VideoRow): Video {
   return {
     ...row,
@@ -38,7 +42,25 @@ export interface VideoStore {
 }
 
 export class SqliteVideoStore implements VideoStore {
+  private legacyYoutubeColumns: { hasYoutubeUrl: boolean; hasYoutubeId: boolean } | null = null
+
   constructor(private db: Database.Database) {}
+
+  private getLegacyYoutubeColumns(): { hasYoutubeUrl: boolean; hasYoutubeId: boolean } {
+    if (this.legacyYoutubeColumns) {
+      return this.legacyYoutubeColumns
+    }
+
+    const tableInfo = this.db.prepare('PRAGMA table_info(videos)').all() as VideoTableInfoRow[]
+    const columnNames = new Set(tableInfo.map((row) => row.name))
+
+    this.legacyYoutubeColumns = {
+      hasYoutubeUrl: columnNames.has('youtube_url'),
+      hasYoutubeId: columnNames.has('youtube_id'),
+    }
+
+    return this.legacyYoutubeColumns
+  }
 
   list(): Video[] {
     const rows = this.db.prepare('SELECT * FROM videos ORDER BY created_at DESC').all() as VideoRow[]
@@ -52,18 +74,50 @@ export class SqliteVideoStore implements VideoStore {
 
   insert(params: InsertVideoParams): Video {
     const now = new Date().toISOString()
-    this.db.prepare(`
-      INSERT INTO videos (id, title, author_name, thumbnail_url, transcript_path, transcript_format, tags, created_at, updated_at, source_type, local_video_path, local_video_filename, thumbnail_path)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      params.id, params.title,
-      params.author_name, params.thumbnail_url, params.transcript_path,
-      params.transcript_format, JSON.stringify(params.tags), now, now,
+    const { hasYoutubeUrl, hasYoutubeId } = this.getLegacyYoutubeColumns()
+    const columns = [
+      'id',
+      'title',
+      'author_name',
+      'thumbnail_url',
+      'transcript_path',
+      'transcript_format',
+      'tags',
+      'created_at',
+      'updated_at',
+      'source_type',
+      'local_video_path',
+      'local_video_filename',
+      'thumbnail_path',
+    ]
+    const values: unknown[] = [
+      params.id,
+      params.title,
+      params.author_name,
+      params.thumbnail_url,
+      params.transcript_path,
+      params.transcript_format,
+      JSON.stringify(params.tags),
+      now,
+      now,
       params.source_type,
       params.local_video_path ?? null,
       params.local_video_filename ?? null,
       params.thumbnail_path ?? null,
-    )
+    ]
+
+    if (hasYoutubeUrl) {
+      columns.push('youtube_url')
+      values.push('')
+    }
+
+    if (hasYoutubeId) {
+      columns.push('youtube_id')
+      values.push('')
+    }
+
+    const placeholders = columns.map(() => '?').join(', ')
+    this.db.prepare(`INSERT INTO videos (${columns.join(', ')}) VALUES (${placeholders})`).run(...values)
     return this.getById(params.id)!
   }
 

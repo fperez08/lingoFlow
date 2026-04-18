@@ -2,6 +2,11 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import PlayerClient from '../PlayerClient'
 import { Video } from '@/lib/videos'
 
+jest.mock('@/hooks/useVocabulary', () => ({
+  useVocabulary: () => ({ data: new Map(), isLoading: false }),
+  useUpdateWordStatus: () => ({ mutate: jest.fn(), isPending: false }),
+}))
+
 const mockVideo: Video = {
   id: 'video-1',
 
@@ -73,10 +78,10 @@ describe('PlayerClient', () => {
     expect(screen.getByTestId('mini-player')).toBeInTheDocument()
   })
 
-  it('renders the transcript tab area', async () => {
+  it('renders the transcript panel', async () => {
     render(<PlayerClient video={mockVideo} />)
-    expect(screen.getByTestId('tab-transcript')).toBeInTheDocument()
-    expect(screen.getByTestId('tab-vocabulary')).toBeInTheDocument()
+    expect(screen.getByText('Interactive Transcript')).toBeInTheDocument()
+    expect(screen.queryByTestId('tab-vocabulary')).not.toBeInTheDocument()
   })
 
   it('fetches transcript on mount', async () => {

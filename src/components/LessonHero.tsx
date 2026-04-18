@@ -33,12 +33,12 @@ export default function LessonHero({ video, onPlay }: LessonHeroProps) {
           onClick={onPlay}
           aria-label="Play video"
           data-testid="play-button"
-          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-br from-primary to-primary-container text-white rounded-xl font-bold hover:scale-[1.02] transition-transform whitespace-nowrap"
+          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-primary to-primary-container text-white rounded-xl font-bold hover:scale-[1.02] transition-transform whitespace-nowrap"
         >
           <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M8 5v14l11-7z" />
           </svg>
-          Play Lesson
+          Play
         </button>
       </div>
     </div>

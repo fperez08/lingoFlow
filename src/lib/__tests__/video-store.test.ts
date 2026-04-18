@@ -43,6 +43,35 @@ describe('SqliteVideoStore', () => {
       const video = store.insert(makeParams({ id: 'no-tags', tags: [] }))
       expect(video.tags).toEqual([])
     })
+
+    it('supports legacy schema with NOT NULL youtube columns', () => {
+      const db = openDb(':memory:')
+      db.exec(`
+        CREATE TABLE videos (
+          id TEXT PRIMARY KEY,
+          youtube_url TEXT NOT NULL,
+          youtube_id TEXT NOT NULL,
+          title TEXT NOT NULL,
+          author_name TEXT NOT NULL,
+          thumbnail_url TEXT NOT NULL,
+          transcript_path TEXT NOT NULL,
+          transcript_format TEXT NOT NULL,
+          tags TEXT NOT NULL DEFAULT '[]',
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          source_type TEXT,
+          local_video_path TEXT,
+          local_video_filename TEXT,
+          thumbnail_path TEXT
+        )
+      `)
+
+      const legacyStore = new SqliteVideoStore(db)
+      const video = legacyStore.insert(makeParams({ id: 'legacy-1' }))
+
+      expect(video.id).toBe('legacy-1')
+      expect(video.source_type).toBe('local')
+    })
   })
 
   describe('list', () => {
