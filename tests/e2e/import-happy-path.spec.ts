@@ -47,14 +47,19 @@ test.describe('Import happy path', () => {
     // 2. Open import modal
     await importActions.clickImportButton()
 
-    // 3. Fill YouTube URL
-    
+    // 3. Fill video file and title
+    await importActions.fillVideoFile({
+      name: 'video.mp4',
+      mimeType: 'video/mp4',
+      buffer: Buffer.from('fake mp4 content'),
+    })
+    await importActions.fillTitle(LOCAL_VIDEO_TITLE)
+
     // 4. Upload transcript file
     await importActions.fillTranscriptFile(SAMPLE_SRT)
 
     // 5. Add tags
     await importActions.fillTags('music, classic')
-    await expect(page.getByTestId('preview-container')).toBeVisible()
 
     // 6. Submit import
     await importActions.clickSubmitImport()
