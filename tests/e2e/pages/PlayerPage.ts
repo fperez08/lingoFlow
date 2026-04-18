@@ -2,7 +2,7 @@
  * PlayerPage: page-object for the lingoFlow player route (/player/[id]).
  *
  * Encapsulates all interactions with the player screen, including
- * navigation, transcript panel, vocabulary tab, and tab switching.
+ * navigation, transcript panel, and playback controls.
  */
 
 import { expect, type Page, type Locator } from '@playwright/test'
@@ -11,7 +11,6 @@ export class PlayerPage {
   readonly page: Page
   readonly playerClient: Locator
   readonly transcriptTab: Locator
-  readonly vocabTab: Locator
   readonly playButton: Locator
   readonly miniPlayer: Locator
   readonly miniPlayerClose: Locator
@@ -24,7 +23,6 @@ export class PlayerPage {
     this.page = page
     this.playerClient = page.getByTestId('player-client')
     this.transcriptTab = page.getByTestId('tab-transcript')
-    this.vocabTab = page.getByTestId('tab-vocabulary')
     this.playButton = page.getByTestId('play-button')
     this.miniPlayer = page.getByTestId('mini-player')
     this.miniPlayerClose = page.getByTestId('mini-player-close')
@@ -44,11 +42,6 @@ export class PlayerPage {
   async assertLoaded(): Promise<void> {
     await expect(this.playerClient).toBeAttached({ timeout: 30_000 })
     await expect(this.playerClient).toBeVisible({ timeout: 30_000 })
-  }
-
-  /** Clicks the Vocabulary tab. */
-  async switchToVocabTab(): Promise<void> {
-    await this.vocabTab.click()
   }
 
   /** Clicks the Transcript tab. */

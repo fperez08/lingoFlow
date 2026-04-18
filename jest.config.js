@@ -9,13 +9,11 @@ const createJestConfig = nextJest({
 const customJestConfig = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
   testEnvironment: 'jest-environment-jsdom',
-  testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/tests/e2e/'],
+  roots: ['<rootDir>/src', '<rootDir>/tests'],
+  testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/tests/e2e/', '<rootDir>/pr-[^/]+/'],
+  modulePathIgnorePatterns: ['<rootDir>/pr-[^/]+/'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
-    '^@babel/runtime/(.*)$': '/workspaces/lingoFlow/node_modules/.pnpm/@babel+runtime@7.29.2/node_modules/@babel/runtime/$1',
-  },
-  transform: {
-    '^.+\\.(js|jsx|ts|tsx|mjs)$': ['/workspaces/lingoFlow/node_modules/.pnpm/node_modules/babel-jest/build/index.js', {}],
   },
 }
 

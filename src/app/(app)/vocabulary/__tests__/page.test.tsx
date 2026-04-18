@@ -1,5 +1,42 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import VocabularyPage from '../page'
+import { VocabEntry } from '@/lib/vocab-store'
+
+const mockMutate = jest.fn()
+
+jest.mock('@/hooks/useVocabulary', () => ({
+  useVocabulary: jest.fn(),
+  useUpdateWordStatus: jest.fn(() => ({ mutate: mockMutate, isPending: false })),
+}))
+
+import { useVocabulary } from '@/hooks/useVocabulary'
+
+const MOCK_ENTRIES: VocabEntry[] = [
+  { word: 'ethereal', status: 'new', level: 'B2', definition: 'Extremely delicate' },
+  { word: 'juxtaposition', status: 'new', level: 'C1', definition: 'Two contrasting things' },
+  { word: 'eloquent', status: 'new', level: 'B1', definition: 'Fluent or persuasive' },
+  { word: 'serendipity', status: 'learning', level: 'B2', definition: 'Happy chance' },
+  { word: 'ephemeral', status: 'learning', level: 'C1', definition: 'Lasting briefly' },
+  { word: 'resilient', status: 'learning', level: 'B1', definition: 'Recovering quickly' },
+  { word: 'ambiguous', status: 'mastered', level: 'B1', definition: 'Open to interpretation' },
+  { word: 'pragmatic', status: 'mastered', level: 'B2', definition: 'Dealing sensibly' },
+  { word: 'nuance', status: 'mastered', level: 'B2', definition: 'A subtle difference' },
+]
+
+function makeMap(entries: VocabEntry[]) {
+  return new Map(entries.map((e) => [e.word.toLowerCase(), e]))
+}
+
+beforeEach(() => {
+  jest.mocked(useVocabulary).mockReturnValue({
+    data: makeMap(MOCK_ENTRIES),
+    isLoading: false,
+  } as ReturnType<typeof useVocabulary>)
+})
+
+afterEach(() => {
+  jest.clearAllMocks()
+})
 
 describe('VocabularyPage', () => {
   it('renders the page heading', () => {
@@ -13,7 +50,6 @@ describe('VocabularyPage', () => {
     const newTab = screen.getByTestId('tab-new')
     expect(newTab).toHaveClass('text-primary')
     const cards = screen.getAllByTestId('vocab-card')
-    // 3 new words in mock data
     expect(cards).toHaveLength(3)
   })
 
@@ -22,9 +58,9 @@ describe('VocabularyPage', () => {
     fireEvent.click(screen.getByTestId('tab-learning'))
     const cards = screen.getAllByTestId('vocab-card')
     expect(cards).toHaveLength(3)
-    expect(screen.getByText('Serendipity')).toBeInTheDocument()
-    expect(screen.getByText('Ephemeral')).toBeInTheDocument()
-    expect(screen.getByText('Resilient')).toBeInTheDocument()
+    expect(screen.getByText('serendipity')).toBeInTheDocument()
+    expect(screen.getByText('ephemeral')).toBeInTheDocument()
+    expect(screen.getByText('resilient')).toBeInTheDocument()
   })
 
   it('switches to Mastered tab and shows only mastered words', () => {
@@ -32,47 +68,25 @@ describe('VocabularyPage', () => {
     fireEvent.click(screen.getByTestId('tab-mastered'))
     const cards = screen.getAllByTestId('vocab-card')
     expect(cards).toHaveLength(3)
-    expect(screen.getByText('Ambiguous')).toBeInTheDocument()
-    expect(screen.getByText('Pragmatic')).toBeInTheDocument()
-    expect(screen.getByText('Nuance')).toBeInTheDocument()
+    expect(screen.getByText('ambiguous')).toBeInTheDocument()
+    expect(screen.getByText('pragmatic')).toBeInTheDocument()
+    expect(screen.getByText('nuance')).toBeInTheDocument()
   })
 
   it('filters cards by search query', () => {
     render(<VocabularyPage />)
     const input = screen.getByTestId('vocab-search-input')
-    fireEvent.change(input, { target: { value: 'Ethereal' } })
+    fireEvent.change(input, { target: { value: 'ethereal' } })
     const cards = screen.getAllByTestId('vocab-card')
     expect(cards).toHaveLength(1)
-    expect(screen.getByText('Ethereal')).toBeInTheDocument()
+    expect(screen.getByText('ethereal')).toBeInTheDocument()
   })
 
-  it('mark as mastered removes word from New list', () => {
+  it('mark as mastered calls updateWordStatus mutation', () => {
     render(<VocabularyPage />)
-    // On the New tab, all 3 words visible
-    expect(screen.getAllByTestId('vocab-card')).toHaveLength(3)
     const masterButtons = screen.getAllByTestId('mark-mastered-button')
     fireEvent.click(masterButtons[0])
-    // One word moved to mastered — now 2 new words shown
-    expect(screen.getAllByTestId('vocab-card')).toHaveLength(2)
-  })
-
-  it('remove button removes the card from the list', () => {
-    render(<VocabularyPage />)
-    expect(screen.getAllByTestId('vocab-card')).toHaveLength(3)
-    const removeButtons = screen.getAllByTestId('remove-button')
-    fireEvent.click(removeButtons[0])
-    expect(screen.getAllByTestId('vocab-card')).toHaveLength(2)
-  })
-
-  it('source filter chip filters to only words from that source', () => {
-    render(<VocabularyPage />)
-    // Cinema has 1 new word (Ethereal)
-    const chips = screen.getAllByTestId('source-filter-chip')
-    const cinemaChip = chips.find((c) => c.textContent === 'Cinema')!
-    fireEvent.click(cinemaChip)
-    const cards = screen.getAllByTestId('vocab-card')
-    expect(cards).toHaveLength(1)
-    expect(screen.getByText('Ethereal')).toBeInTheDocument()
+    expect(mockMutate).toHaveBeenCalledWith({ word: expect.any(String), status: 'mastered' })
   })
 
   it('shows empty state when no words match filters', () => {
@@ -81,5 +95,14 @@ describe('VocabularyPage', () => {
     fireEvent.change(input, { target: { value: 'xyznonexistent' } })
     expect(screen.getByTestId('empty-vocab-state')).toBeInTheDocument()
     expect(screen.queryAllByTestId('vocab-card')).toHaveLength(0)
+  })
+
+  it('shows loading state while fetching', () => {
+    jest.mocked(useVocabulary).mockReturnValue({
+      data: undefined,
+      isLoading: true,
+    } as ReturnType<typeof useVocabulary>)
+    render(<VocabularyPage />)
+    expect(screen.getByText('Loading vocabulary…')).toBeInTheDocument()
   })
 })

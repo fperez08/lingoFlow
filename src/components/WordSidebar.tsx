@@ -1,28 +1,37 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { VocabWord } from '@/lib/vocabulary'
+import { VocabInfo } from '@/lib/vocabulary'
 
 interface WordSidebarProps {
   word: string
   contextSentence: string
-  vocabEntry: VocabWord | undefined
+  vocabEntry: VocabInfo | undefined
   onClose: () => void
+  onStatusChange?: (word: string, status: 'new' | 'learning' | 'mastered') => void
+  isUpdating?: boolean
 }
 
-const STATUS_STYLES: Record<VocabWord['status'], string> = {
+const STATUS_STYLES: Record<VocabInfo['status'], string> = {
   mastered: 'text-green-600 bg-green-50 border-green-200',
   learning: 'text-yellow-600 bg-yellow-50 border-yellow-200',
   new: 'text-red-600 bg-red-50 border-red-200',
 }
 
-const STATUS_LABELS: Record<VocabWord['status'], string> = {
+const STATUS_LABELS: Record<VocabInfo['status'], string> = {
   mastered: 'Mastered',
   learning: 'Learning',
   new: 'New',
 }
 
-export default function WordSidebar({ word, contextSentence, vocabEntry, onClose }: WordSidebarProps) {
+export default function WordSidebar({
+  word,
+  contextSentence,
+  vocabEntry,
+  onClose,
+  onStatusChange,
+  isUpdating = false,
+}: WordSidebarProps) {
   const panelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -32,6 +41,14 @@ export default function WordSidebar({ word, contextSentence, vocabEntry, onClose
     document.addEventListener('keydown', handleKey)
     return () => document.removeEventListener('keydown', handleKey)
   }, [onClose])
+
+  const isKnown = vocabEntry?.status === 'mastered'
+
+  function handleToggle() {
+    if (!onStatusChange) return
+    const nextStatus = isKnown ? 'new' : 'mastered'
+    onStatusChange(word, nextStatus)
+  }
 
   return (
     <>
@@ -98,13 +115,39 @@ export default function WordSidebar({ word, contextSentence, vocabEntry, onClose
           {vocabEntry && (
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold px-2 py-0.5 rounded bg-surface-container dark:bg-slate-800 text-on-surface-variant dark:text-slate-400">
-                  {vocabEntry.level}
-                </span>
-                <span className="text-xs text-on-surface-variant dark:text-slate-400">{vocabEntry.source}</span>
+                {vocabEntry.level && (
+                  <span className="text-xs font-bold px-2 py-0.5 rounded bg-surface-container dark:bg-slate-800 text-on-surface-variant dark:text-slate-400">
+                    {vocabEntry.level}
+                  </span>
+                )}
+                {vocabEntry.source && (
+                  <span className="text-xs text-on-surface-variant dark:text-slate-400">{vocabEntry.source}</span>
+                )}
               </div>
-              <p className="text-sm text-on-surface dark:text-slate-200 leading-relaxed">{vocabEntry.definition}</p>
+              {vocabEntry.definition && (
+                <p className="text-sm text-on-surface dark:text-slate-200 leading-relaxed">{vocabEntry.definition}</p>
+              )}
             </div>
+          )}
+
+          {/* Status toggle */}
+          {onStatusChange && (
+            <button
+              data-testid="status-toggle"
+              onClick={handleToggle}
+              disabled={isUpdating}
+              className={`w-full py-2 rounded-xl text-sm font-bold transition-opacity disabled:opacity-50 ${
+                isKnown
+                  ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                  : 'bg-green-100 text-green-700 hover:bg-green-200'
+              }`}
+            >
+              {isUpdating
+                ? 'Saving…'
+                : isKnown
+                ? 'Mark as unknown'
+                : 'Mark as known'}
+            </button>
           )}
 
           {/* Context sentence */}
