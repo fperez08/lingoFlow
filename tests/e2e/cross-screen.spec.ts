@@ -24,7 +24,16 @@ const MOCK_VIDEO = {
 }
 
 test.describe('Cross-screen: Vocabulary page', () => {
+  const MOCK_VOCAB_ENTRIES = [
+    { word: 'ethereal', status: 'new', level: 'B2', definition: 'Extremely delicate' },
+    { word: 'eloquent', status: 'new', level: 'B1', definition: 'Fluent or persuasive' },
+    { word: 'serendipity', status: 'learning', level: 'B2', definition: 'Happy chance' },
+  ]
+
   test('renders the vocabulary manager heading', async ({ page }) => {
+    await page.route('**/api/vocabulary', async route => {
+      await route.fulfill({ json: MOCK_VOCAB_ENTRIES })
+    })
     const vocab = new VocabularyPage(page)
     await vocab.navigateTo()
     await vocab.assertLoaded()
@@ -32,15 +41,20 @@ test.describe('Cross-screen: Vocabulary page', () => {
   })
 
   test('renders word cards in the New Words tab', async ({ page }) => {
+    await page.route('**/api/vocabulary', async route => {
+      await route.fulfill({ json: MOCK_VOCAB_ENTRIES })
+    })
     const vocab = new VocabularyPage(page)
     await vocab.navigateTo()
     await vocab.assertLoaded()
     const count = await vocab.getCardCount()
-    // MOCK_VOCAB contains words in 'new' status by default
     expect(count).toBeGreaterThan(0)
   })
 
   test('search filters vocab cards', async ({ page }) => {
+    await page.route('**/api/vocabulary', async route => {
+      await route.fulfill({ json: MOCK_VOCAB_ENTRIES })
+    })
     const vocab = new VocabularyPage(page)
     await vocab.navigateTo()
     await vocab.assertLoaded()
@@ -49,6 +63,9 @@ test.describe('Cross-screen: Vocabulary page', () => {
   })
 
   test('tab switching works', async ({ page }) => {
+    await page.route('**/api/vocabulary', async route => {
+      await route.fulfill({ json: MOCK_VOCAB_ENTRIES })
+    })
     const vocab = new VocabularyPage(page)
     await vocab.navigateTo()
     await vocab.assertLoaded()
@@ -88,12 +105,15 @@ test.describe('Cross-screen: Player page', () => {
     await page.route(`**/api/videos/${MOCK_VIDEO.id}/transcript`, async route => {
       await route.fulfill({ json: { cues: [] } })
     })
+    await page.route('**/api/vocabulary', async route => {
+      await route.fulfill({ json: [] })
+    })
 
     await player.navigateTo(MOCK_VIDEO.id)
     await player.assertLoaded()
   })
 
-  test('can switch to vocabulary tab in player', async ({ page }) => {
+  test('transcript is visible without tab navigation', async ({ page }) => {
     const player = new PlayerPage(page)
 
     await page.route(`**/api/videos/${MOCK_VIDEO.id}`, async route => {
@@ -102,10 +122,12 @@ test.describe('Cross-screen: Player page', () => {
     await page.route(`**/api/videos/${MOCK_VIDEO.id}/transcript`, async route => {
       await route.fulfill({ json: { cues: [] } })
     })
+    await page.route('**/api/vocabulary', async route => {
+      await route.fulfill({ json: [] })
+    })
 
     await player.navigateTo(MOCK_VIDEO.id)
     await player.assertLoaded()
-    await player.switchToVocabTab()
-    await expect(player.vocabTab).toBeVisible()
+    await expect(page.getByTestId('tab-vocabulary')).not.toBeAttached()
   })
 })

@@ -13,6 +13,7 @@ import { ensureDataDirs, openDb, initializeSchema } from '@/lib/db'
 import { SqliteVideoStore } from '@/lib/video-store'
 import { VideoService } from '@/lib/video-service'
 import { writeTranscript, deleteTranscript } from '@/lib/transcripts'
+import { SqliteVocabStore } from '@/lib/vocab-store'
 import fs from 'fs'
 
 function createContainer(dataDir: string) {
@@ -21,6 +22,7 @@ function createContainer(dataDir: string) {
   initializeSchema(db)
 
   const store = new SqliteVideoStore(db)
+  const vocabStore = new SqliteVocabStore(db)
   const transcriptStore = {
     write: (videoId: string, ext: string, buffer: Buffer) => writeTranscript(videoId, ext, buffer),
     delete: (filePath: string) => deleteTranscript(filePath),
@@ -43,10 +45,10 @@ function createContainer(dataDir: string) {
   }
   const service = new VideoService(store, transcriptStore, videoFileStore)
 
-  return { videoStore: store, videoService: service }
+  return { videoStore: store, videoService: service, vocabStore }
 }
 
 const dataDir = process.env.LINGOFLOW_DATA_DIR ?? path.join(process.cwd(), '.lingoflow-data')
-const { videoStore, videoService } = createContainer(dataDir)
+const { videoStore, videoService, vocabStore } = createContainer(dataDir)
 
-export { videoStore, videoService }
+export { videoStore, videoService, vocabStore }

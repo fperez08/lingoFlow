@@ -46,4 +46,15 @@ export function initializeSchema(db: Database.Database): void {
   addColumnIfMissing('local_video_path', 'TEXT')
   addColumnIfMissing('local_video_filename', 'TEXT')
   addColumnIfMissing('thumbnail_path', 'TEXT')
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS vocabulary (
+      word TEXT PRIMARY KEY,
+      status TEXT NOT NULL CHECK(status IN ('new','learning','mastered')),
+      level TEXT,
+      definition TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `)
 }
