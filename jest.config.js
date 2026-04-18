@@ -12,10 +12,6 @@ const customJestConfig = {
   testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/tests/e2e/'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
-    '^@babel/runtime/(.*)$': '/workspaces/lingoFlow/node_modules/.pnpm/@babel+runtime@7.29.2/node_modules/@babel/runtime/$1',
-  },
-  transform: {
-    '^.+\\.(js|jsx|ts|tsx|mjs)$': ['/workspaces/lingoFlow/node_modules/.pnpm/node_modules/babel-jest/build/index.js', {}],
   },
 }
 
