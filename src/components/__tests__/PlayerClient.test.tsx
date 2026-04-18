@@ -78,10 +78,10 @@ describe('PlayerClient', () => {
     expect(screen.getByTestId('mini-player')).toBeInTheDocument()
   })
 
-  it('renders the transcript tab area', async () => {
+  it('renders the transcript panel', async () => {
     render(<PlayerClient video={mockVideo} />)
-    expect(screen.getByTestId('tab-transcript')).toBeInTheDocument()
-    expect(screen.getByTestId('tab-vocabulary')).toBeInTheDocument()
+    expect(screen.getByText('Interactive Transcript')).toBeInTheDocument()
+    expect(screen.queryByTestId('tab-vocabulary')).not.toBeInTheDocument()
   })
 
   it('fetches transcript on mount', async () => {
