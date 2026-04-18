@@ -1,7 +1,7 @@
 # LingoFlow — Project Documentation Snapshot
 
 > **Purpose**: Reference for coding agents. Describes current implemented state only — not aspirational.
-> **Last updated**: auto-generated snapshot (2026-07, HEAD: feat/155-resize-play-cta).
+> **Last updated**: auto-generated snapshot (2026-07, HEAD: main).
 
 ---
 
@@ -24,27 +24,33 @@ src/
 │   │   │       ├── page.tsx              # Server component — delegates to PlayerLoader
 │   │   │       └── __tests__/page.test.tsx
 │   │   └── vocabulary/
-│   │       ├── page.tsx                  # Vocabulary browser (MOCK data only)
+│   │       ├── page.tsx                  # Vocabulary browser — MOCK_VOCAB only, NOT DB-wired
 │   │       └── __tests__/page.test.tsx
 │   └── api/
-│       └── videos/
-│           ├── route.ts                  # GET /api/videos
+│       ├── videos/
+│       │   ├── route.ts                  # GET /api/videos
+│       │   ├── __tests__/route.test.ts
+│       │   ├── import/
+│       │   │   ├── route.ts              # POST /api/videos/import (local video upload)
+│       │   │   └── __tests__/route.test.ts
+│       │   └── [id]/
+│       │       ├── route.ts             # GET / PATCH / DELETE /api/videos/:id
+│       │       ├── __tests__/route.test.ts
+│       │       ├── transcript/
+│       │       │   ├── route.ts         # GET /api/videos/:id/transcript → {cues[]}
+│       │       │   └── __tests__/route.test.ts
+│       │       ├── stream/
+│       │       │   ├── route.ts         # GET /api/videos/:id/stream (byte-range video)
+│       │       │   └── __tests__/route.test.ts
+│       │       └── thumbnail/
+│       │           ├── route.ts         # GET /api/videos/:id/thumbnail
+│       │           └── __tests__/route.test.ts
+│       └── vocabulary/
+│           ├── route.ts                 # GET /api/vocabulary → VocabEntry[]
 │           ├── __tests__/route.test.ts
-│           ├── import/
-│           │   ├── route.ts              # POST /api/videos/import (local video upload)
-│           │   └── __tests__/route.test.ts
-│           └── [id]/
-│               ├── route.ts             # GET / PATCH / DELETE /api/videos/:id
-│               ├── __tests__/route.test.ts
-│               ├── transcript/
-│               │   ├── route.ts         # GET /api/videos/:id/transcript → {cues[]}
-│               │   └── __tests__/route.test.ts
-│               ├── stream/
-│               │   ├── route.ts         # GET /api/videos/:id/stream (byte-range video)
-│               │   └── __tests__/route.test.ts
-│               └── thumbnail/
-│                   ├── route.ts         # GET /api/videos/:id/thumbnail
-│                   └── __tests__/route.test.ts
+│           └── [word]/
+│               ├── route.ts             # PATCH /api/vocabulary/:word → upsert status
+│               └── __tests__/route.test.ts
 ├── components/
 │   ├── PlayerClient.tsx                  # Main player page logic (client component)
 │   ├── PlayerLoader.tsx                  # Fetches video by id, renders PlayerClient
@@ -77,6 +83,7 @@ src/
 │   ├── useVideos.ts                      # React Query: GET /api/videos
 │   ├── useVideoMutations.ts              # deleteVideo + refreshVideos mutations
 │   ├── useImportVideoForm.ts             # Full form state for import modal
+│   ├── useVocabulary.ts                  # useVocabulary() + useUpdateWordStatus() — DB-backed, global
 │   └── __tests__/
 ├── lib/
 │   ├── api-schemas.ts                    # Zod schemas for API request bodies
@@ -84,15 +91,16 @@ src/
 │   ├── videos.ts                         # Zod schemas + TS types: Video, InsertVideoParams, etc.
 │   ├── video-store.ts                    # SqliteVideoStore — CRUD over the `videos` table
 │   ├── video-service.ts                  # VideoService — business logic (import, update, delete)
+│   ├── vocab-store.ts                    # SqliteVocabStore — CRUD over the `vocabulary` table
 │   ├── transcripts.ts                    # writeTranscript / deleteTranscript (filesystem I/O)
 │   ├── parse-transcript.ts               # parseSrt / parseVtt / parseTxt → TranscriptCue[]
 │   ├── tokenize-transcript.ts            # tokenizeCueText → WordToken[] | PunctToken[]
 │   ├── detect-transcript-format.ts       # Detects SRT/VTT/TXT from pasted content
 │   ├── video-files.ts                    # Video file I/O helpers
 │   ├── thumbnails.ts                     # generateThumbnail via ffmpeg
-│   ├── vocabulary.ts                     # MOCK_VOCAB data + VocabWord type (CEFR A1–C2)
+│   ├── vocabulary.ts                     # MOCK_VOCAB + VocabWord type (CEFR A1–C2) + VocabInfo interface
 │   └── server/
-│       └── composition.ts               # DI root — wires VideoService + SqliteVideoStore
+│       └── composition.ts               # DI root — wires VideoService + SqliteVideoStore + SqliteVocabStore
 tests/
 └── e2e/
     ├── *.spec.ts                         # Playwright E2E specs
@@ -135,7 +143,7 @@ page.tsx (Server Component)
               ├── PlaybackProgress    — shown only when miniplayer is open
               ├── Transcript / Vocabulary tab panel
               │     ├── TranscriptCue rows (clickable → seek + word sidebar)
-              │     └── Vocabulary word cards (add/master actions)
+              │     └── Vocabulary word cards (add/master — local state only)
               ├── LocalVideoPlayer    — mounted when isMiniPlayerOpen = true
               └── WordSidebar         — slide-over, mounted when selectedWord ≠ null
 ```
@@ -150,29 +158,21 @@ page.tsx (Server Component)
 
 ```ts
 interface LocalVideoPlayerProps {
-  videoId: string           // Used to build src: /api/videos/{videoId}/stream
-  title: string             // Native <video> title attribute
-  onClose: () => void       // Called when ✕ button clicked; pauses video first
-  onTimeUpdate?: (currentTime: number, duration: number) => void  // Polled every 250ms while playing
-  seekToTime?: number | null  // When non-null, sets videoRef.current.currentTime
-  onSeekApplied?: () => void  // Called immediately after seek is applied
+  videoId: string           // src: /api/videos/{videoId}/stream
+  title: string
+  onClose: () => void
+  onTimeUpdate?: (currentTime: number, duration: number) => void
+  seekToTime?: number | null
+  onSeekApplied?: () => void
 }
 ```
 
-### Internal state / refs
-
-| Ref | Type | Purpose |
-|---|---|---|
-| `videoRef` | `RefObject<HTMLVideoElement>` | Direct access to the `<video>` DOM element |
-| `pollIntervalRef` | `RefObject<ReturnType<setInterval>\|null>` | 250 ms polling interval handle |
-
 ### Behavior
 
-- **Polling**: Starts on `onPlay`, stops on `onPause`/`onEnded`. Calls `onTimeUpdate(currentTime, duration)` every 250ms.
-- **Seek**: `useEffect` on `seekToTime` — sets `el.currentTime = seekToTime` then fires `onSeekApplied()`.
-- **Close**: Pauses video then calls `onClose()`.
-- **No play/pause controls exposed** — the native `<video>` element handles its own controls bar (browser default). The component exposes **no imperative ref handle** (`useImperativeHandle` not used).
-- **No `forwardRef`** — parent cannot imperatively call play/pause/seek.
+- **Polling**: 250ms interval on play, stops on pause/ended. Fires `onTimeUpdate`.
+- **Seek**: `useEffect` on `seekToTime` → sets `el.currentTime`, fires `onSeekApplied()`.
+- **Close**: pauses video then calls `onClose()`.
+- No `forwardRef` / no imperative handle — parent cannot control playback directly.
 
 ### DOM / test IDs
 
@@ -182,82 +182,79 @@ interface LocalVideoPlayerProps {
 | `local-video` | `<video>` element |
 | `mini-player-close` | Close `<button>` |
 
-### Positioning
-
-Fixed, bottom-right (`fixed bottom-4 right-4 z-50 w-80 aspect-video`). On `md:` screens shifts to top-right (`md:bottom-auto md:top-20`).
+Positioning: `fixed bottom-4 right-4 z-50 w-80 aspect-video`. On `md:`: shifts to top-right.
 
 ---
 
-## 5. `PlayerClient.tsx` — Miniplayer Wiring
+## 5. `PlayerClient.tsx` — State, Vocab Flow, and Tab Structure
 
 ### State managed
 
 ```ts
-isMiniPlayerOpen: boolean           // toggles LocalVideoPlayer mount
-playbackTime: { current, duration } // fed by onTimeUpdate
-requestedSeekTime: number | null    // cleared after LocalVideoPlayer calls onSeekApplied
-activeCueIndex: number              // set by clicking a cue row (manual nav)
-selectedWord: { word, contextSentence } | null  // drives WordSidebar
-cues: TranscriptCue[]               // loaded from /api/videos/:id/transcript
-vocabWords: WordCard[]              // extracted from cues, 8 unique words ≥5 chars
+const { data: vocabMap = new Map() } = useVocabulary()  // DB-backed, global, Map<string, VocabEntry>
+const updateWordStatus = useUpdateWordStatus()           // PATCH /api/vocabulary/:word
+
+cues: TranscriptCue[]               // from /api/videos/:id/transcript
+loadingTranscript: boolean
+activeCueIndex: number              // manual cue nav (click)
 activeTab: 'transcript' | 'vocabulary'
+vocabWords: WordCard[]              // LOCAL state — extracted from cues, NOT persisted
+isMiniPlayerOpen: boolean
+playbackTime: { current, duration }
+requestedSeekTime: number | null
+selectedWord: { word, contextSentence } | null  // drives WordSidebar
 ```
 
-### Miniplayer open/close lifecycle
+### Vocabulary tab (in-player — WHAT NEEDS UNDERSTANDING)
 
-1. **Open**: `LessonHero` calls `onPlay` → `setIsMiniPlayerOpen(true)`.
-2. **Time updates**: `LocalVideoPlayer.onTimeUpdate` → `handleTimeUpdate` → `setPlaybackTime`.
-3. **Seek from transcript**: clicking a cue sets `activeCueIndex` + `requestedSeekTime`. `LocalVideoPlayer` receives `seekToTime` prop. On seek applied, `onSeekApplied` clears `requestedSeekTime` to `null`.
-4. **Close**: `LocalVideoPlayer.onClose` → `handleClose` → resets `isMiniPlayerOpen`, `playbackTime`, `activeCueIndex`, `requestedSeekTime`.
+The player contains a **two-tab panel** inside the transcript area:
 
-### Active cue tracking
+```
+[ Transcript ]  [ Vocabulary ]
+    data-testid="tab-transcript"   data-testid="tab-vocabulary"
+```
 
-- **`playbackCueIndex`**: Computed from `playbackTime.current` against cue start/end times (only when `isMiniPlayerOpen`). `-1` when player is closed.
-- **`highlightedCueIndex`**: `playbackCueIndex >= 0 ? playbackCueIndex : activeCueIndex`. Auto-scrolls via `scrollIntoView`.
+Tab state: `activeTab: 'transcript' | 'vocabulary'`, default `'transcript'`.
 
-### What is NOT wired
+**Vocabulary tab panel** (renders when `activeTab === 'vocabulary'`):
+- Shows `vocabWords` — local-only list of ≤8 unique words (≥5 chars) from transcript cues.
+- `extractVocabWords(cues)` runs on transcript load; returns `{ word, status: 'new' }[]`.
+- "Add to Deck" → `handleWordAction(word, 'add')` → **local state only, no DB call**.
+- "Mark Mastered" → `handleWordAction(word, 'master')` → **local state only, no DB call**.
+- State resets on page navigation. Completely disconnected from `vocabStore`.
 
-- No play/pause button in `PlayerClient` (only Play to open the miniplayer; close to dismiss).
-- No volume, speed, or fullscreen controls.
-- No rewind/fast-forward.
-- `LocalVideoPlayer` does not expose any ref handle — `PlayerClient` cannot imperatively control playback.
+**This tab is separate from the DB-backed vocab system.**
+
+### vocabMap (DB vocab) — Transcript tab only
+
+`vocabMap` from `useVocabulary()` (global, DB-backed) is used in the **Transcript tab**:
+1. Passed to `CueText` in every cue row → colors known words red/yellow/green.
+2. Passed to `WordSidebar` → `vocabEntry={vocabMap.get(word.toLowerCase())}`.
+
+`WordSidebar` status toggle → `updateWordStatus.mutate({ word, status })` → `PATCH /api/vocabulary/:word` → SQLite persisted → React Query cache invalidated.
+
+### Word-click → WordSidebar flow
+
+1. Click word in `CueText` → `onWordClick(token.raw, cue.text)`
+2. `PlayerClient`: `setSelectedWord({ word, contextSentence })`
+3. Renders `<WordSidebar ... vocabEntry={vocabMap.get(word.toLowerCase())} onStatusChange={(w,s) => updateWordStatus.mutate(...)} isUpdating={updateWordStatus.isPending} />`
+4. Escape / backdrop → `setSelectedWord(null)` → unmounts
 
 ---
 
 ## 6. `PlaybackProgress.tsx`
 
 ```ts
-interface PlaybackProgressProps {
-  currentTime: number   // seconds
-  duration: number      // seconds (0 while video metadata not loaded)
-}
+interface PlaybackProgressProps { currentTime: number; duration: number }
 ```
 
-- Renders a visual progress bar (`width: (currentTime/duration)*100%`) and `M:SS` / `M:SS` time labels.
-- **Stateless** — driven entirely by props from `PlayerClient`.
-- Shown only when `isMiniPlayerOpen === true`.
+Stateless. Renders progress bar + `M:SS` labels. Shown only when `isMiniPlayerOpen === true`.
 
 Test IDs: `playback-progress`, `progress-bar-fill`, `current-time`, `duration`.
 
 ---
 
-## 7. Playback Control Hooks / Utilities
-
-There are **no dedicated playback control hooks**. All playback state is managed inline in `PlayerClient.tsx`:
-
-| Concern | Where handled |
-|---|---|
-| Open/close miniplayer | `isMiniPlayerOpen` state in `PlayerClient` |
-| Time tracking | 250ms poll in `LocalVideoPlayer` → `onTimeUpdate` callback |
-| Seek | `requestedSeekTime` prop → `LocalVideoPlayer` effect |
-| Active cue sync | Computed `playbackCueIndex` in `PlayerClient` render |
-| Progress bar | `PlaybackProgress` component (display only) |
-
-No `usePlayback`, `useSeek`, or similar hook exists.
-
----
-
-## 8. API Routes (all require `export const runtime = 'nodejs'`)
+## 7. API Routes (all require `export const runtime = 'nodejs'`)
 
 | Method | Path | Description |
 |---|---|---|
@@ -267,101 +264,153 @@ No `usePlayback`, `useSeek`, or similar hook exists.
 | `PATCH` | `/api/videos/:id` | Update tags and/or transcript |
 | `DELETE` | `/api/videos/:id` | Delete video + files |
 | `GET` | `/api/videos/:id/transcript` | Parse transcript → `{ cues: TranscriptCue[] }` |
-| `GET` | `/api/videos/:id/stream` | Byte-range video streaming (mp4/webm/mov) |
-| `GET` | `/api/videos/:id/thumbnail` | Serve generated thumbnail image |
+| `GET` | `/api/videos/:id/stream` | Byte-range video streaming |
+| `GET` | `/api/videos/:id/thumbnail` | Serve generated thumbnail |
+| `GET` | `/api/vocabulary` | List all vocab entries (`vocabStore.getAll()`) |
+| `PATCH` | `/api/vocabulary/:word` | Upsert word status (`vocabStore.upsert(word, status)`) |
 
 ### Tags contract
 
-- `POST /api/videos/import`: `tags` FormData field is **comma-separated string** → `"french,beginner"`.
-- `PATCH /api/videos/:id`: `tags` FormData field is **JSON-serialized array string** → `'["french","beginner"]'`.
+- `POST /api/videos/import`: `tags` FormData = **comma-separated string** → `"french,beginner"`.
+- `PATCH /api/videos/:id`: `tags` FormData = **JSON-serialized array string** → `'["french","beginner"]'`.
 
 ---
 
-## 9. Data Model
+## 8. Data Model
 
-### `Video` (Zod schema in `src/lib/videos.ts`)
+### `Video` (Zod: `src/lib/videos.ts`)
 
 ```ts
 {
-  id: string
-  title: string
-  author_name: string
-  thumbnail_url: string
-  transcript_path: string           // relative or absolute path to transcript file
-  transcript_format: string         // 'srt' | 'vtt' | 'txt'
+  id: string; title: string; author_name: string; thumbnail_url: string
+  transcript_path: string; transcript_format: string
   tags: string[]                    // stored as JSON in SQLite
-  created_at: string                // ISO datetime string
-  updated_at: string
+  created_at: string; updated_at: string
   source_type: 'local'
-  local_video_path?: string | null  // path to video file in .lingoflow-data/videos/
-  local_video_filename?: string | null
-  thumbnail_path?: string | null    // path to generated thumbnail jpg
-}
-```
-
-### `TranscriptCue`
-
-```ts
-{
-  index: number
-  startTime: string   // "HH:MM:SS,mmm" or "HH:MM:SS.mmm"
-  endTime: string
-  text: string
+  local_video_path?: string | null; local_video_filename?: string | null
+  thumbnail_path?: string | null
 }
 ```
 
 ### SQLite schema (`videos` table)
 
 ```sql
-id TEXT PRIMARY KEY
-title TEXT NOT NULL
-author_name TEXT NOT NULL
-thumbnail_url TEXT NOT NULL
-transcript_path TEXT NOT NULL
-transcript_format TEXT NOT NULL
-tags TEXT NOT NULL DEFAULT '[]'     -- JSON array string
-created_at TEXT NOT NULL DEFAULT (datetime('now'))
+id TEXT PRIMARY KEY, title TEXT NOT NULL, author_name TEXT NOT NULL,
+thumbnail_url TEXT NOT NULL, transcript_path TEXT NOT NULL,
+transcript_format TEXT NOT NULL, tags TEXT NOT NULL DEFAULT '[]',
+created_at TEXT NOT NULL DEFAULT (datetime('now')),
+updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+source_type TEXT, local_video_path TEXT, local_video_filename TEXT, thumbnail_path TEXT
+```
+
+### SQLite schema (`vocabulary` table)
+
+```sql
+word TEXT PRIMARY KEY,              -- lowercased word is the PK (no id column)
+status TEXT NOT NULL CHECK(status IN ('new','learning','mastered')),
+level TEXT,                         -- CEFR level, nullable
+definition TEXT,                    -- nullable
+created_at TEXT NOT NULL DEFAULT (datetime('now')),
 updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-source_type TEXT
-local_video_path TEXT
-local_video_filename TEXT
-thumbnail_path TEXT
+```
+
+> No `contextQuote`, `source`, or `video_id` — those exist only in `MOCK_VOCAB`.
+
+### `TranscriptCue`
+
+```ts
+{ index: number; startTime: string; endTime: string; text: string }
 ```
 
 ---
 
-## 10. Vocabulary System — Current State
+## 9. Vocabulary System — Complete Current State
 
-### `src/lib/vocabulary.ts`
+Two coexisting subsystems that are NOT yet unified:
 
-The vocabulary module contains **mock data only** — no database wiring exists yet.
+---
 
-#### Types
+### 9a. DB-backed Vocab (production path)
 
-```ts
-const VocabWordSchema = z.object({
-  id: z.string(),
-  word: z.string(),
-  level: z.enum(['A1', 'A2', 'B1', 'B2', 'C1', 'C2']),
-  definition: z.string(),
-  contextQuote: z.string(),
-  source: z.string(),
-  status: z.enum(['new', 'learning', 'mastered']),
-})
-export type VocabWord = z.infer<typeof VocabWordSchema>
-```
-
-#### `MOCK_VOCAB`
-
-9 hardcoded `VocabWord` entries (CEFR levels B1–C1). Words: Ethereal, Juxtaposition, Eloquent, Serendipity, Ephemeral, Resilient, Ambiguous, Pragmatic, Nuance. Sources: Cinema, Literature, Science, Nature, Tech. Statuses: 3 `new`, 3 `learning`, 3 `mastered`.
+#### `src/lib/vocab-store.ts`
 
 ```ts
-export const MOCK_VOCAB: VocabWord[] = [ /* 9 entries */ ]
-export const VOCAB_SOURCES = ['Cinema', 'Literature', 'Science', 'Nature', 'Tech'] as const
-export const VOCAB_LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'] as const
+export interface VocabEntry {
+  word: string
+  status: 'new' | 'learning' | 'mastered'
+  level?: string
+  definition?: string
+}
+
+export class SqliteVocabStore implements VocabStore {
+  getAll(): VocabEntry[]
+  getByWord(word: string): VocabEntry | null
+  upsert(word: string, status: VocabEntry['status'], level?: string, definition?: string): VocabEntry
+}
 ```
 
-#### Status → color mapping (used in both `CueText` and `WordSidebar`)
+`word` is PK. `upsert` uses `INSERT … ON CONFLICT(word) DO UPDATE SET`.
+
+#### Composition root: `src/lib/server/composition.ts`
+
+`vocabStore` is instantiated alongside `videoStore` and `videoService`. API routes import from here.
+
+#### API routes
+
+- `GET /api/vocabulary` → `vocabStore.getAll()` → `VocabEntry[]`
+- `PATCH /api/vocabulary/:word` → URL-decoded + lowercased `:word` → `vocabStore.upsert(word, status)`
+  - Body schema: `{ status: 'new' | 'learning' | 'mastered' }`
+
+#### `src/hooks/useVocabulary.ts`
+
+```ts
+// Global, NOT scoped per video. Query key: ['vocabulary'].
+export function useVocabulary(): UseQueryResult<Map<string, VocabEntry>, Error>
+
+// Mutation. Invalidates ['vocabulary'] on success.
+export function useUpdateWordStatus(): UseMutationResult<
+  VocabEntry, Error, { word: string; status: VocabEntry['status'] }
+>
+```
+
+Returns `Map<string, VocabEntry>` keyed by lowercased word. **Cross-video** — same cache for all videos.
+
+---
+
+### 9b. Mock/Local Vocab (NOT DB-backed)
+
+#### `src/lib/vocabulary.ts`
+
+```ts
+/** Minimal interface — satisfied by both VocabWord (mock) and VocabEntry (DB). */
+export interface VocabInfo {
+  status: 'new' | 'learning' | 'mastered'
+  level?: string; definition?: string; source?: string
+}
+
+export type VocabWord = {
+  id: string; word: string; level: 'A1'|'A2'|'B1'|'B2'|'C1'|'C2'
+  definition: string; contextQuote: string; source: string
+  status: 'new' | 'learning' | 'mastered'
+}
+
+export const MOCK_VOCAB: VocabWord[]   // 9 hardcoded entries
+export const VOCAB_SOURCES             // ['Cinema','Literature','Science','Nature','Tech']
+export const VOCAB_LEVELS              // ['A1','A2','B1','B2','C1','C2']
+```
+
+`VocabInfo` is used as the type for `CueText.vocabMap` and `WordSidebar.vocabEntry`. Both `VocabEntry` (DB) and `VocabWord` (mock) satisfy it.
+
+#### `/vocabulary` page (`src/app/(app)/vocabulary/page.tsx`)
+
+- **Still uses `MOCK_VOCAB`** — no `useVocabulary()` call, no API fetch.
+- All state is `useState<VocabWord[]>(MOCK_VOCAB)`. `markMastered`/`removeWord` update local state only.
+- Tabs: `new` / `learning` / `mastered`. Source + level filter chips.
+- Completely disconnected from DB.
+
+---
+
+### 9c. Status → color mapping
 
 | Status | Color |
 |---|---|
@@ -369,226 +418,169 @@ export const VOCAB_LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'] as const
 | `learning` | Yellow (text-yellow-600, bg-yellow-50) |
 | `mastered` | Green (text-green-600, bg-green-50) |
 
+Used in `CueText.tsx` (`STATUS_WORD_STYLES`) and `WordSidebar.tsx` (`STATUS_STYLES`, `STATUS_LABELS`).
+
 ---
 
-## 11. `CueText.tsx` — Word Colorization
+### 9d. Vocab data flow summary
+
+```
+DB (vocabulary table)
+    ↑ upsert via PATCH /api/vocabulary/:word (WordSidebar status toggle)
+    ↓ getAll via GET /api/vocabulary
+useVocabulary() → vocabMap: Map<string, VocabEntry>  [global, all videos]
+    → PlayerClient → CueText word colors (Transcript tab)
+    → PlayerClient → WordSidebar (status display + toggle)
+
+MOCK_VOCAB (hardcoded, src/lib/vocabulary.ts)
+    → /vocabulary page (local state only, no persistence)
+
+extractVocabWords(cues) → vocabWords (local state in PlayerClient)
+    → Player Vocabulary tab cards (in-memory only, no persistence)
+```
+
+---
+
+### 9e. Gap analysis
+
+| Component | Status |
+|---|---|
+| `vocabulary` SQLite table | ✅ |
+| `SqliteVocabStore` | ✅ |
+| `vocabStore` in composition root | ✅ |
+| `GET /api/vocabulary` | ✅ |
+| `PATCH /api/vocabulary/:word` | ✅ |
+| `useVocabulary()` + `useUpdateWordStatus()` | ✅ |
+| Word highlighting in transcript (DB) | ✅ via `vocabMap` in `CueText` |
+| WordSidebar status toggle (DB-persisted) | ✅ via `onStatusChange` + `useUpdateWordStatus` |
+| `/vocabulary` page DB-wiring | ❌ uses `MOCK_VOCAB` only |
+| Player Vocabulary tab DB-wiring | ❌ `vocabWords` local-only, no API calls |
+| `POST /api/vocabulary` (create endpoint) | ❌ none — only PATCH exists |
+| `contextQuote` / `source` in DB schema | ❌ not present |
+
+---
+
+## 10. `CueText.tsx` — Word Colorization
 
 ```ts
 interface CueTextProps {
-  text: string                          // raw transcript cue text
-  vocabMap: Map<string, VocabWord>      // keyed by lowercased word
+  text: string
+  vocabMap: Map<string, VocabInfo>   // keyed by lowercased word
   onWordClick: (word: string, sentence: string) => void
 }
 ```
 
-- Calls `tokenizeCueText(text)` → `TranscriptToken[]` (words + punct).
-- For each token: looks up `vocabMap.get(token.normalized)` (normalized = lowercased).
-- If found → applies `STATUS_WORD_STYLES[entry.status]` (red/yellow/green with bg tint).
-- If not found → applies `DEFAULT_WORD_STYLE` (hover highlight only).
-- Punctuation tokens rendered as plain `<span>` (not clickable).
-- Each word span: `role="button"`, `tabIndex={0}`, `data-testid="word-{normalized}"`, `onClick` stops propagation and calls `onWordClick(token.raw, text)`.
-- Keyboard accessible: Enter/Space trigger same callback.
-
-`tokenizeCueText` (`src/lib/tokenize-transcript.ts`): splits on whitespace and non-alpha chars; emits `{ type: 'word', raw, normalized }` for alpha-only tokens, `{ type: 'punct', raw }` otherwise.
+- `tokenizeCueText(text)` → `TranscriptToken[]`.
+- Each word token: looks up `vocabMap.get(token.normalized)`.
+- If found → `STATUS_WORD_STYLES[entry.status]` (red/yellow/green).
+- If not found → `DEFAULT_WORD_STYLE` (hover highlight only).
+- Word spans: `role="button"`, `tabIndex={0}`, `data-testid="word-{normalized}"`, keyboard accessible.
 
 ---
 
-## 12. `WordSidebar.tsx` — Word Detail Panel
+## 11. `WordSidebar.tsx` — Word Detail Panel
 
 ```ts
 interface WordSidebarProps {
-  word: string                        // raw word as clicked (preserves original casing)
-  contextSentence: string             // full cue text containing the word
-  vocabEntry: VocabWord | undefined   // undefined if word not in vocab map
+  word: string                          // raw, original casing
+  contextSentence: string               // full cue text
+  vocabEntry: VocabInfo | undefined
   onClose: () => void
+  onStatusChange?: (word: string, status: 'new' | 'learning' | 'mastered') => void
+  isUpdating?: boolean
 }
 ```
 
-### Behavior
+- Fixed right slide-over (`fixed top-0 right-0 z-50 h-full w-80`).
+- Escape key + transparent backdrop close it.
+- **Status toggle** (`data-testid="status-toggle"`): shown when `onStatusChange` provided. Toggles `mastered` ↔ `new`. Disabled while `isUpdating`.
 
-- Renders a fixed right slide-over (`fixed top-0 right-0 z-50 h-full w-80`).
-- `role="dialog"`, `aria-modal="true"`, `aria-label="Word details"`.
-- Backdrop: transparent `fixed inset-0 z-40` div — click dismisses.
-- Escape key: `document` keydown listener → `onClose()`.
-- Close button: `data-testid="word-sidebar-close"`.
-
-### Content
-
-| Section | Shown when | Content |
+| Section | Shown when | testid |
 |---|---|---|
-| Word display | always | `data-testid="sidebar-word"` — large bold word; colored if `vocabEntry` exists |
-| Status badge | `vocabEntry` defined | Colored pill: "Mastered" / "Learning" / "New" |
-| Vocab details | `vocabEntry` defined | CEFR level badge, source, definition paragraph |
-| Context | always | `data-testid="sidebar-context"` — full cue sentence in italic block |
+| Word (colored) | always | `sidebar-word` |
+| Status badge | `vocabEntry` defined | — |
+| Level + definition | `vocabEntry` defined | — |
+| Status toggle | `onStatusChange` provided | `status-toggle` |
+| Context sentence | always | `sidebar-context` |
 
-### Test IDs
-
-`word-sidebar`, `word-sidebar-close`, `sidebar-word`, `sidebar-context`.
+Other test IDs: `word-sidebar`, `word-sidebar-close`.
 
 ---
 
-## 13. `PlayerClient.tsx` — selectedWord → WordSidebar Flow
+## 12. `LessonHero.tsx`
 
 ```ts
-// Module-level constant (not reactive state)
-const vocabMap: Map<string, VocabWord> = new Map(
-  MOCK_VOCAB.map((entry) => [entry.word.toLowerCase(), entry])
-)
+interface LessonHeroProps { video: Video; onPlay: () => void }
 ```
 
-`vocabMap` is built once at module load from `MOCK_VOCAB`. It is **not** derived from SQLite — it uses the hardcoded mock.
-
-```ts
-// State slice driving WordSidebar
-const [selectedWord, setSelectedWord] = useState<SelectedWord | null>(null)
-// { word: string; contextSentence: string }
-```
-
-**Click flow**:
-1. User clicks word token in `CueText` → `onWordClick(token.raw, cue.text)` called.
-2. `PlayerClient` handler: `setSelectedWord({ word, contextSentence: sentence })`.
-3. `{selectedWord && <WordSidebar word={selectedWord.word} contextSentence={selectedWord.contextSentence} vocabEntry={vocabMap.get(selectedWord.word.toLowerCase())} onClose={() => setSelectedWord(null)} />}`.
-4. `WordSidebar` renders; Escape or backdrop click → `setSelectedWord(null)` → unmounts.
-
-**Both** active and non-active cue rows render `CueText` (with the same `vocabMap` and `onWordClick` handler). Word colorization therefore applies to all visible cues.
-
-### `vocabWords` (Vocabulary tab, separate from vocabMap)
-
-`vocabWords: WordCard[]` — extracted from cues on load via `extractVocabWords(cues)`:
-- Joins all cue text, splits on whitespace, strips non-alpha, keeps words ≥5 chars.
-- Returns up to 8 unique words as `{ word, status: 'new' }`.
-- **Not linked to `MOCK_VOCAB`** — completely separate extraction.
-- `handleWordAction(word, 'add'|'master')` updates status in local state only (no persistence).
+Play button: `data-testid="play-button"`, `aria-label="Play video"`, label `"Play"`, `px-4 py-2`.
 
 ---
 
-## 14. Vocabulary Persistence — Gaps for Issue #156
+## 13. Dependency Injection / Composition Root
 
-### What exists today
+`src/lib/server/composition.ts` — single DI root. Creates:
 
-| Mechanism | Status |
-|---|---|
-| `vocabulary` SQLite table | ❌ Does not exist — `initializeSchema` creates only the `videos` table |
-| Vocab API routes | ❌ None — no `src/app/api/vocabulary/` routes exist |
-| localStorage persistence | ❌ Not used |
-| `VocabWord` Zod schema + type | ✅ Defined in `src/lib/vocabulary.ts` |
-| `MOCK_VOCAB` (9 hardcoded entries) | ✅ Used by `PlayerClient` and `/vocabulary` page |
-| Status→color display logic | ✅ Implemented in `CueText` and `WordSidebar` |
-| Word-click → sidebar flow | ✅ Implemented end-to-end in `PlayerClient` |
+- `SqliteVideoStore`
+- `VideoService` (takes store + transcriptStore + videoFileStore)
+- `SqliteVocabStore` (same DB instance)
 
-### Gaps to fill for issue #156
-
-1. **SQLite `vocabulary` table**: needs `CREATE TABLE IF NOT EXISTS vocabulary (id, word, level, definition, context_quote, source, status, video_id?, created_at, updated_at)` added to `initializeSchema` in `src/lib/db.ts`.
-2. **`SqliteVocabStore`** (parallel to `SqliteVideoStore`): CRUD over the vocabulary table.
-3. **`VocabService`** or inline route logic: add/update/delete vocab entries.
-4. **Composition root update** (`src/lib/server/composition.ts`): wire up vocab store/service.
-5. **API routes**: at minimum `GET /api/vocabulary`, `POST /api/vocabulary`, `PATCH /api/vocabulary/:id` (to update status). Must export `runtime = 'nodejs'`.
-6. **`PlayerClient` wiring**: replace `MOCK_VOCAB` / module-level `vocabMap` with data fetched from API (React Query). `WordSidebar` add-to-vocab action needs to call the API.
-7. **`/vocabulary` page** (`src/app/(app)/vocabulary/page.tsx`): replace mock data with API fetch.
-8. **`WordSidebar` add/update action**: needs an `onStatusChange` prop (or similar) to call the persistence layer when user marks a word as learning/mastered.
+Route handlers import `{ videoStore, videoService, vocabStore }` from here. **Never instantiate directly.**
 
 ---
 
-## 15. `LessonHero.tsx` — Current State (snapshot 2026-07)
-
-File: `src/components/LessonHero.tsx`
-
-### Props
-
-```ts
-interface LessonHeroProps {
-  video: Video
-  onPlay: () => void
-}
-```
-
-### Button (current — post #155)
-
-| Attribute | Current value |
-|---|---|
-| Label text | `Play` |
-| `aria-label` | `"Play video"` |
-| `data-testid` | `"play-button"` |
-| `onClick` | `onPlay` prop |
-| Size classes | `px-4 py-2` (reduced from px-6 py-3) |
-| Visual style | `bg-gradient-to-br from-primary to-primary-container text-white rounded-xl font-bold hover:scale-[1.02] transition-transform whitespace-nowrap` |
-| Icon | `w-5 h-5` SVG play chevron (path `M8 5v14l11-7z`) |
-
-### Test files that reference the button label / component
-
-| File | Reference | Type |
-|---|---|---|
-| `src/components/__tests__/LessonHero.test.tsx` | `getByTestId('play-button')` — no text assertion on label | Unit |
-| `tests/e2e/player.spec.ts` | `toContainText('Play')` | E2E |
-| `tests/e2e/pages/PlayerPage.ts` | `getByTestId('play-button')` — no text assertion | E2E POM |
-
-Issue #155 is merged — label is now `"Play"`, padding is `px-4 py-2`.
-
----
-
-## 16. Dependency Injection / Composition Root
-
-`src/lib/server/composition.ts` is the single DI root. It creates:
-
-- `SqliteVideoStore` (wraps `better-sqlite3`)
-- `VideoService` (business logic, takes store + transcriptStore + videoFileStore)
-
-All API route handlers import `{ videoStore, videoService }` from here. **Never instantiate these directly in route handlers.**
-
----
-
-## 17. Key Library Files
+## 14. Key Library Files
 
 ### `src/lib/parse-transcript.ts`
-- `parseTranscript(content, format)` → `TranscriptCue[]`
-- Supports `'srt'`, `'vtt'` (strips WEBVTT header, parses as SRT), and plain text.
+- `parseTranscript(content, format)` → `TranscriptCue[]`. Supports `'srt'`, `'vtt'`, plain text.
 
 ### `src/lib/tokenize-transcript.ts`
-- `tokenizeCueText(text)` → `TranscriptToken[]`
-- Each token is `{ type: 'word', raw, normalized }` or `{ type: 'punct', raw }`.
-- `normalized` is lowercased word, used for vocab map lookup.
+- `tokenizeCueText(text)` → `{ type:'word', raw, normalized }[] | { type:'punct', raw }[]`.
 
 ### `src/lib/vocabulary.ts`
-- `MOCK_VOCAB: VocabWord[]` — 9 hardcoded entries, CEFR levels B1–C1.
-- `VocabWord` has `{ id, word, level, definition, contextQuote, source, status }`.
-- **Not yet wired to SQLite** — vocabulary page and `PlayerClient` use mock data only.
+- `MOCK_VOCAB` (9 entries B1–C1), `VocabWord` type, `VocabInfo` interface, `VOCAB_SOURCES`, `VOCAB_LEVELS`.
+- `PlayerClient` does NOT use `MOCK_VOCAB` — uses `useVocabulary()` (DB-backed).
+- `/vocabulary` page DOES use `MOCK_VOCAB` — not DB-wired.
+
+### `src/lib/vocab-store.ts`
+- `SqliteVocabStore`: `getAll()`, `getByWord()`, `upsert()`. PK is `word` (lowercased).
 
 ### `src/lib/thumbnails.ts`
-- `generateThumbnail(videoPath, outputPath)` → `string | null`
-- Uses `fluent-ffmpeg` to extract a frame at 1 second. Async, non-blocking (called with `void` in import route).
+- `generateThumbnail(videoPath, outputPath)` → `string | null`. Uses `fluent-ffmpeg`, frame at 1s.
 
 ---
 
-## 18. Build & Test Commands
+## 15. Build & Test Commands
 
 ```bash
-pnpm install          # install / sync deps (run after package.json changes)
-pnpm build            # production build + TypeScript validation — MUST pass
+pnpm install          # install / sync deps
+pnpm build            # production build + TypeScript — MUST pass
 pnpm test             # Jest unit tests
 pnpm dev              # dev server on http://localhost:3000
-pnpm lint             # ESLint — pre-existing failures in test files; NOT a CI gate
+pnpm lint             # ESLint — pre-existing test file failures; NOT a CI gate
 pnpm test:e2e         # Playwright E2E (auto-starts dev server via webServer config)
 ```
 
 ---
 
-## 19. Critical Patterns
+## 16. Critical Patterns
 
-1. **`export const runtime = 'nodejs'`** required in every `src/app/api/` file.
-2. **`// @jest-environment node`** required at top of API route test files.
-3. **Zod v4**: use `result.error.issues[0].message`, NOT `.errors`.
+1. **`export const runtime = 'nodejs'`** — required in every `src/app/api/` file.
+2. **`// @jest-environment node`** — required at top of every API route test file.
+3. **Zod v4**: `result.error.issues[0].message`, NOT `.errors`.
 4. **Dynamic route params**: `params` is `Promise<{ id: string }>` — must `await params`.
-5. **Tags in SQLite**: stored as JSON string; `SqliteVideoStore.rowToVideo()` deserializes. Always pass `string[]` to store methods.
-6. **Composition root**: always import `{ videoStore, videoService }` from `@/lib/server/composition`.
+5. **Tags in SQLite**: stored as JSON string; `rowToVideo()` deserializes. Always pass `string[]` to store methods.
+6. **Composition root**: import `{ videoStore, videoService, vocabStore }` from `@/lib/server/composition`. Never instantiate directly.
 7. **Import tags**: comma-separated string in FormData. **Update tags**: JSON-serialized array string in FormData.
-8. **`@/` path alias** maps to `src/`. Use in all imports.
-9. **Data dir**: `.lingoflow-data/` (gitignored) — contains `lingoflow.db`, `transcripts/`, `videos/`, `thumbnails/`. Override with `LINGOFLOW_DATA_DIR` env var.
+8. **`@/` path alias** maps to `src/`.
+9. **Data dir**: `.lingoflow-data/` — `lingoflow.db`, `transcripts/`, `videos/`, `thumbnails/`. Override via `LINGOFLOW_DATA_DIR`.
 10. **`pnpm` only** — no npm or yarn.
+11. **Vocab store PK**: `vocabulary.word` is lowercased PK. `upsert` handles insert + update. No separate ID.
 
 ---
 
-## 20. CI Pipeline
+## 17. CI Pipeline
 
-Defined in `.github/workflows/e2e.yml`. Triggers on **push to `main` only** (post-merge).
+`.github/workflows/e2e.yml`. Triggers on **push to `main` only** (post-merge).
 Steps: `pnpm install --frozen-lockfile` → `pnpm test` → `pnpm test:e2e`.
 No lint step. Run `pnpm build` and `pnpm test` locally before merging.
