@@ -2,6 +2,11 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import PlayerClient from '../PlayerClient'
 import { Video } from '@/lib/videos'
 
+jest.mock('@/hooks/useVocabulary', () => ({
+  useVocabulary: () => ({ data: new Map(), isLoading: false }),
+  useUpdateWordStatus: () => ({ mutate: jest.fn(), isPending: false }),
+}))
+
 const mockVideo: Video = {
   id: 'video-1',
 

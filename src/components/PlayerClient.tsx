@@ -3,12 +3,12 @@
 import { useEffect, useState } from 'react'
 import { Video } from '@/lib/videos'
 import { TranscriptCue } from '@/lib/parse-transcript'
-import { MOCK_VOCAB, VocabWord } from '@/lib/vocabulary'
 import LessonHero from '@/components/LessonHero'
 import LocalVideoPlayer from '@/components/LocalVideoPlayer'
 import PlaybackProgress from '@/components/PlaybackProgress'
 import CueText from '@/components/CueText'
 import WordSidebar from '@/components/WordSidebar'
+import { useVocabulary, useUpdateWordStatus } from '@/hooks/useVocabulary'
 
 interface WordCard {
   word: string
@@ -19,10 +19,6 @@ interface SelectedWord {
   word: string
   contextSentence: string
 }
-
-const vocabMap: Map<string, VocabWord> = new Map(
-  MOCK_VOCAB.map((entry) => [entry.word.toLowerCase(), entry])
-)
 
 function parseTimeToSeconds(timestamp: string): number {
   const normalized = timestamp.trim().replace(',', '.')
@@ -44,6 +40,8 @@ function extractVocabWords(cues: TranscriptCue[]): WordCard[] {
 }
 
 export default function PlayerClient({ video }: { video: Video }) {
+  const { data: vocabMap = new Map() } = useVocabulary()
+  const updateWordStatus = useUpdateWordStatus()
   const [cues, setCues] = useState<TranscriptCue[]>([])
   const [loadingTranscript, setLoadingTranscript] = useState(true)
   const [activeCueIndex, setActiveCueIndex] = useState(0)
@@ -274,6 +272,8 @@ export default function PlayerClient({ video }: { video: Video }) {
           contextSentence={selectedWord.contextSentence}
           vocabEntry={vocabMap.get(selectedWord.word.toLowerCase())}
           onClose={() => setSelectedWord(null)}
+          onStatusChange={(w, status) => updateWordStatus.mutate({ word: w, status })}
+          isUpdating={updateWordStatus.isPending}
         />
       )}
     </div>

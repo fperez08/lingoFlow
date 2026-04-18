@@ -1,5 +1,13 @@
 import { z } from 'zod'
 
+/** Minimal interface satisfied by both VocabWord (mock) and VocabEntry (DB). */
+export interface VocabInfo {
+  status: 'new' | 'learning' | 'mastered'
+  level?: string
+  definition?: string
+  source?: string
+}
+
 export const VocabWordSchema = z.object({
   id: z.string(),
   word: z.string(),
