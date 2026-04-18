@@ -33,16 +33,6 @@ function makeLocator(overrides: Partial<Record<string, jest.Mock>> = {}) {
   return locator
 }
 
-function makePage() {
-  const locator = makeLocator()
-  const page = {
-    getByTestId: jest.fn().mockReturnValue(locator),
-    getByRole: jest.fn().mockReturnValue(locator),
-    getByText: jest.fn().mockReturnValue(locator),
-  }
-  return { page, locator }
-}
-
 describe('EditActions', () => {
   it('clickEditOnCard() clicks the edit button at given index and waits for modal', async () => {
     const btnListLocator = makeLocator()
