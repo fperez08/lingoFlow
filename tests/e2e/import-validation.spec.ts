@@ -1,15 +1,15 @@
 /**
- * E2E spec: import form validation — bad URL, unsupported extension, missing fields
+ * E2E spec: import form validation — missing fields, unsupported extension
  *
  * Verifies that client-side validation (canSubmit gate) and server-side
  * validation (400/422 responses) surface the correct user-facing error messages.
  *
  * Scenarios:
- *   1. Plain invalid URL  → preview error + submit disabled
- *   2. Non-YouTube URL    → preview error + submit disabled
- *   3. Valid URL, no file → submit button disabled
- *   4. Valid URL + .doc   → submit → server 400 → import-error "Invalid file extension"
- *   5. Bad URL → fix URL + add file → error clears + submit re-enabled
+ *   1. No video file selected  → submit disabled
+ *   2. Video file but no title → submit disabled
+ *   3. Valid video + title + no transcript → submit disabled
+ *   4. Valid video + title + .doc transcript → server 400 → "Invalid file extension"
+ *   5. Add all required fields → submit enabled
  */
 
 import { test, expect } from '@playwright/test'
@@ -18,6 +18,13 @@ import { DashboardPage } from './pages/DashboardPage'
 import { ImportActions } from './pages/ImportActions'
 
 const SAMPLE_SRT = path.join(__dirname, 'fixtures', 'sample.srt')
+const TEST_MP4 = path.join(__dirname, 'fixtures', 'test.mp4')
+
+const FAKE_VIDEO = {
+  name: 'video.mp4',
+  mimeType: 'video/mp4',
+  buffer: Buffer.from('fake mp4 content'),
+}
 
 test.describe('Import form validation', () => {
   test.beforeEach(async ({ page }) => {
@@ -27,45 +34,35 @@ test.describe('Import form validation', () => {
     await importActions.clickImportButton()
   })
 
-  test('1 — plain invalid URL shows preview error and disables submit', async ({ page }) => {
+  test('1 — no video file selected keeps submit disabled', async ({ page }) => {
+    const submitBtn = page.getByTestId('submit-import-button')
+    await expect(submitBtn).toBeDisabled()
+  })
+
+  test('2 — video file selected but no title keeps submit disabled', async ({ page }) => {
     const importActions = new ImportActions(page)
 
-    await importActions.fillYoutubeUrl('not-a-url')
-
-    await expect(page.getByTestId('url-preview-error')).toBeVisible()
+    await importActions.fillVideoFile(FAKE_VIDEO)
 
     const submitBtn = page.getByTestId('submit-import-button')
     await expect(submitBtn).toBeDisabled()
   })
 
-  test('2 — non-YouTube URL shows preview error and disables submit', async ({ page }) => {
+  test('3 — valid video + title with no transcript file keeps submit disabled', async ({ page }) => {
     const importActions = new ImportActions(page)
 
-    
-    await expect(page.getByTestId('url-preview-error')).toBeVisible()
+    await importActions.fillVideoFile(FAKE_VIDEO)
+    await importActions.fillTitle('Test Video')
 
     const submitBtn = page.getByTestId('submit-import-button')
     await expect(submitBtn).toBeDisabled()
   })
 
-  test('3 — valid URL with no transcript file keeps submit disabled', async ({ page }) => {
+  test('4 — valid video + title + .doc file → server 400 shows "Invalid file extension" error', async ({ page }) => {
     const importActions = new ImportActions(page)
 
-    await importActions.fillYoutubeUrl(RICK_ASTLEY_URL)
-    await expect(page.getByTestId('url-preview-error')).toBeHidden()
-    await expect(page.getByTestId('preview-container')).toBeVisible()
-
-    const submitBtn = page.getByTestId('submit-import-button')
-    await expect(submitBtn).toBeDisabled()
-  })
-
-  test('4 — valid URL + .doc file → server 400 shows "Invalid file extension" error', async ({ page }) => {
-    const importActions = new ImportActions(page)
-
-    await importActions.fillYoutubeUrl(RICK_ASTLEY_URL)
-    await expect(page.getByTestId('url-preview-error')).toBeHidden()
-    await expect(page.getByTestId('preview-container')).toBeVisible()
-
+    await importActions.fillVideoFile({ name: 'video.mp4', mimeType: 'video/mp4', buffer: Buffer.from('fake') })
+    await importActions.fillTitle('Test Video')
     await importActions.fillTranscriptFile({
       name: 'transcript.doc',
       mimeType: 'application/msword',
@@ -76,23 +73,15 @@ test.describe('Import form validation', () => {
     await importActions.assertValidationError('Invalid file extension')
   })
 
-  test('5 — bad URL fixed to valid URL + file clears error and re-enables submit', async ({ page }) => {
+  test('5 — adding video + title + transcript clears disabled state and enables submit', async ({ page }) => {
     const importActions = new ImportActions(page)
 
-    // Enter invalid URL first
-    await importActions.fillYoutubeUrl('not-a-url')
-    await expect(page.getByTestId('url-preview-error')).toBeVisible()
-
-    // Fix URL and add valid transcript file
-        await importActions.fillYoutubeUrl(RICK_ASTLEY_URL)
-
-    // Wait for preview to load and error to clear
-    await expect(page.getByTestId('url-preview-error')).toBeHidden()
-    await expect(page.getByTestId('preview-container')).toBeVisible()
-
+    await importActions.fillVideoFile(FAKE_VIDEO)
+    await importActions.fillTitle('Test Video')
     await importActions.fillTranscriptFile(SAMPLE_SRT)
 
     const submitBtn = page.getByTestId('submit-import-button')
     await expect(submitBtn).toBeEnabled()
   })
 })
+

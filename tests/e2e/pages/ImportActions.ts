@@ -31,7 +31,18 @@ export class ImportActions {
     await expect(this.page.getByTestId('import-modal')).toBeVisible()
   }
 
+  /** Fills the video title field in the import modal. */
+  async fillTitle(title: string): Promise<void> {
+    await this.page.getByTestId('local-title-input').fill(title)
+  }
 
+  /**
+   * Sets the video file input using the provided file or file descriptor.
+   * @param file - Absolute path or file descriptor object with name/mimeType/buffer.
+   */
+  async fillVideoFile(file: TranscriptInput): Promise<void> {
+    await this.page.getByTestId('video-file-input').setInputFiles(file)
+  }
 
   /**
    * Sets the transcript file input using the provided file path.

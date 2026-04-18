@@ -28,7 +28,7 @@ export class PlayerPage {
     this.playButton = page.getByTestId('play-button')
     this.miniPlayer = page.getByTestId('mini-player')
     this.miniPlayerClose = page.getByTestId('mini-player-close')
-    this.miniPlayerIframe = page.getByTestId('mini-player-iframe')
+    this.miniPlayerIframe = page.getByTestId('local-video')
     this.playbackProgress = page.getByTestId('playback-progress')
     this.progressBarFill = page.getByTestId('progress-bar-fill')
     this.currentTime = page.getByTestId('current-time')

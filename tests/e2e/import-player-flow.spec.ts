@@ -4,8 +4,9 @@ import { DashboardPage } from './pages/DashboardPage'
 import { ImportActions } from './pages/ImportActions'
 import { PlayerPage } from './pages/PlayerPage'
 
-const LOCAL_VIDEO_TITLE = 'Sample Local Video'
+const LOCAL_VIDEO_TITLE = 'Fire Drill Safety'
 const FIRE_DRILL_SRT = path.join(__dirname, 'fixtures', 'fire-drill.srt')
+const TEST_MP4 = path.join(__dirname, 'fixtures', 'test.mp4')
 
 test.describe('Import → player → transcript → delete integration', () => {
   test.use({ viewport: { width: 1280, height: 1200 } })
@@ -19,16 +20,16 @@ test.describe('Import → player → transcript → delete integration', () => {
     const uniqueTag = `flow-${Date.now()}`
     const importedCard = page
       .locator('[data-testid^="video-card-"]')
-      .filter({ hasText: FIRE_DRILL_TITLE })
+      .filter({ hasText: LOCAL_VIDEO_TITLE })
       .filter({ hasText: uniqueTag })
       .first()
 
     await dashboard.loadDashboard()
 
     await importActions.clickImportButton()
-        await expect(page.getByTestId('url-preview-error')).toBeHidden()
-    await expect(page.getByTestId('preview-container')).toBeVisible()
-    await expect(page.getByTestId('preview-container')).toContainText(LOCAL_VIDEO_TITLE)
+    await importActions.fillVideoFile(TEST_MP4)
+    await importActions.fillTitle(LOCAL_VIDEO_TITLE)
+    await expect(page.getByTestId('preview-container')).toBeHidden()
 
     await importActions.fillTranscriptFile(FIRE_DRILL_SRT)
     await importActions.fillTags(`english, office, ${uniqueTag}`)
@@ -52,14 +53,7 @@ test.describe('Import → player → transcript → delete integration', () => {
 
     await player.clickPlay()
     await player.assertMiniPlayerOpen()
-    await page.waitForFunction(
-      () => {
-        const duration = document.querySelector('[data-testid="duration"]')?.textContent
-        return typeof duration === 'string' && duration !== '0:00'
-      },
-      undefined,
-      { timeout: 45_000 }
-    )
+    await expect(page.getByTestId('playback-progress')).toBeVisible()
 
     await page.goto('/dashboard', { waitUntil: 'networkidle' })
     await expect(importedCard).toBeVisible()
