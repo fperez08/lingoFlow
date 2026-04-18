@@ -28,10 +28,20 @@ import { POST } from '../route'
 import { videoService, videoStore } from '@/lib/server/composition'
 import { ALLOWED_TRANSCRIPT_FORMATS } from '@/lib/api-schemas'
 import { generateThumbnail } from '@/lib/thumbnails'
+import type { NextRequest } from 'next/server'
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const mockVideoService = videoService as any
-const mockVideoStore = videoStore as any
+type MockVideoService = {
+  importLocalVideo: jest.Mock
+  updateVideo: jest.Mock
+  deleteVideo: jest.Mock
+}
+
+type MockVideoStore = {
+  update: jest.Mock
+}
+
+const mockVideoService = videoService as unknown as MockVideoService
+const mockVideoStore = videoStore as unknown as MockVideoStore
 const mockGenerateThumbnail = generateThumbnail as jest.MockedFunction<typeof generateThumbnail>
 
 const fakeLocalVideo = {
@@ -76,8 +86,7 @@ describe('POST /api/videos/import', () => {
     const transcriptFile = new File(['content'], 'transcript.srt', { type: 'text/plain' })
     const fd = makeFormData({ transcript: transcriptFile })
     const req = makeRequest(fd)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const res = await POST(req as any)
+    const res = await POST(req as unknown as NextRequest)
     expect(res.status).toBe(400)
     const body = await res.json()
     expect(body.error).toBe('Only local video upload is supported')
@@ -92,8 +101,7 @@ describe('POST /api/videos/import', () => {
     const transcriptFile = new File(['content'], 'transcript.pdf', { type: 'application/pdf' })
     const fd = makeFormData({ video: videoFile, title: 'Test', transcript: transcriptFile })
     const req = makeRequest(fd)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const res = await POST(req as any)
+    const res = await POST(req as unknown as NextRequest)
     expect(res.status).toBe(400)
     const body = await res.json()
     expect(body.error).toMatch(/Invalid file extension/)
@@ -144,8 +152,7 @@ describe('POST /api/videos/import — local upload path', () => {
   it('returns 201 and calls importLocalVideo when video file is present', async () => {
     const fd = makeLocalFormData({ tags: 'french, beginner', author: 'Local Author' })
     const req = makeRequest(fd)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const res = await POST(req as any)
+    const res = await POST(req as unknown as NextRequest)
     expect(res.status).toBe(201)
     const body = await res.json()
     expect(body).toEqual(fakeLocalVideo2)
@@ -168,8 +175,7 @@ describe('POST /api/videos/import — local upload path', () => {
 
     const fd = makeLocalFormData({ tags: 'french, beginner', author: 'Local Author' })
     const req = makeRequest(fd)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const res = await POST(req as any)
+    const res = await POST(req as unknown as NextRequest)
 
     expect(res.status).toBe(201)
     await Promise.resolve()
@@ -192,8 +198,7 @@ describe('POST /api/videos/import — local upload path', () => {
     const transcriptFile = new File(['content'], 'transcript.srt', { type: 'text/plain' })
     const fd = makeFormData({ video: videoFile, transcript: transcriptFile })
     const req = makeRequest(fd)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const res = await POST(req as any)
+    const res = await POST(req as unknown as NextRequest)
     expect(res.status).toBe(400)
     const body = await res.json()
     expect(body.error).toMatch(/Title is required/)
@@ -204,8 +209,7 @@ describe('POST /api/videos/import — local upload path', () => {
     mockVideoService.importLocalVideo.mockResolvedValue(fakeNoTags)
     const fd = makeLocalFormData()
     const req = makeRequest(fd)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const res = await POST(req as any)
+    const res = await POST(req as unknown as NextRequest)
     expect(res.status).toBe(201)
     expect(mockVideoService.importLocalVideo).toHaveBeenCalledWith(
       expect.objectContaining({ tags: [] })
@@ -215,8 +219,7 @@ describe('POST /api/videos/import — local upload path', () => {
   it('returns 201 with empty author_name when no author provided', async () => {
     const fd = makeLocalFormData()
     const req = makeRequest(fd)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await POST(req as any)
+    await POST(req as unknown as NextRequest)
     expect(mockVideoService.importLocalVideo).toHaveBeenCalledWith(
       expect.objectContaining({ author_name: '' })
     )
@@ -231,8 +234,7 @@ describe('POST /api/videos/import — local upload path', () => {
     const transcriptFile = new File(['content'], 'transcript.srt', { type: 'text/plain' })
     const fd = makeFormData({ video: videoFile, title: 'Test', transcript: transcriptFile })
     const req = makeRequest(fd)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const res = await POST(req as any)
+    const res = await POST(req as unknown as NextRequest)
     expect(res.status).toBe(400)
     const body = await res.json()
     expect(body.error).toMatch(/Unsupported format/)
@@ -249,8 +251,7 @@ describe('POST /api/videos/import — local upload path', () => {
     const transcriptFile = new File(['content'], 'transcript.srt', { type: 'text/plain' })
     const fd = makeFormData({ video: videoFile, title: 'Test', transcript: transcriptFile })
     const req = makeRequest(fd)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const res = await POST(req as any)
+    const res = await POST(req as unknown as NextRequest)
     expect(res.status).toBe(400)
     const body = await res.json()
     expect(body.error).toMatch(/500 MB/)
@@ -266,8 +267,7 @@ describe('POST /api/videos/import — local upload path', () => {
     mockVideoService.importLocalVideo.mockResolvedValue(fakeWebmVideo)
     const fd = makeLocalFormData({ video: videoFile, title: 'WebM Video' })
     const req = makeRequest(fd)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const res = await POST(req as any)
+    const res = await POST(req as unknown as NextRequest)
     expect(res.status).toBe(201)
   })
 })

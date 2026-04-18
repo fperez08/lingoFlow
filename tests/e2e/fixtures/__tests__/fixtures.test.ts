@@ -3,6 +3,9 @@
  */
 import fs from 'fs'
 import path from 'path'
+import os from 'os'
+import * as dbModule from '../../../../src/lib/db'
+import * as videosModule from '../../../../src/lib/videos'
 
 import {
   getIsolatedDataDir,
@@ -28,7 +31,6 @@ describe('getIsolatedDataDir()', () => {
   })
 
   it('returns a path inside os.tmpdir()', () => {
-    const os = require('os')
     const dir = getIsolatedDataDir()
     expect(dir.startsWith(os.tmpdir())).toBe(true)
   })
@@ -63,8 +65,9 @@ describe('setupIsolatedDb() / teardownIsolatedDb()', () => {
   })
 
   it('initialises the videos table', () => {
-    const { getDb } = require('../../../../src/lib/db')
-    const db = getDb()
+    const getDb = Reflect.get(dbModule, 'getDb') as (() => { prepare: (query: string) => { get: () => unknown } }) | undefined
+    expect(getDb).toBeDefined()
+    const db = getDb!()
     const row = db
       .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='videos'")
       .get()
@@ -89,8 +92,9 @@ describe('setupIsolatedDb() / teardownIsolatedDb()', () => {
   })
 
   it('two consecutive runs do not share state', () => {
-    const { getDb } = require('../../../../src/lib/db')
-    getDb()
+    const getDb = Reflect.get(dbModule, 'getDb') as (() => { prepare: (query: string) => { run: () => void } }) | undefined
+    expect(getDb).toBeDefined()
+    getDb!()
       .prepare(
         `INSERT INTO videos (id,youtube_url,youtube_id,title,author_name,thumbnail_url,transcript_path,transcript_format,tags)
          VALUES ('v1','u','yi','t','a','th','tp','txt','[]')`
@@ -101,8 +105,9 @@ describe('setupIsolatedDb() / teardownIsolatedDb()', () => {
     jest.resetModules()
     ctx = setupIsolatedDb()
 
-    const { getDb: getDb2 } = require('../../../../src/lib/db')
-    const count = getDb2()
+    const getDb2 = Reflect.get(dbModule, 'getDb') as (() => { prepare: (query: string) => { get: () => unknown } }) | undefined
+    expect(getDb2).toBeDefined()
+    const count = getDb2!()
       .prepare('SELECT COUNT(*) as c FROM videos')
       .get() as { c: number }
     expect(count.c).toBe(0)
@@ -135,8 +140,9 @@ describe('seedVideo()', () => {
 
   it('persists the record in the database', () => {
     const inserted = seedVideo({ title: 'Persisted' })
-    const { getVideoById } = require('../../../../src/lib/videos')
-    const fetched = getVideoById(inserted.id)
+    const getVideoById = Reflect.get(videosModule, 'getVideoById') as ((id: string) => { title: string } | undefined) | undefined
+    expect(getVideoById).toBeDefined()
+    const fetched = getVideoById!(inserted.id)
     expect(fetched).toBeDefined()
     expect(fetched!.title).toBe('Persisted')
   })

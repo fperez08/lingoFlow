@@ -18,7 +18,7 @@ const mockVideo: Video = {
 
 // Mock MiniPlayer to expose onTimeUpdate for testing.
 // Variable MUST start with "mock" to satisfy babel-jest's hoisting rules for jest.mock factories.
-var mockCapturedOnTimeUpdate: ((current: number, duration: number) => void) | undefined
+let mockCapturedOnTimeUpdate: ((current: number, duration: number) => void) | undefined
 
 
 jest.mock('@/components/LocalVideoPlayer', () => ({

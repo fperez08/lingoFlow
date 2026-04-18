@@ -4,6 +4,7 @@
  */
 
 import { EditActions } from '../EditActions'
+import type { Page } from '@playwright/test'
 
 jest.mock('@playwright/test', () => ({
   expect: jest.fn(() => ({
@@ -58,7 +59,7 @@ describe('EditActions', () => {
       getByText: jest.fn().mockReturnValue(makeLocator()),
     }
 
-    const editActions = new EditActions(page as any)
+    const editActions = new EditActions(page as unknown as Page)
     await editActions.clickEditOnCard(1)
 
     expect(btnListLocator.nth).toHaveBeenCalledWith(1)
@@ -76,7 +77,7 @@ describe('EditActions', () => {
       getByText: jest.fn().mockReturnValue(makeLocator()),
     }
 
-    const editActions = new EditActions(page as any)
+    const editActions = new EditActions(page as unknown as Page)
     await editActions.addTag('spanish')
     expect(page.getByTestId).toHaveBeenCalledWith('tag-input')
     expect(tagInputLocator.fill).toHaveBeenCalledWith('spanish')
@@ -91,7 +92,7 @@ describe('EditActions', () => {
       getByText: jest.fn().mockReturnValue(makeLocator()),
     }
 
-    const editActions = new EditActions(page as any)
+    const editActions = new EditActions(page as unknown as Page)
     await editActions.removeTag('spanish')
     expect(page.getByTestId).toHaveBeenCalledWith('remove-tag-spanish')
     expect(removeLocator.click).toHaveBeenCalled()
@@ -109,7 +110,7 @@ describe('EditActions', () => {
       getByText: jest.fn().mockReturnValue(makeLocator()),
     }
 
-    const editActions = new EditActions(page as any)
+    const editActions = new EditActions(page as unknown as Page)
     await editActions.clickSave()
     expect(modalLocator.getByRole).toHaveBeenCalledWith('button', { name: 'Save' })
     expect(saveBtn.click).toHaveBeenCalled()
@@ -123,7 +124,7 @@ describe('EditActions', () => {
       getByText: jest.fn().mockReturnValue(tagLocator),
     }
 
-    const editActions = new EditActions(page as any)
+    const editActions = new EditActions(page as unknown as Page)
     await editActions.assertTagsSaved(['spanish', 'beginner'])
     expect(page.getByText).toHaveBeenCalledWith('spanish')
     expect(page.getByText).toHaveBeenCalledWith('beginner')
