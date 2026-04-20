@@ -45,7 +45,11 @@ Read `docs/index.md`, then only relevant API and project docs in `docs/`. Match 
 
 ### 4. Create branch
 
+Always create feature branch from latest `main`. Before creating branch, update local `main` with remote changes:
+
 ```bash
+git checkout main
+git pull origin main
 git checkout -b feat/issue-<number>-<short-slug>
 ```
 

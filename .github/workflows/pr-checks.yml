@@ -11,7 +11,7 @@ on:
       - ready_for_review
 
 permissions:
-  contents: read
+  contents: write
   statuses: write
 
 concurrency:
@@ -39,6 +39,10 @@ jobs:
 
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -55,10 +59,79 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Run lint
+        id: lint
+        continue-on-error: true
         run: pnpm lint
 
       - name: Run unit tests
+        id: unit_tests
+        continue-on-error: true
         run: pnpm test
+
+      - name: Evaluate initial checks
+        id: initial_checks
+        run: |
+          if [ "${{ steps.lint.outcome }}" = "success" ] && [ "${{ steps.unit_tests.outcome }}" = "success" ]; then
+            echo "failed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "failed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install Copilot CLI
+        if: steps.initial_checks.outputs.failed == 'true' && github.event.pull_request.head.repo.full_name == github.repository
+        run: npm install --global @github/copilot
+
+      - name: Copilot autofix failing checks
+        if: steps.initial_checks.outputs.failed == 'true' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          copilot \
+            --model gpt-5.3-codex \
+            --yolo \
+            --no-ask-user \
+            --max-autopilot-continues 5 \
+            -p "You are in CI for PR checks. pnpm lint and/or pnpm test failed. Inspect failures, fix root cause in repository code, and update tests when required. Keep changes minimal and safe. After edits, run pnpm lint and pnpm test until they pass or you cannot make progress. Do not create a new branch."
+
+      - name: Commit and push autofix
+        if: steps.initial_checks.outputs.failed == 'true' && github.event.pull_request.head.repo.full_name == github.repository
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -A
+            git commit -m "ci: copilot autofix lint/test failures"
+            git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
+          else
+            echo "No changes produced by Copilot."
+          fi
+
+      - name: Re-run lint after autofix
+        id: lint_after_autofix
+        if: steps.initial_checks.outputs.failed == 'true'
+        continue-on-error: true
+        run: pnpm lint
+
+      - name: Re-run unit tests after autofix
+        id: unit_tests_after_autofix
+        if: steps.initial_checks.outputs.failed == 'true'
+        continue-on-error: true
+        run: pnpm test
+
+      - name: Fail workflow if checks still failing
+        if: steps.initial_checks.outputs.failed == 'true'
+        run: |
+          if [ "${{ github.event.pull_request.head.repo.full_name }}" != "${{ github.repository }}" ]; then
+            echo "PR comes from fork; skipping push-based Copilot autofix."
+            exit 1
+          fi
+
+          if [ "${{ steps.lint_after_autofix.outcome }}" = "success" ] && [ "${{ steps.unit_tests_after_autofix.outcome }}" = "success" ]; then
+            echo "Autofix successful."
+          else
+            echo "Checks still failing after Copilot autofix."
+            exit 1
+          fi
 
       - name: Emit success status
         if: success()
