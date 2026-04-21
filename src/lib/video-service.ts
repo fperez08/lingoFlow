@@ -1,6 +1,10 @@
 import { VideoStore } from './video-store'
 import { Video, InsertVideoParams, UpdateVideoParams } from './videos'
 
+export interface PostImportTask {
+  run(video: Video): Promise<Partial<UpdateVideoParams>>
+}
+
 export interface TranscriptStore {
   write(videoId: string, ext: string, buffer: Buffer): string
   delete(filePath: string): void
@@ -42,11 +46,33 @@ export interface UpdateVideoServiceParams {
 }
 
 export class VideoService {
+  private postImportTasks: PostImportTask[] = []
+
   constructor(
     private store: VideoStore,
     private transcripts: TranscriptStore,
     private videoFiles: VideoFileStore,
   ) {}
+
+  registerPostImportTask(task: PostImportTask): this {
+    this.postImportTasks.push(task)
+    return this
+  }
+
+  async drainPostImportTasks(video: Video): Promise<void> {
+    const updates: UpdateVideoParams = {}
+    for (const task of this.postImportTasks) {
+      try {
+        const partial = await task.run(video)
+        Object.assign(updates, partial)
+      } catch (err) {
+        console.error(`PostImportTask failed for video ${video.id}:`, err)
+      }
+    }
+    if (Object.keys(updates).length > 0) {
+      this.store.update(video.id, updates)
+    }
+  }
 
   async importVideo(params: ImportVideoParams): Promise<Video> {
     const transcriptPath = this.transcripts.write(params.id, params.transcript_ext, params.transcript_buffer)
@@ -97,7 +123,9 @@ export class VideoService {
     }
 
     try {
-      return this.store.insert(insertParams)
+      const record = this.store.insert(insertParams)
+      await this.drainPostImportTasks(record)
+      return record
     } catch (err) {
       this.transcripts.delete(transcriptPath)
       this.videoFiles.delete(videoPath)

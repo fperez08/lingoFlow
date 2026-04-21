@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import path from 'path'
 
 import { getContainer } from '@/lib/server/composition'
 import { ImportLocalVideoRequestSchema } from '@/lib/api-schemas'
-import { generateThumbnail } from '@/lib/thumbnails'
-import { getThumbnailsDir } from '@/lib/data-dir'
 
 export const runtime = 'nodejs'
 
@@ -40,7 +37,7 @@ export async function POST(request: NextRequest) {
     const transcriptExt = transcriptFile.name.split('.').pop()?.toLowerCase() || ''
     const tags = tagsString.split(',').map((t) => t.trim()).filter((t) => t.length > 0)
 
-    const { videoService, videoStore } = getContainer()
+    const { videoService } = getContainer()
     const record = await videoService.importLocalVideo({
       id: videoId,
       title,
@@ -53,19 +50,6 @@ export async function POST(request: NextRequest) {
       tags,
       source_type: 'local',
     })
-
-    if (record.local_video_path) {
-      const thumbnailPath = path.join(getThumbnailsDir(), `${videoId}.jpg`)
-      void generateThumbnail(record.local_video_path, thumbnailPath)
-        .then((resolvedPath) => {
-          if (resolvedPath) {
-            videoStore.update(videoId, { thumbnail_path: resolvedPath })
-          }
-        })
-        .catch((thumbnailError) => {
-          console.error(`Failed to generate thumbnail for video ${videoId}:`, thumbnailError)
-        })
-    }
 
     return NextResponse.json(record, { status: 201 })
   } catch (error) {

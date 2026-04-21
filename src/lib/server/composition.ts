@@ -74,8 +74,15 @@ export function createContainer(dataDir: string): Container {
       }
     },
   }
-
   const service = new VideoService(store, transcriptStore, videoFileStore)
+
+  if (dataDir !== ':memory:') {
+    // Lazy require to avoid loading thumbnails.ts (ffmpeg) at module import time
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { ThumbnailTask } = require('@/lib/tasks/thumbnail-task')
+    service.registerPostImportTask(new ThumbnailTask(dataDir))
+  }
+
   return { videoStore: store, videoService: service, vocabStore }
 }
 

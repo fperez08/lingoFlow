@@ -2,10 +2,6 @@
  * @jest-environment node
  */
 
-jest.mock('@/lib/thumbnails', () => ({
-  generateThumbnail: jest.fn().mockResolvedValue(null),
-}))
-
 jest.mock('@/lib/server/composition', () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const actual = jest.requireActual('@/lib/server/composition')
@@ -17,7 +13,6 @@ import * as composition from '@/lib/server/composition'
 import { createContainer } from '@/lib/server/composition'
 import type { Container } from '@/lib/server/composition'
 import { ALLOWED_TRANSCRIPT_FORMATS } from '@/lib/api-schemas'
-import { generateThumbnail } from '@/lib/thumbnails'
 import type { NextRequest } from 'next/server'
 
 let container: Container
@@ -56,7 +51,6 @@ function makeLocalFormData(overrides: Record<string, string | File> = {}): FormD
 beforeEach(() => {
   container = createContainer(':memory:')
   ;(composition.getContainer as jest.Mock).mockReturnValue(container)
-  ;(generateThumbnail as jest.Mock).mockResolvedValue(null)
 })
 
 afterEach(() => {
@@ -175,25 +169,5 @@ describe('POST /api/videos/import', () => {
     const fd = makeLocalFormData({ video: webmFile, title: 'WebM Video' })
     const res = await POST(makeRequest(fd) as unknown as NextRequest)
     expect(res.status).toBe(201)
-  })
-
-  it('kicks off thumbnail generation after local import', async () => {
-    const thumbnailPath = '/data/thumbnails/video.jpg'
-    ;(generateThumbnail as jest.Mock).mockResolvedValue(thumbnailPath)
-    const updateSpy = jest.spyOn(container.videoStore, 'update')
-
-    const fd = makeLocalFormData({ tags: 'french, beginner', author: 'Local Author' })
-    const res = await POST(makeRequest(fd) as unknown as NextRequest)
-
-    expect(res.status).toBe(201)
-    await Promise.resolve()
-
-    expect(generateThumbnail as jest.Mock).toHaveBeenCalledWith(
-      expect.stringContaining('.mp4'),
-      expect.stringContaining('thumbnails')
-    )
-    expect(updateSpy).toHaveBeenCalledWith(expect.any(String), {
-      thumbnail_path: thumbnailPath,
-    })
   })
 })
