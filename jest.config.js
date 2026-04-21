@@ -15,6 +15,13 @@ const customJestConfig = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
+  // Use ts-jest to transform TypeScript/JSX without requiring native SWC bindings.
+  transform: {
+    '^.+\\.(js|jsx|ts|tsx|mjs)$': ['ts-jest', {
+      tsconfig: '<rootDir>/tsconfig.json',
+      useESM: false,
+    }],
+  },
 }
 
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async

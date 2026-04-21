@@ -43,4 +43,27 @@ describe('LessonHero', () => {
     fireEvent.click(screen.getByTestId('play-button'))
     expect(onPlay).toHaveBeenCalledTimes(1)
   })
+
+  it('play button has accessible name via aria-label', () => {
+    render(<LessonHero video={mockVideo} onPlay={jest.fn()} />)
+    expect(screen.getByRole('button', { name: 'Play video' })).toBeInTheDocument()
+  })
+
+  it('play button does not render visible Play text label', () => {
+    render(<LessonHero video={mockVideo} onPlay={jest.fn()} />)
+    const btn = screen.getByTestId('play-button')
+    expect(btn).not.toHaveTextContent(/^Play$/)
+  })
+
+  it('play button contains an svg icon', () => {
+    render(<LessonHero video={mockVideo} onPlay={jest.fn()} />)
+    const btn = screen.getByTestId('play-button')
+    expect(btn.querySelector('svg')).not.toBeNull()
+  })
+
+  it('play button is compact — uses rounded-full class for icon-control shape', () => {
+    render(<LessonHero video={mockVideo} onPlay={jest.fn()} />)
+    const btn = screen.getByTestId('play-button')
+    expect(btn.className).toMatch(/rounded-full/)
+  })
 })
