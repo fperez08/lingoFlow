@@ -4,10 +4,9 @@ import path from 'path'
 import { videoService, videoStore } from '@/lib/server/composition'
 import { ImportLocalVideoRequestSchema } from '@/lib/api-schemas'
 import { generateThumbnail } from '@/lib/thumbnails'
+import { getThumbnailsDir } from '@/lib/data-dir'
 
 export const runtime = 'nodejs'
-
-const dataDir = process.env.LINGOFLOW_DATA_DIR ?? path.join(process.cwd(), '.lingoflow-data')
 
 export async function POST(request: NextRequest) {
   try {
@@ -55,7 +54,7 @@ export async function POST(request: NextRequest) {
     })
 
     if (record.local_video_path) {
-      const thumbnailPath = path.join(dataDir, 'thumbnails', `${videoId}.jpg`)
+      const thumbnailPath = path.join(getThumbnailsDir(), `${videoId}.jpg`)
       void generateThumbnail(record.local_video_path, thumbnailPath)
         .then((resolvedPath) => {
           if (resolvedPath) {

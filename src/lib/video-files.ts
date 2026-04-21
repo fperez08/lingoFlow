@@ -1,13 +1,8 @@
 import fs from 'fs'
 import path from 'path'
+import { getVideosDir } from '@/lib/data-dir'
 
-function getDataDir(): string {
-  return process.env.LINGOFLOW_DATA_DIR ?? path.join(process.cwd(), '.lingoflow-data')
-}
-
-export function getVideosDir(): string {
-  return path.join(getDataDir(), 'videos')
-}
+export { getVideosDir }
 
 export function buildVideoFilePath(videoId: string, ext: string): string {
   return path.join(getVideosDir(), `${videoId}.${ext}`)
