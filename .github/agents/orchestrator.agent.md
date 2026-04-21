@@ -1,8 +1,8 @@
 ---
 name: orchestrator
-description: Coord orchestrator. Runs one issue pipeline in strict order: api-docs-gatherer, project-docs-generator, coding-subagent, then task-reporter. Uses todo tool as persistent memory across workflow.
+description: "Coord orchestrator. Runs one issue pipeline in strict order: api-docs-gatherer, project-docs-generator, coding-subagent, then task-reporter. Uses todo tool as persistent memory across workflow."
 tools: ["read/readFile", "agent"]
-model: Claude Sonnet 4.6 (copilot)
+model: "Claude Sonnet 4.6 (copilot)"
 disable-model-invocation: true
 user-invocable: true
 ---
