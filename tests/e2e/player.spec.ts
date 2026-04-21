@@ -254,4 +254,36 @@ test.describe('Player + mini-player workflow', () => {
       expect(miniPlayerRight).toBeGreaterThan(viewportWidth - 32) // within 32px of right edge
     }
   })
+
+  test('mini-player and vocabulary sidebar are both visible simultaneously', async ({ page }) => {
+    test.setTimeout(60_000)
+
+    await mockPlayerRoutes(page)
+
+    const player = new PlayerPage(page)
+    await player.navigateTo(MOCK_VIDEO.id)
+    await player.assertLoaded()
+
+    // Open mini-player
+    await player.clickPlay()
+    await player.assertMiniPlayerOpen()
+
+    // Click first cue to make it active
+    await page.getByTestId('cue-0').click()
+
+    // Click a word in the active cue to open vocabulary sidebar
+    // The active cue renders words via CueText as <button> elements
+    const firstWord = page.getByTestId('cue-0').locator('button').first()
+    await expect(firstWord).toBeVisible({ timeout: 5000 })
+    await firstWord.click()
+
+    // Both overlays should be visible
+    await expect(player.miniPlayer).toBeVisible()
+    await expect(page.getByTestId('word-sidebar')).toBeVisible()
+
+    // Mini-player controls should remain interactive
+    await expect(page.getByTestId('mini-player-play-pause')).toBeVisible()
+    await expect(page.getByTestId('rewind-button')).toBeVisible()
+    await expect(page.getByTestId('fastforward-button')).toBeVisible()
+  })
 })
