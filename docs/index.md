@@ -8,7 +8,9 @@
 
 | File | Contents |
 |---|---|
-| [`api-docs.md`](./api-docs.md) | Tech stack versions, API patterns, library references |
+| [`architecture.md`](./architecture.md) | **Architecture reference** — App Router layout, DI/composition root, data flow, component hierarchy, hook inventory, testing conventions |
+| [`api-reference.md`](./api-reference.md) | **Canonical API reference** — all REST endpoints, types, service interfaces, DB schema, library patterns |
+| [`api-docs.md`](./api-docs.md) | Extended API patterns, hooks, and issue-specific notes |
 | [`e2e-testing.md`](./e2e-testing.md) | Playwright config, Page Object Model, fixtures, `data-testid` reference |
 | [`project-docs.md`](./project-docs.md) | Architecture, directory layout, build/test commands, design decisions |
 
