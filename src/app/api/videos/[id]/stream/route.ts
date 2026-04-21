@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server'
 import fs from 'fs'
 import path from 'path'
 import { videoStore } from '@/lib/server/composition'
+import { getDataDir } from '@/lib/data-dir'
 
 const MIME_TYPES: Record<string, string> = {
   mp4: 'video/mp4',
@@ -23,11 +24,9 @@ export async function GET(
       return new NextResponse('Not Found', { status: 404 })
     }
 
-    const dataDir =
-      process.env.LINGOFLOW_DATA_DIR ?? path.join(process.cwd(), '.lingoflow-data')
     const filePath = path.isAbsolute(video.local_video_path)
       ? video.local_video_path
-      : path.join(dataDir, video.local_video_path)
+      : path.join(getDataDir(), video.local_video_path)
 
     if (!fs.existsSync(filePath)) {
       return new NextResponse('Not Found', { status: 404 })
