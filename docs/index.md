@@ -8,7 +8,9 @@
 
 | File | Contents |
 |---|---|
+| [`stack.md`](./stack.md) | **Tech stack** — all dependencies with versions, architecture decisions, build commands, CI pipeline |
 | [`architecture.md`](./architecture.md) | **Architecture reference** — App Router layout, DI/composition root, data flow, component hierarchy, hook inventory, testing conventions |
+| [`components.md`](./components.md) | **Component reference** — every React component in `src/components/`: purpose, props, `data-testid` map, z-index layering |
 | [`player-architecture.md`](./player-architecture.md) | **Player & mini-player reference** — component tree, seek flow, transport controls, `data-testid` map, test patterns |
 | [`api-reference.md`](./api-reference.md) | **Canonical API reference** — all REST endpoints, types, service interfaces, DB schema, library patterns |
 | [`api.md`](./api.md) | Extended API reference — includes `ApiClient`, `usePlayerData`, `VocabStore`, vocabulary endpoints |
@@ -42,6 +44,8 @@
 
 ## Stack Versions (from package.json)
 
+> See [`stack.md`](./stack.md) for full detail including architecture decisions and CLI commands.
+
 | Library | Version |
 |---|---|
 | Next.js | 16.2.3 |
@@ -50,6 +54,8 @@
 | TanStack React Query | ^5.96.2 |
 | better-sqlite3 | ^12.8.0 |
 | Zod | ^4.3.6 |
+| fluent-ffmpeg | ^2.1.3 |
+| @ffmpeg-installer/ffmpeg | ^1.1.0 |
 | Jest | ^30.3.0 |
 | Playwright | ^1.59.1 |
 | Tailwind CSS | ^3.4.19 |

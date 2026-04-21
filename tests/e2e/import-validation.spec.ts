@@ -18,7 +18,6 @@ import { DashboardPage } from './pages/DashboardPage'
 import { ImportActions } from './pages/ImportActions'
 
 const SAMPLE_SRT = path.join(__dirname, 'fixtures', 'sample.srt')
-const TEST_MP4 = path.join(__dirname, 'fixtures', 'test.mp4')
 
 const FAKE_VIDEO = {
   name: 'video.mp4',

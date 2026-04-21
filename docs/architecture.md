@@ -1,7 +1,7 @@
 # LingoFlow — Architecture Reference
 
 > **Purpose**: Accurate developer reference for architecture, data flow, patterns, and conventions.
-> **Last updated**: 2026-07, HEAD: main.
+> **Last updated**: 2026-07, refreshed HEAD: main.
 
 ---
 
@@ -165,13 +165,21 @@ Currently only `ThumbnailTask` is registered (generates JPEG thumbnail via ffmpe
 
 ### React Query (TanStack Query v5) — server state
 
-All server state in the client is managed through React Query. The `QueryClientProvider` is mounted at root in `src/components/Providers.tsx`.
+All server state in the client is managed through React Query. The `QueryClientProvider` is mounted at root in `src/components/Providers.tsx`, together with `ApiClientProvider` (see `src/lib/api-client.ts`).
 
 ```ts
 // Providers.tsx
 const [queryClient] = useState(() => new QueryClient())
-return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+return (
+  <QueryClientProvider client={queryClient}>
+    <ApiClientProvider>
+      {children}
+    </ApiClientProvider>
+  </QueryClientProvider>
+)
 ```
+
+`ApiClientProvider` injects an `ApiClient` instance (default: `FetchApiClient`) into context. Hooks consume it via `useApiClient()`. This allows tests to inject stub clients without mocking `fetch`.
 
 **Query hooks** use `useQuery`; **mutation hooks** use `useMutation` + `queryClient.invalidateQueries`.
 
@@ -189,7 +197,7 @@ return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider
 
 ```
 RootLayout (src/app/layout.tsx)
-  └─ Providers (React Query QueryClientProvider)
+  └─ Providers (React Query QueryClientProvider + ApiClientProvider)
        └─ AppLayout (src/app/(app)/layout.tsx)
             ├─ Sidebar
             ├─ TopBar (contains DarkModeToggle)
@@ -243,9 +251,13 @@ PlayerPage  [server component]           ← awaits params.id; renders <PlayerLo
 
 ```
 VocabularyPage  [client component, 'use client']
-  ├─ useVocabulary()          ← React Query: GET /api/vocabulary
-  └─ (renders vocabulary list with CEFR level grouping)
+  ├─ useVocabulary()          ← React Query: GET /api/vocabulary → Map<string,VocabEntry>
+  ├─ useUpdateWordStatus()    ← React Query mutation: PATCH /api/vocabulary/:word
+  └─ (renders word cards with tab navigation: new / learning / mastered,
+      search input, CEFR level filter chips, and per-word status toggle)
 ```
+
+The vocabulary page is **fully DB-wired** — it reads from and writes to the `vocabulary` SQLite table via `/api/vocabulary` routes.
 
 ---
 

@@ -47,6 +47,12 @@ export default function PlayerClient({ video, cues: propCues }: { video: Video; 
   }
 
   useEffect(() => {
+    if (propCues === undefined) return
+    setCues(propCues)
+    setLoadingTranscript(false)
+  }, [propCues])
+
+  useEffect(() => {
     if (propCues !== undefined) return
     fetch(`/api/videos/${video.id}/transcript`)
       .then((r) => r.json())
@@ -58,7 +64,7 @@ export default function PlayerClient({ video, cues: propCues }: { video: Video; 
         setCues([])
       })
       .finally(() => setLoadingTranscript(false))
-  }, [video.id])
+  }, [propCues, video.id])
 
   const playbackCueIndex = (() => {
     if (!isMiniPlayerOpen || cues.length === 0) return -1
@@ -158,6 +164,7 @@ export default function PlayerClient({ video, cues: propCues }: { video: Video; 
           onTimeUpdate={handleTimeUpdate}
           seekToTime={requestedSeekTime}
           onSeekApplied={() => setRequestedSeekTime(null)}
+          isSidebarOpen={selectedWord !== null}
         />
       )}
 

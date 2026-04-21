@@ -21,15 +21,16 @@ const mockVideo: Video = {
   source_type: 'local',
 }
 
-// Mock MiniPlayer to expose onTimeUpdate for testing.
+// Mock LocalVideoPlayer to expose onTimeUpdate and isSidebarOpen for testing.
 // Variable MUST start with "mock" to satisfy babel-jest's hoisting rules for jest.mock factories.
 let mockCapturedOnTimeUpdate: ((current: number, duration: number) => void) | undefined
-
+let mockCapturedIsSidebarOpen: boolean | undefined
 
 jest.mock('@/components/LocalVideoPlayer', () => ({
   __esModule: true,
-  default: ({ onClose, onTimeUpdate }: { onClose: () => void; onTimeUpdate?: (c: number, d: number) => void }) => {
+  default: ({ onClose, onTimeUpdate, isSidebarOpen }: { onClose: () => void; onTimeUpdate?: (c: number, d: number) => void; isSidebarOpen?: boolean }) => {
     mockCapturedOnTimeUpdate = onTimeUpdate
+    mockCapturedIsSidebarOpen = isSidebarOpen
     return (
       <div data-testid="mini-player">
         <button data-testid="mini-player-close" onClick={onClose}>Close</button>
@@ -40,6 +41,7 @@ jest.mock('@/components/LocalVideoPlayer', () => ({
 
 beforeEach(() => {
   mockCapturedOnTimeUpdate = undefined
+  mockCapturedIsSidebarOpen = undefined
   global.fetch = jest.fn()
 })
 
@@ -148,6 +150,23 @@ describe('PlayerClient', () => {
     render(<PlayerClient video={localVideo} cues={[]} />)
     fireEvent.click(screen.getByTestId('play-button'))
     expect(screen.getByTestId('mini-player')).toBeInTheDocument()
+  })
+
+  it('passes isSidebarOpen=false to mini-player when no word is selected', () => {
+    render(<PlayerClient video={mockVideo} cues={[]} />)
+    fireEvent.click(screen.getByTestId('play-button'))
+    expect(mockCapturedIsSidebarOpen).toBe(false)
+  })
+
+  it('passes isSidebarOpen=true to mini-player when a word is selected', () => {
+    const cues = [
+      { index: 1, startTime: '00:00:00,000', endTime: '00:00:02,000', text: 'Hello' },
+    ]
+    render(<PlayerClient video={mockVideo} cues={cues} />)
+    fireEvent.click(screen.getByTestId('play-button'))
+    // Click the word to open the sidebar
+    fireEvent.click(screen.getByTestId('word-hello'))
+    expect(mockCapturedIsSidebarOpen).toBe(true)
   })
 })
 
