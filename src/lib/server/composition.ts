@@ -1,36 +1,64 @@
 /**
- * Production composition root.
+ * Composition root.
  *
- * Data directory is resolved from the LINGOFLOW_DATA_DIR environment variable.
- * If the variable is not set, it defaults to `.lingoflow-data` inside the
- * current working directory (process.cwd()).
+ * createContainer(dataDir) — builds a fresh container wired to the given data directory.
+ *   Pass ':memory:' to get an in-memory SQLite database (useful for tests).
  *
- * Example:
+ * getContainer() — returns the process-lifetime singleton, lazily initialised on first call.
+ *   Route handlers MUST call this inside the handler body, never at module scope.
+ *
+ * Example (production):
  *   LINGOFLOW_DATA_DIR=/var/data/lingoflow pnpm start
+ *
+ * Example (test):
+ *   jest.spyOn(composition, 'getContainer').mockReturnValue(createContainer(':memory:'))
  */
+import Database from 'better-sqlite3'
 import { ensureDataDirs, openDb, initializeSchema } from '@/lib/db'
 import { SqliteVideoStore } from '@/lib/video-store'
 import { VideoService } from '@/lib/video-service'
 import { writeTranscript, deleteTranscript } from '@/lib/transcripts'
 import { SqliteVocabStore } from '@/lib/vocab-store'
-import { getDataDir, getDbPath, getVideosDir } from '@/lib/data-dir'
+import { getDataDir, getVideosDir } from '@/lib/data-dir'
 import fs from 'fs'
 import path from 'path'
 
-function createContainer() {
-  const dataDir = getDataDir()
-  ensureDataDirs(dataDir)
-  const db = openDb(getDbPath())
-  initializeSchema(db)
+export interface Container {
+  videoStore: SqliteVideoStore
+  videoService: VideoService
+  vocabStore: SqliteVocabStore
+}
+
+export function createContainer(dataDir: string): Container {
+  let db: Database.Database
+
+  if (dataDir === ':memory:') {
+    db = new Database(':memory:')
+    db.pragma('journal_mode = WAL')
+    initializeSchema(db)
+  } else {
+    ensureDataDirs(dataDir)
+    db = openDb(path.join(dataDir, 'lingoflow.db'))
+    initializeSchema(db)
+  }
 
   const store = new SqliteVideoStore(db)
   const vocabStore = new SqliteVocabStore(db)
+
   const transcriptStore = {
-    write: (videoId: string, ext: string, buffer: Buffer) => writeTranscript(videoId, ext, buffer),
-    delete: (filePath: string) => deleteTranscript(filePath),
+    write: (videoId: string, ext: string, buffer: Buffer): string => {
+      if (dataDir === ':memory:') return `:memory:/transcripts/${videoId}.${ext}`
+      return writeTranscript(videoId, ext, buffer)
+    },
+    delete: (filePath: string): void => {
+      if (dataDir === ':memory:') return
+      deleteTranscript(filePath)
+    },
   }
+
   const videoFileStore = {
     write: (videoId: string, ext: string, buffer: Buffer): string => {
+      if (dataDir === ':memory:') return `:memory:/videos/${videoId}.${ext}`
       const videosDir = getVideosDir()
       fs.mkdirSync(videosDir, { recursive: true })
       const filePath = path.join(videosDir, `${videoId}.${ext}`)
@@ -38,6 +66,7 @@ function createContainer() {
       return filePath
     },
     delete: (filePath: string): void => {
+      if (dataDir === ':memory:') return
       try {
         fs.unlinkSync(filePath)
       } catch (err: unknown) {
@@ -45,11 +74,16 @@ function createContainer() {
       }
     },
   }
-  const service = new VideoService(store, transcriptStore, videoFileStore)
 
+  const service = new VideoService(store, transcriptStore, videoFileStore)
   return { videoStore: store, videoService: service, vocabStore }
 }
 
-const { videoStore, videoService, vocabStore } = createContainer()
+let _container: Container | null = null
 
-export { videoStore, videoService, vocabStore }
+export function getContainer(): Container {
+  if (!_container) {
+    _container = createContainer(getDataDir())
+  }
+  return _container
+}

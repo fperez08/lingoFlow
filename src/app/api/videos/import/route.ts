@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import path from 'path'
 
-import { videoService, videoStore } from '@/lib/server/composition'
+import { getContainer } from '@/lib/server/composition'
 import { ImportLocalVideoRequestSchema } from '@/lib/api-schemas'
 import { generateThumbnail } from '@/lib/thumbnails'
 import { getThumbnailsDir } from '@/lib/data-dir'
@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
     const transcriptExt = transcriptFile.name.split('.').pop()?.toLowerCase() || ''
     const tags = tagsString.split(',').map((t) => t.trim()).filter((t) => t.length > 0)
 
+    const { videoService, videoStore } = getContainer()
     const record = await videoService.importLocalVideo({
       id: videoId,
       title,

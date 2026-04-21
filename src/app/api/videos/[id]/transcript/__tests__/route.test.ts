@@ -1,45 +1,44 @@
-// @jest-environment node
+/**
+ * @jest-environment node
+ */
 import { GET } from '../route'
-import { videoStore } from '@/lib/server/composition'
+import * as composition from '@/lib/server/composition'
+import { createContainer } from '@/lib/server/composition'
+import type { Container } from '@/lib/server/composition'
+import type { InsertVideoParams } from '@/lib/videos'
 import fs from 'fs'
 
-jest.mock('next/server', () => ({
-  NextResponse: class MockNextResponse {
-    status: number
-    body: unknown
-    constructor(body: unknown, init?: { status?: number }) {
-      this.body = body
-      this.status = init?.status ?? 200
-    }
-    static json(data: unknown, init?: { status?: number }) {
-      const res = new this(data, init)
-      res.body = data
-      return res
-    }
-  },
+jest.mock('fs', () => ({
+  ...jest.requireActual('fs'),
+  readFileSync: jest.fn(),
 }))
 
-jest.mock('@/lib/server/composition', () => ({
-  videoStore: { getById: jest.fn() },
-}))
+jest.mock('@/lib/server/composition', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const actual = jest.requireActual('@/lib/server/composition')
+  return { ...actual, getContainer: jest.fn() }
+})
 
-jest.mock('fs')
-
-const mockGetById = videoStore.getById as jest.Mock
 const mockReadFileSync = fs.readFileSync as jest.Mock
 
-const baseVideo = {
-  id: 'video-1',
-  youtube_url: 'https://youtube.com/watch?v=abc',
-  youtube_id: 'abc',
-  title: 'Test Video',
-  author_name: 'Author',
-  thumbnail_url: 'https://img.example.com/thumb.jpg',
-  transcript_path: '/data/transcripts/video-1.srt',
-  transcript_format: 'srt',
-  tags: ['spanish'],
-  created_at: '2026-01-01T00:00:00Z',
-  updated_at: '2026-01-01T00:00:00Z',
+let container: Container
+
+function makeVideoParams(overrides: Partial<InsertVideoParams> = {}): InsertVideoParams {
+  return {
+    id: 'video-1',
+    title: 'Test Video',
+    author_name: 'Author',
+    thumbnail_url: '',
+    transcript_path: '/transcripts/video-1.srt',
+    transcript_format: 'srt',
+    tags: ['spanish'],
+    source_type: 'local',
+    ...overrides,
+  }
+}
+
+function makeRequest(): Request {
+  return { method: 'GET', url: 'http://localhost/api/videos/video-1/transcript' } as Request
 }
 
 const srtContent = `1
@@ -51,35 +50,39 @@ Hello world
 This is a transcript
 `
 
-function makeRequest() {
-  return { method: 'GET', url: 'http://localhost/api/videos/video-1/transcript' } as Request
-}
+beforeEach(() => {
+  container = createContainer(':memory:')
+  ;(composition.getContainer as jest.Mock).mockReturnValue(container)
+})
+
+afterEach(() => {
+  jest.restoreAllMocks()
+  jest.clearAllMocks()
+})
 
 describe('GET /api/videos/[id]/transcript', () => {
-  afterEach(() => jest.clearAllMocks())
-
   it('returns 404 when video not found', async () => {
-    mockGetById.mockReturnValue(undefined)
     const response = await GET(makeRequest(), { params: Promise.resolve({ id: 'video-1' }) })
     expect(response.status).toBe(404)
   })
 
-  it('returns { cues: [] } when transcript_path is null', async () => {
-    mockGetById.mockReturnValue({ ...baseVideo, transcript_path: null })
+  it('returns { cues: [] } when transcript_path is empty', async () => {
+    container.videoStore.insert(makeVideoParams({ transcript_path: '' }))
     const response = await GET(makeRequest(), { params: Promise.resolve({ id: 'video-1' }) })
     expect(response.status).toBe(200)
-    expect((response as { body: { cues: unknown[] } }).body).toEqual({ cues: [] })
+    const body = await response.json()
+    expect(body).toEqual({ cues: [] })
   })
 
   it('returns parsed cues when transcript exists', async () => {
-    mockGetById.mockReturnValue(baseVideo)
+    container.videoStore.insert(makeVideoParams())
     mockReadFileSync.mockReturnValue(srtContent)
     const response = await GET(makeRequest(), { params: Promise.resolve({ id: 'video-1' }) })
     expect(response.status).toBe(200)
-    const body = (response as { body: { cues: { text: string }[] } }).body
+    const body = await response.json()
     expect(body.cues).toHaveLength(2)
     expect(body.cues[0].text).toBe('Hello world')
     expect(body.cues[1].text).toBe('This is a transcript')
-    expect(mockReadFileSync).toHaveBeenCalledWith('/data/transcripts/video-1.srt', 'utf-8')
+    expect(mockReadFileSync).toHaveBeenCalledWith('/transcripts/video-1.srt', 'utf-8')
   })
 })

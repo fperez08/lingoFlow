@@ -3,7 +3,7 @@ export const runtime = 'nodejs'
 import { NextResponse } from 'next/server'
 import fs from 'fs'
 import path from 'path'
-import { videoStore } from '@/lib/server/composition'
+import { getContainer } from '@/lib/server/composition'
 
 const MIME_TYPES: Record<string, string> = {
   mp4: 'video/mp4',
@@ -17,6 +17,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params
+    const { videoStore } = getContainer()
     const video = videoStore.getById(id)
 
     if (!video || !video.local_video_path) {

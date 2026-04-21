@@ -1,31 +1,19 @@
-// @jest-environment node
+/**
+ * @jest-environment node
+ */
+
+jest.mock('@/lib/server/composition', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const actual = jest.requireActual('@/lib/server/composition')
+  return { ...actual, getContainer: jest.fn() }
+})
+
 import { PATCH } from '../route'
-import { vocabStore } from '@/lib/server/composition'
+import * as composition from '@/lib/server/composition'
+import { createContainer } from '@/lib/server/composition'
+import type { Container } from '@/lib/server/composition'
 
-jest.mock('next/server', () => ({
-  NextResponse: class MockNextResponse {
-    status: number
-    body: unknown
-    constructor(body: unknown, init?: { status?: number }) {
-      this.body = body
-      this.status = init?.status ?? 200
-    }
-    static json(data: unknown, init?: { status?: number }) {
-      const res = new this(data, init)
-      res.body = data
-      return res
-    }
-    async json() { return this.body }
-  },
-}))
-
-jest.mock('@/lib/server/composition', () => ({
-  vocabStore: {
-    upsert: jest.fn(),
-  },
-}))
-
-const mockVocabStore = vocabStore as jest.Mocked<typeof vocabStore>
+let container: Container
 
 function makeRequest(body: unknown): Request {
   return {
@@ -35,35 +23,37 @@ function makeRequest(body: unknown): Request {
   } as unknown as Request
 }
 
+beforeEach(() => {
+  container = createContainer(':memory:')
+  ;(composition.getContainer as jest.Mock).mockReturnValue(container)
+})
+
+afterEach(() => {
+  jest.restoreAllMocks()
+})
+
 describe('PATCH /api/vocabulary/[word]', () => {
-  beforeEach(() => {
-    jest.clearAllMocks()
-  })
-
   it('upserts and returns the updated entry', async () => {
-    const entry = { word: 'ephemeral', status: 'mastered' }
-    mockVocabStore.upsert.mockReturnValue(entry)
-
     const res = await PATCH(makeRequest({ status: 'mastered' }), {
       params: Promise.resolve({ word: 'ephemeral' }),
     })
 
     expect(res.status).toBe(200)
     const body = await res.json()
-    expect(body).toEqual(entry)
-    expect(mockVocabStore.upsert).toHaveBeenCalledWith('ephemeral', 'mastered')
+    expect(body.word).toBe('ephemeral')
+    expect(body.status).toBe('mastered')
+    expect(container.vocabStore.getByWord('ephemeral')?.status).toBe('mastered')
   })
 
   it('decodes and lowercases the word param', async () => {
-    const entry = { word: 'hello world', status: 'new' }
-    mockVocabStore.upsert.mockReturnValue(entry)
-
     const res = await PATCH(makeRequest({ status: 'new' }), {
       params: Promise.resolve({ word: 'Hello%20World' }),
     })
 
     expect(res.status).toBe(200)
-    expect(mockVocabStore.upsert).toHaveBeenCalledWith('hello world', 'new')
+    const body = await res.json()
+    expect(body.word).toBe('hello world')
+    expect(container.vocabStore.getByWord('hello world')?.status).toBe('new')
   })
 
   it('returns 400 for invalid status', async () => {
@@ -77,7 +67,7 @@ describe('PATCH /api/vocabulary/[word]', () => {
   })
 
   it('returns 500 on store error', async () => {
-    mockVocabStore.upsert.mockImplementation(() => {
+    jest.spyOn(container.vocabStore, 'upsert').mockImplementation(() => {
       throw new Error('db error')
     })
 

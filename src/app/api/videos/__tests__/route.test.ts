@@ -1,49 +1,66 @@
 /**
  * @jest-environment node
  */
+
+jest.mock('@/lib/server/composition', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const actual = jest.requireActual('@/lib/server/composition')
+  return { ...actual, getContainer: jest.fn() }
+})
+
 import { GET } from '../route'
-import { videoStore } from '@/lib/server/composition'
+import * as composition from '@/lib/server/composition'
+import { createContainer } from '@/lib/server/composition'
+import type { Container } from '@/lib/server/composition'
+import type { InsertVideoParams } from '@/lib/videos'
 
-jest.mock('@/lib/server/composition', () => ({
-  videoStore: { list: jest.fn() },
-}))
+let container: Container
 
-const mockList = (videoStore.list as jest.Mock)
-
-const mockVideos = [
-  {
+function makeVideoParams(overrides: Partial<InsertVideoParams> = {}): InsertVideoParams {
+  return {
     id: 'v1',
     title: 'Video 1',
-    tags: ['tag1'],
-    transcript_path: 'path/v1.srt',
-    transcript_format: 'srt',
-    created_at: '2026-04-10T00:00:00Z',
-    updated_at: '2026-04-10T00:00:00Z',
     author_name: 'Author 1',
-    thumbnail_url: 'https://example.com/thumb1.jpg',
-    youtube_url: 'https://youtube.com/watch?v=1',
-    youtube_id: '1',
-  },
-]
+    thumbnail_url: '',
+    transcript_path: '/transcripts/v1.srt',
+    transcript_format: 'srt',
+    tags: ['tag1'],
+    source_type: 'local',
+    ...overrides,
+  }
+}
+
+beforeEach(() => {
+  container = createContainer(':memory:')
+  ;(composition.getContainer as jest.Mock).mockReturnValue(container)
+})
+
+afterEach(() => {
+  jest.restoreAllMocks()
+})
 
 describe('GET /api/videos', () => {
-  afterEach(() => jest.clearAllMocks())
-
-  it('returns 200 with video array from store.list()', async () => {
-    mockList.mockReturnValue(mockVideos)
-
+  it('returns 200 with empty array when no videos', async () => {
     const response = await GET()
     expect(response.status).toBe(200)
     const body = await response.json()
-    expect(body).toEqual(mockVideos)
-    expect(mockList).toHaveBeenCalledTimes(1)
+    expect(body).toEqual([])
+  })
+
+  it('returns 200 with videos from DB', async () => {
+    container.videoStore.insert(makeVideoParams())
+    const response = await GET()
+    expect(response.status).toBe(200)
+    const body = await response.json()
+    expect(body).toHaveLength(1)
+    expect(body[0].id).toBe('v1')
+    expect(body[0].tags).toEqual(['tag1'])
   })
 
   it('returns 500 if store.list() throws', async () => {
-    mockList.mockImplementation(() => {
+    jest.spyOn(container.videoStore, 'list').mockImplementation(() => {
       throw new Error('DB error')
     })
-
     const response = await GET()
     expect(response.status).toBe(500)
     const body = await response.json()

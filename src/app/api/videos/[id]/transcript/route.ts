@@ -1,7 +1,7 @@
 // @jest-environment node
 import { NextResponse } from 'next/server'
 import fs from 'fs'
-import { videoStore } from '@/lib/server/composition'
+import { getContainer } from '@/lib/server/composition'
 import { parseTranscript } from '@/lib/parse-transcript'
 
 export const runtime = 'nodejs'
@@ -12,6 +12,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params
+    const { videoStore } = getContainer()
     const video = videoStore.getById(id)
     if (!video) {
       return new NextResponse('Not Found', { status: 404 })
