@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { vocabStore } from '@/lib/server/composition'
+import { getContainer } from '@/lib/server/composition'
 import { UpdateVocabRequestSchema } from '@/lib/api-schemas'
 
 export const runtime = 'nodejs'
@@ -18,6 +18,7 @@ export async function PATCH(
       return NextResponse.json({ error: result.error.issues[0].message }, { status: 400 })
     }
 
+    const { vocabStore } = getContainer()
     const entry = vocabStore.upsert(decoded, result.data.status)
     return NextResponse.json(entry)
   } catch (error) {

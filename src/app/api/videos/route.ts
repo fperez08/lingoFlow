@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server'
-import { videoStore } from '@/lib/server/composition'
+import { getContainer } from '@/lib/server/composition'
 
 export const runtime = 'nodejs'
 
 export async function GET() {
   try {
+    const { videoStore } = getContainer()
     const videos = videoStore.list()
     return NextResponse.json(videos)
   } catch (error) {

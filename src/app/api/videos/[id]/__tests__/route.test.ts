@@ -1,67 +1,42 @@
-// @jest-environment node
+/**
+ * @jest-environment node
+ */
+
+jest.mock('@/lib/server/composition', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const actual = jest.requireActual('@/lib/server/composition')
+  return { ...actual, getContainer: jest.fn() }
+})
+
 import { DELETE, PATCH, GET } from '../route'
-import { videoStore, videoService } from '@/lib/server/composition'
+import * as composition from '@/lib/server/composition'
+import { createContainer } from '@/lib/server/composition'
+import type { Container } from '@/lib/server/composition'
+import type { InsertVideoParams } from '@/lib/videos'
 
-jest.mock('next/server', () => ({
-  NextResponse: class MockNextResponse {
-    status: number
-    body: unknown
-    constructor(body: unknown, init?: { status?: number }) {
-      this.body = body
-      this.status = init?.status ?? 200
-    }
-    static json(data: unknown, init?: { status?: number }) {
-      const res = new this(data, init)
-      res.body = data
-      return res
-    }
-  },
-}))
+let container: Container
 
-jest.mock('@/lib/server/composition', () => ({
-  videoStore: { getById: jest.fn() },
-  videoService: { deleteVideo: jest.fn(), updateVideo: jest.fn() },
-}))
+function makeVideoParams(overrides: Partial<InsertVideoParams> = {}): InsertVideoParams {
+  return {
+    id: 'video-1',
+    title: 'Test Video',
+    author_name: 'Author',
+    thumbnail_url: '',
+    transcript_path: '/transcripts/video-1.srt',
+    transcript_format: 'srt',
+    tags: ['spanish'],
+    source_type: 'local',
+    local_video_path: '/videos/video-1.mp4',
+    local_video_filename: 'video-1.mp4',
+    ...overrides,
+  }
+}
 
-const mockGetById = (videoStore.getById as jest.Mock)
-const mockDeleteVideo = (videoService.deleteVideo as jest.Mock)
-const mockUpdateVideo = (videoService.updateVideo as jest.Mock)
-
-function makeRequest() {
+function makeRequest(): Request {
   return { method: 'DELETE', url: 'http://localhost/api/videos/video-1' } as unknown as Request
 }
 
-describe('DELETE /api/videos/[id]', () => {
-  afterEach(() => jest.clearAllMocks())
-
-  it('returns 404 if video not found', async () => {
-    mockDeleteVideo.mockResolvedValue(false)
-    const response = await DELETE(makeRequest(), { params: Promise.resolve({ id: 'video-1' }) })
-    expect(response.status).toBe(404)
-  })
-
-  it('returns 204 on successful delete', async () => {
-    mockDeleteVideo.mockResolvedValue(true)
-    const response = await DELETE(makeRequest(), { params: Promise.resolve({ id: 'video-1' }) })
-    expect(response.status).toBe(204)
-    expect(mockDeleteVideo).toHaveBeenCalledWith('video-1')
-  })
-
-  it('calls service.deleteVideo with the correct id', async () => {
-    mockDeleteVideo.mockResolvedValue(true)
-    await DELETE(makeRequest(), { params: Promise.resolve({ id: 'video-1' }) })
-    expect(mockDeleteVideo).toHaveBeenCalledWith('video-1')
-  })
-
-  it('returns 404 when service.deleteVideo returns false', async () => {
-    mockDeleteVideo.mockResolvedValue(false)
-    await DELETE(makeRequest(), { params: Promise.resolve({ id: 'video-1' }) })
-    const response = await DELETE(makeRequest(), { params: Promise.resolve({ id: 'video-1' }) })
-    expect(response.status).toBe(404)
-  })
-})
-
-function makePatchRequest(fields: Record<string, unknown>) {
+function makePatchRequest(fields: Record<string, unknown>): Request {
   const mockFormData = {
     get: jest.fn((key: string) => fields[key] ?? null),
   }
@@ -72,9 +47,35 @@ function makePatchRequest(fields: Record<string, unknown>) {
   } as unknown as Request
 }
 
-describe('PATCH /api/videos/[id]', () => {
-  afterEach(() => jest.clearAllMocks())
+beforeEach(() => {
+  container = createContainer(':memory:')
+  ;(composition.getContainer as jest.Mock).mockReturnValue(container)
+})
 
+afterEach(() => {
+  jest.restoreAllMocks()
+})
+
+describe('DELETE /api/videos/[id]', () => {
+  it('returns 404 if video not found', async () => {
+    const response = await DELETE(makeRequest(), { params: Promise.resolve({ id: 'video-1' }) })
+    expect(response.status).toBe(404)
+  })
+
+  it('returns 204 on successful delete', async () => {
+    container.videoStore.insert(makeVideoParams())
+    const response = await DELETE(makeRequest(), { params: Promise.resolve({ id: 'video-1' }) })
+    expect(response.status).toBe(204)
+  })
+
+  it('removes video from DB after delete', async () => {
+    container.videoStore.insert(makeVideoParams())
+    await DELETE(makeRequest(), { params: Promise.resolve({ id: 'video-1' }) })
+    expect(container.videoStore.getById('video-1')).toBeUndefined()
+  })
+})
+
+describe('PATCH /api/videos/[id]', () => {
   it('returns 400 if tags field is missing', async () => {
     const response = await PATCH(makePatchRequest({}), { params: Promise.resolve({ id: 'video-1' }) })
     expect(response.status).toBe(400)
@@ -91,60 +92,61 @@ describe('PATCH /api/videos/[id]', () => {
   })
 
   it('returns 404 if video not found', async () => {
-    mockUpdateVideo.mockResolvedValue(undefined)
     const response = await PATCH(makePatchRequest({ tags: JSON.stringify(['spanish']) }), { params: Promise.resolve({ id: 'video-1' }) })
     expect(response.status).toBe(404)
   })
 
   it('returns 200 with updated video on tags-only update', async () => {
-    const updatedVideo = { id: 'video-1', tags: ['spanish', 'advanced'] }
-    mockUpdateVideo.mockResolvedValue(updatedVideo)
-
-    const response = await PATCH(makePatchRequest({ tags: JSON.stringify(['spanish', 'advanced']) }), { params: Promise.resolve({ id: 'video-1' }) })
+    container.videoStore.insert(makeVideoParams({ tags: ['old'] }))
+    const response = await PATCH(
+      makePatchRequest({ tags: JSON.stringify(['spanish', 'advanced']) }),
+      { params: Promise.resolve({ id: 'video-1' }) }
+    )
     expect(response.status).toBe(200)
-    expect(mockUpdateVideo).toHaveBeenCalledWith('video-1', { tags: ['spanish', 'advanced'] })
+    const body = await response.json()
+    expect(body.tags).toEqual(['spanish', 'advanced'])
   })
 
-  it('returns 200 and calls service.updateVideo with transcript params on transcript replacement', async () => {
-    const updatedVideo = { id: 'video-1', tags: ['spanish'], transcript_path: '/new/path.srt' }
-    mockUpdateVideo.mockResolvedValue(updatedVideo)
-
-    const file = { name: 'subtitles.srt', size: 7, arrayBuffer: jest.fn().mockResolvedValue(Buffer.from('content')) } as unknown as File
-    const response = await PATCH(makePatchRequest({ tags: JSON.stringify(['spanish']), transcript: file }), { params: Promise.resolve({ id: 'video-1' }) })
-    expect(response.status).toBe(200)
-    expect(mockUpdateVideo).toHaveBeenCalledWith('video-1', expect.objectContaining({
-      tags: ['spanish'],
-      transcript_ext: 'srt',
-      transcript_buffer: expect.any(Buffer),
-    }))
+  it('persists tag update to DB', async () => {
+    container.videoStore.insert(makeVideoParams({ tags: ['old'] }))
+    await PATCH(
+      makePatchRequest({ tags: JSON.stringify(['new-tag']) }),
+      { params: Promise.resolve({ id: 'video-1' }) }
+    )
+    expect(container.videoStore.getById('video-1')?.tags).toEqual(['new-tag'])
   })
 
   it('returns 400 for invalid transcript extension', async () => {
+    container.videoStore.insert(makeVideoParams())
     const file = { name: 'subtitles.pdf', size: 7, arrayBuffer: jest.fn().mockResolvedValue(Buffer.from('content')) } as unknown as File
     const response = await PATCH(makePatchRequest({ tags: JSON.stringify(['spanish']), transcript: file }), { params: Promise.resolve({ id: 'video-1' }) })
     expect(response.status).toBe(400)
   })
+
+  it('returns 200 on transcript replacement with valid extension', async () => {
+    container.videoStore.insert(makeVideoParams())
+    const file = { name: 'subtitles.srt', size: 7, arrayBuffer: jest.fn().mockResolvedValue(Buffer.from('content')) } as unknown as File
+    const response = await PATCH(
+      makePatchRequest({ tags: JSON.stringify(['spanish']), transcript: file }),
+      { params: Promise.resolve({ id: 'video-1' }) }
+    )
+    expect(response.status).toBe(200)
+  })
 })
 
-function makeGetRequest() {
-  return { method: 'GET', url: 'http://localhost/api/videos/video-1' } as unknown as Request
-}
-
 describe('GET /api/videos/[id]', () => {
-  afterEach(() => jest.clearAllMocks())
-
   it('returns 404 if video not found', async () => {
-    mockGetById.mockReturnValue(undefined)
-    const response = await GET(makeGetRequest(), { params: Promise.resolve({ id: 'video-1' }) })
+    const response = await GET(makeRequest(), { params: Promise.resolve({ id: 'video-1' }) })
     expect(response.status).toBe(404)
   })
 
   it('returns 200 with video data when found', async () => {
-    const video = { id: 'video-1', title: 'Test', tags: ['t1'], transcript_path: 'p.srt', transcript_format: 'srt', created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z', author_name: 'A', thumbnail_url: 'http://t.com', youtube_url: 'http://y.com', youtube_id: 'abc' }
-    mockGetById.mockReturnValue(video)
-    const response = await GET(makeGetRequest(), { params: Promise.resolve({ id: 'video-1' }) })
+    container.videoStore.insert(makeVideoParams())
+    const response = await GET(makeRequest(), { params: Promise.resolve({ id: 'video-1' }) })
     expect(response.status).toBe(200)
-    expect(mockGetById).toHaveBeenCalledWith('video-1')
+    const body = await response.json()
+    expect(body.id).toBe('video-1')
+    expect(body.title).toBe('Test Video')
   })
 })
 

@@ -1,63 +1,26 @@
-// @jest-environment node
-
-jest.mock('@/lib/server/composition', () => ({
-  videoService: {
-    importLocalVideo: jest.fn(),
-    updateVideo: jest.fn(),
-    deleteVideo: jest.fn(),
-  },
-  videoStore: {
-    update: jest.fn(),
-  },
-}))
+/**
+ * @jest-environment node
+ */
 
 jest.mock('@/lib/thumbnails', () => ({
   generateThumbnail: jest.fn().mockResolvedValue(null),
 }))
 
-jest.mock('next/server', () => ({
-  NextResponse: {
-    json: (data: unknown, init?: { status?: number }) => ({
-      status: init?.status ?? 200,
-      json: async () => data,
-    }),
-  },
-}))
+jest.mock('@/lib/server/composition', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const actual = jest.requireActual('@/lib/server/composition')
+  return { ...actual, getContainer: jest.fn() }
+})
 
 import { POST } from '../route'
-import { videoService, videoStore } from '@/lib/server/composition'
+import * as composition from '@/lib/server/composition'
+import { createContainer } from '@/lib/server/composition'
+import type { Container } from '@/lib/server/composition'
 import { ALLOWED_TRANSCRIPT_FORMATS } from '@/lib/api-schemas'
 import { generateThumbnail } from '@/lib/thumbnails'
 import type { NextRequest } from 'next/server'
 
-type MockVideoService = {
-  importLocalVideo: jest.Mock
-  updateVideo: jest.Mock
-  deleteVideo: jest.Mock
-}
-
-type MockVideoStore = {
-  update: jest.Mock
-}
-
-const mockVideoService = videoService as unknown as MockVideoService
-const mockVideoStore = videoStore as unknown as MockVideoStore
-const mockGenerateThumbnail = generateThumbnail as jest.MockedFunction<typeof generateThumbnail>
-
-const fakeLocalVideo = {
-  id: 'local-video-uuid',
-  title: 'My Local Video',
-  author_name: 'Local Author',
-  thumbnail_url: '',
-  transcript_path: '/data/transcripts/local-video-uuid.srt',
-  transcript_format: 'srt',
-  tags: ['french', 'beginner'],
-  created_at: '2024-01-01T00:00:00.000Z',
-  updated_at: '2024-01-01T00:00:00.000Z',
-  source_type: 'local' as const,
-  local_video_path: '/data/videos/local-video-uuid.mp4',
-  local_video_filename: 'my-video.mp4',
-}
+let container: Container
 
 function makeFormData(fields: Record<string, string | File>): FormData {
   const fd = new FormData()
@@ -71,13 +34,37 @@ function makeRequest(formData: FormData): { formData: () => Promise<FormData> } 
   return { formData: async () => formData }
 }
 
-describe('POST /api/videos/import', () => {
-  beforeEach(() => {
-    jest.clearAllMocks()
-    mockVideoService.importLocalVideo.mockResolvedValue(fakeLocalVideo)
-    mockGenerateThumbnail.mockResolvedValue(null)
-  })
+function makeLocalFormData(overrides: Record<string, string | File> = {}): FormData {
+  const videoContent = Buffer.from('fake-video-data')
+  const videoFile = Object.assign(
+    new File([videoContent], 'my-video.mp4', { type: 'video/mp4' }),
+    { arrayBuffer: async () => videoContent.buffer }
+  )
+  const transcriptContent = '1\n00:00:01,000 --> 00:00:02,000\nBonjour'
+  const transcriptFile = Object.assign(
+    new File([transcriptContent], 'transcript.srt', { type: 'text/plain' }),
+    { arrayBuffer: async () => Buffer.from(transcriptContent).buffer }
+  )
+  const defaults: Record<string, string | File> = {
+    video: videoFile,
+    title: 'My Local Video',
+    transcript: transcriptFile,
+  }
+  return makeFormData({ ...defaults, ...overrides })
+}
 
+beforeEach(() => {
+  container = createContainer(':memory:')
+  ;(composition.getContainer as jest.Mock).mockReturnValue(container)
+  ;(generateThumbnail as jest.Mock).mockResolvedValue(null)
+})
+
+afterEach(() => {
+  jest.restoreAllMocks()
+  jest.clearAllMocks()
+})
+
+describe('POST /api/videos/import', () => {
   it('exports ALLOWED_TRANSCRIPT_FORMATS with srt, vtt, txt', () => {
     expect(ALLOWED_TRANSCRIPT_FORMATS).toEqual(['srt', 'vtt', 'txt'])
   })
@@ -85,8 +72,7 @@ describe('POST /api/videos/import', () => {
   it('returns 400 when no video file is provided', async () => {
     const transcriptFile = new File(['content'], 'transcript.srt', { type: 'text/plain' })
     const fd = makeFormData({ transcript: transcriptFile })
-    const req = makeRequest(fd)
-    const res = await POST(req as unknown as NextRequest)
+    const res = await POST(makeRequest(fd) as unknown as NextRequest)
     expect(res.status).toBe(400)
     const body = await res.json()
     expect(body.error).toBe('Only local video upload is supported')
@@ -100,93 +86,24 @@ describe('POST /api/videos/import', () => {
     )
     const transcriptFile = new File(['content'], 'transcript.pdf', { type: 'application/pdf' })
     const fd = makeFormData({ video: videoFile, title: 'Test', transcript: transcriptFile })
-    const req = makeRequest(fd)
-    const res = await POST(req as unknown as NextRequest)
+    const res = await POST(makeRequest(fd) as unknown as NextRequest)
     expect(res.status).toBe(400)
     const body = await res.json()
     expect(body.error).toMatch(/Invalid file extension/)
   })
-})
 
-const fakeLocalVideo2 = {
-  id: 'local-video-uuid',
-  title: 'My Local Video',
-  author_name: 'Local Author',
-  thumbnail_url: '',
-  transcript_path: '/data/transcripts/local-video-uuid.srt',
-  transcript_format: 'srt',
-  tags: ['french', 'beginner'],
-  created_at: '2024-01-01T00:00:00.000Z',
-  updated_at: '2024-01-01T00:00:00.000Z',
-  source_type: 'local' as const,
-  local_video_path: '/data/videos/local-video-uuid.mp4',
-  local_video_filename: 'my-video.mp4',
-}
-
-describe('POST /api/videos/import — local upload path', () => {
-  beforeEach(() => {
-    jest.clearAllMocks()
-    mockVideoService.importLocalVideo.mockResolvedValue(fakeLocalVideo2)
-    mockGenerateThumbnail.mockResolvedValue(null)
-  })
-
-  function makeLocalFormData(overrides: Record<string, string | File> = {}): FormData {
-    const videoContent = Buffer.from('fake-video-data')
-    const videoFile = Object.assign(
-      new File([videoContent], 'my-video.mp4', { type: 'video/mp4' }),
-      { arrayBuffer: async () => videoContent.buffer }
-    )
-    const transcriptContent = '1\n00:00:01,000 --> 00:00:02,000\nBonjour'
-    const transcriptFile = Object.assign(
-      new File([transcriptContent], 'transcript.srt', { type: 'text/plain' }),
-      { arrayBuffer: async () => Buffer.from(transcriptContent).buffer }
-    )
-    const defaults: Record<string, string | File> = {
-      video: videoFile,
-      title: 'My Local Video',
-      transcript: transcriptFile,
-    }
-    return makeFormData({ ...defaults, ...overrides })
-  }
-
-  it('returns 201 and calls importLocalVideo when video file is present', async () => {
+  it('returns 201 and inserts video into DB on valid local upload', async () => {
     const fd = makeLocalFormData({ tags: 'french, beginner', author: 'Local Author' })
-    const req = makeRequest(fd)
-    const res = await POST(req as unknown as NextRequest)
+    const res = await POST(makeRequest(fd) as unknown as NextRequest)
     expect(res.status).toBe(201)
     const body = await res.json()
-    expect(body).toEqual(fakeLocalVideo2)
-    expect(mockVideoService.importLocalVideo).toHaveBeenCalledWith(
-      expect.objectContaining({
-        title: 'My Local Video',
-        author_name: 'Local Author',
-        video_ext: 'mp4',
-        video_filename: 'my-video.mp4',
-        transcript_ext: 'srt',
-        tags: ['french', 'beginner'],
-        source_type: 'local',
-      })
-    )
-    expect(mockVideoService.importLocalVideo).toHaveBeenCalled()
-  })
-
-  it('kicks off thumbnail generation after local import', async () => {
-    mockGenerateThumbnail.mockResolvedValue('/data/thumbnails/local-video-uuid.jpg')
-
-    const fd = makeLocalFormData({ tags: 'french, beginner', author: 'Local Author' })
-    const req = makeRequest(fd)
-    const res = await POST(req as unknown as NextRequest)
-
-    expect(res.status).toBe(201)
-    await Promise.resolve()
-
-    expect(mockGenerateThumbnail).toHaveBeenCalledWith(
-      '/data/videos/local-video-uuid.mp4',
-      expect.stringContaining('/thumbnails/')
-    )
-    expect(mockVideoStore.update).toHaveBeenCalledWith(expect.any(String), {
-      thumbnail_path: '/data/thumbnails/local-video-uuid.jpg',
-    })
+    expect(body.title).toBe('My Local Video')
+    expect(body.author_name).toBe('Local Author')
+    expect(body.tags).toEqual(['french', 'beginner'])
+    expect(body.transcript_format).toBe('srt')
+    const stored = container.videoStore.getById(body.id)
+    expect(stored).toBeDefined()
+    expect(stored?.title).toBe('My Local Video')
   })
 
   it('returns 400 when video file is present but title is missing', async () => {
@@ -197,32 +114,26 @@ describe('POST /api/videos/import — local upload path', () => {
     )
     const transcriptFile = new File(['content'], 'transcript.srt', { type: 'text/plain' })
     const fd = makeFormData({ video: videoFile, transcript: transcriptFile })
-    const req = makeRequest(fd)
-    const res = await POST(req as unknown as NextRequest)
+    const res = await POST(makeRequest(fd) as unknown as NextRequest)
     expect(res.status).toBe(400)
     const body = await res.json()
     expect(body.error).toMatch(/Title is required/)
   })
 
   it('returns 201 with empty tags when no tags provided for local upload', async () => {
-    const fakeNoTags = { ...fakeLocalVideo, tags: [] }
-    mockVideoService.importLocalVideo.mockResolvedValue(fakeNoTags)
     const fd = makeLocalFormData()
-    const req = makeRequest(fd)
-    const res = await POST(req as unknown as NextRequest)
+    const res = await POST(makeRequest(fd) as unknown as NextRequest)
     expect(res.status).toBe(201)
-    expect(mockVideoService.importLocalVideo).toHaveBeenCalledWith(
-      expect.objectContaining({ tags: [] })
-    )
+    const body = await res.json()
+    expect(body.tags).toEqual([])
   })
 
   it('returns 201 with empty author_name when no author provided', async () => {
     const fd = makeLocalFormData()
-    const req = makeRequest(fd)
-    await POST(req as unknown as NextRequest)
-    expect(mockVideoService.importLocalVideo).toHaveBeenCalledWith(
-      expect.objectContaining({ author_name: '' })
-    )
+    const res = await POST(makeRequest(fd) as unknown as NextRequest)
+    expect(res.status).toBe(201)
+    const body = await res.json()
+    expect(body.author_name).toBe('')
   })
 
   it('returns 400 when video MIME type is not allowed', async () => {
@@ -233,8 +144,7 @@ describe('POST /api/videos/import — local upload path', () => {
     )
     const transcriptFile = new File(['content'], 'transcript.srt', { type: 'text/plain' })
     const fd = makeFormData({ video: videoFile, title: 'Test', transcript: transcriptFile })
-    const req = makeRequest(fd)
-    const res = await POST(req as unknown as NextRequest)
+    const res = await POST(makeRequest(fd) as unknown as NextRequest)
     expect(res.status).toBe(400)
     const body = await res.json()
     expect(body.error).toMatch(/Unsupported format/)
@@ -250,24 +160,40 @@ describe('POST /api/videos/import — local upload path', () => {
     )
     const transcriptFile = new File(['content'], 'transcript.srt', { type: 'text/plain' })
     const fd = makeFormData({ video: videoFile, title: 'Test', transcript: transcriptFile })
-    const req = makeRequest(fd)
-    const res = await POST(req as unknown as NextRequest)
+    const res = await POST(makeRequest(fd) as unknown as NextRequest)
     expect(res.status).toBe(400)
     const body = await res.json()
     expect(body.error).toMatch(/500 MB/)
   })
 
-  it('returns 400 when video is a WebM with unsupported extension alias', async () => {
+  it('returns 201 for WebM videos', async () => {
     const videoContent = Buffer.from('data')
-    const videoFile = Object.assign(
+    const webmFile = Object.assign(
       new File([videoContent], 'my-video.webm', { type: 'video/webm' }),
       { arrayBuffer: async () => videoContent.buffer }
     )
-    const fakeWebmVideo = { ...fakeLocalVideo, local_video_path: '/data/videos/local.webm' }
-    mockVideoService.importLocalVideo.mockResolvedValue(fakeWebmVideo)
-    const fd = makeLocalFormData({ video: videoFile, title: 'WebM Video' })
-    const req = makeRequest(fd)
-    const res = await POST(req as unknown as NextRequest)
+    const fd = makeLocalFormData({ video: webmFile, title: 'WebM Video' })
+    const res = await POST(makeRequest(fd) as unknown as NextRequest)
     expect(res.status).toBe(201)
+  })
+
+  it('kicks off thumbnail generation after local import', async () => {
+    const thumbnailPath = '/data/thumbnails/video.jpg'
+    ;(generateThumbnail as jest.Mock).mockResolvedValue(thumbnailPath)
+    const updateSpy = jest.spyOn(container.videoStore, 'update')
+
+    const fd = makeLocalFormData({ tags: 'french, beginner', author: 'Local Author' })
+    const res = await POST(makeRequest(fd) as unknown as NextRequest)
+
+    expect(res.status).toBe(201)
+    await Promise.resolve()
+
+    expect(generateThumbnail as jest.Mock).toHaveBeenCalledWith(
+      expect.stringContaining('.mp4'),
+      expect.stringContaining('thumbnails')
+    )
+    expect(updateSpy).toHaveBeenCalledWith(expect.any(String), {
+      thumbnail_path: thumbnailPath,
+    })
   })
 })

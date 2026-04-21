@@ -1,10 +1,11 @@
 import fs from 'fs'
-import { videoStore } from '@/lib/server/composition'
+import { getContainer } from '@/lib/server/composition'
 
 export const runtime = 'nodejs'
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+  const { videoStore } = getContainer()
   const video = videoStore.getById(id)
 
   if (!video?.thumbnail_path) {

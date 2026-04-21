@@ -1,55 +1,53 @@
-// @jest-environment node
+/**
+ * @jest-environment node
+ */
+
+jest.mock('@/lib/server/composition', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const actual = jest.requireActual('@/lib/server/composition')
+  return { ...actual, getContainer: jest.fn() }
+})
+
 import { GET } from '../route'
-import { vocabStore } from '@/lib/server/composition'
+import * as composition from '@/lib/server/composition'
+import { createContainer } from '@/lib/server/composition'
+import type { Container } from '@/lib/server/composition'
 
-jest.mock('next/server', () => ({
-  NextResponse: class MockNextResponse {
-    status: number
-    body: unknown
-    constructor(body: unknown, init?: { status?: number }) {
-      this.body = body
-      this.status = init?.status ?? 200
-    }
-    static json(data: unknown, init?: { status?: number }) {
-      const res = new this(data, init)
-      res.body = data
-      return res
-    }
-    async json() { return this.body }
-  },
-}))
+let container: Container
 
-jest.mock('@/lib/server/composition', () => ({
-  vocabStore: {
-    getAll: jest.fn(),
-  },
-}))
+beforeEach(() => {
+  container = createContainer(':memory:')
+  ;(composition.getContainer as jest.Mock).mockReturnValue(container)
+})
 
-const mockVocabStore = vocabStore as jest.Mocked<typeof vocabStore>
+afterEach(() => {
+  jest.restoreAllMocks()
+})
 
 describe('GET /api/vocabulary', () => {
-  beforeEach(() => {
-    jest.clearAllMocks()
-  })
-
   it('returns all vocabulary entries as JSON', async () => {
-    const entries = [
-      { word: 'ephemeral', status: 'new' },
-      { word: 'resilient', status: 'mastered' },
-    ]
-    mockVocabStore.getAll.mockReturnValue(entries)
+    container.vocabStore.upsert('ephemeral', 'new')
+    container.vocabStore.upsert('resilient', 'mastered')
 
     const res = await GET()
     expect(res.status).toBe(200)
     const body = await res.json()
-    expect(body).toEqual(entries)
+    expect(body).toHaveLength(2)
+    expect(body.find((e: { word: string }) => e.word === 'ephemeral')?.status).toBe('new')
+    expect(body.find((e: { word: string }) => e.word === 'resilient')?.status).toBe('mastered')
+  })
+
+  it('returns empty array when no vocabulary entries', async () => {
+    const res = await GET()
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body).toEqual([])
   })
 
   it('returns 500 on store error', async () => {
-    mockVocabStore.getAll.mockImplementation(() => {
+    jest.spyOn(container.vocabStore, 'getAll').mockImplementation(() => {
       throw new Error('db error')
     })
-
     const res = await GET()
     expect(res.status).toBe(500)
     const body = await res.json()
