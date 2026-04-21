@@ -31,6 +31,11 @@
       "sourceType": "github",
       "computedHash": "05c97bc3120108acd0b80bdef7fb4fa7c224ba83c8d384ccbc97f92e8a065918"
     },
+    "domain-model": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "computedHash": "71fd7d7d8c96228d663fcc133843e06e16f211c1d4d1e781aabdc73a097a2d60"
+    },
     "grill-me": {
       "source": "mattpocock/skills",
       "sourceType": "github",
@@ -50,6 +55,16 @@
       "source": "mattpocock/skills",
       "sourceType": "github",
       "computedHash": "ad055544599481182d0079c4198e85da26677cb408a677be2da04915375f0427"
+    },
+    "triage-issue": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "computedHash": "6834b87393bff8f529b3126b9f761c1c2b9706af8a784ad1061961c34bbdb4a9"
+    },
+    "ubiquitous-language": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "computedHash": "32f8a3426cb2d2c3db05977369e70d793e342c38ea87f5447eb22108c03c8d7a"
     },
     "write-a-prd": {
       "source": "mattpocock/skills",

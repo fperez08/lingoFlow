@@ -1,6 +1,6 @@
 ---
 name: coding-subagent
-description: Execute single coding task from issue-orchestrator. Given issue plus pre-generated docs in docs/, write code, update tests/docs, validate build, open PR, and report back to orchestrator.
+description: Execute single coding task from orchestrator. Given issue plus pre-generated docs in docs/, write code, update tests/docs, validate build, open PR, and report back to orchestrator.
 tools: ["execute", "read", "edit", "search"]
 model: GPT-5.3-Codex (copilot)
 disable-model-invocation: true
@@ -58,6 +58,8 @@ git checkout -b feat/issue-<number>-<short-slug>
 Apply only issue-scoped changes. No unrelated refactors, fixes, features.
 
 ### 6. Update tests
+
+Use the TDD skill (`/workspaces/lingoFlow/.agents/skills/tdd/SKILL.md`) for all implementation work. Follow the red-green-refactor loop: write a failing test first, implement the minimum code to pass it, then refactor.
 
 Add or update tests for every behavior change. Put tests in existing test locations. Follow existing naming conventions.
 
