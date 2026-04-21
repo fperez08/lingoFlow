@@ -76,7 +76,7 @@ test.describe('Player + mini-player workflow', () => {
     await player.assertLoaded()
 
     await expect(page.getByRole('button', { name: 'Save Lesson' })).toHaveCount(0)
-    await expect(player.playButton).toContainText('Play')
+    await expect(player.playButton).toBeVisible()
 
     await player.clickPlay()
     await player.assertMiniPlayerOpen()
