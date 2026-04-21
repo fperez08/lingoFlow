@@ -24,11 +24,11 @@ function parseTimeToSeconds(timestamp: string): number {
   return Number(hh) * 3600 + Number(mm) * 60 + Number(ss) + Number(ms) / 1000
 }
 
-export default function PlayerClient({ video }: { video: Video }) {
+export default function PlayerClient({ video, cues: propCues }: { video: Video; cues?: TranscriptCue[] }) {
   const { data: vocabMap = new Map() } = useVocabulary()
   const updateWordStatus = useUpdateWordStatus()
-  const [cues, setCues] = useState<TranscriptCue[]>([])
-  const [loadingTranscript, setLoadingTranscript] = useState(true)
+  const [cues, setCues] = useState<TranscriptCue[]>(propCues ?? [])
+  const [loadingTranscript, setLoadingTranscript] = useState(propCues === undefined)
   const [activeCueIndex, setActiveCueIndex] = useState(0)
   const [isMiniPlayerOpen, setIsMiniPlayerOpen] = useState(false)
   const [playbackTime, setPlaybackTime] = useState({ current: 0, duration: 0 })
@@ -47,6 +47,7 @@ export default function PlayerClient({ video }: { video: Video }) {
   }
 
   useEffect(() => {
+    if (propCues !== undefined) return
     fetch(`/api/videos/${video.id}/transcript`)
       .then((r) => r.json())
       .then((data) => {
