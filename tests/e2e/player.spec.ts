@@ -99,7 +99,39 @@ test.describe('Player + mini-player workflow', () => {
     expect(pageErrors).toEqual([])
   })
 
-  test('seek controls are visible, distinct, and clickable in mini-player', async ({ page }) => {
+  test('mini-player and vocabulary sidebar do not overlap when both are open', async ({ page }) => {
+    test.setTimeout(60_000)
+
+    await mockPlayerRoutes(page)
+
+    const player = new PlayerPage(page)
+    await player.navigateTo(MOCK_VIDEO.id)
+    await player.assertLoaded()
+
+    await player.clickPlay()
+    await player.assertMiniPlayerOpen()
+
+    // Click a word in the active transcript cue to open the vocabulary sidebar
+    const wordButton = page.locator('[role="button"]').first()
+    await expect(wordButton).toBeVisible()
+    await wordButton.click()
+
+    const wordSidebar = page.getByTestId('word-sidebar')
+    await expect(wordSidebar).toBeVisible()
+    await expect(player.miniPlayer).toBeVisible()
+
+    // Confirm mini-player has shifted left (right offset > sidebar width)
+    const miniPlayerBox = await player.miniPlayer.boundingBox()
+    const sidebarBox = await wordSidebar.boundingBox()
+    expect(miniPlayerBox).not.toBeNull()
+    expect(sidebarBox).not.toBeNull()
+    if (miniPlayerBox && sidebarBox) {
+      // Mini-player right edge must not overlap sidebar left edge
+      const miniPlayerRight = miniPlayerBox.x + miniPlayerBox.width
+      const sidebarLeft = sidebarBox.x
+      expect(miniPlayerRight).toBeLessThanOrEqual(sidebarLeft + 1) // 1px tolerance
+    }
+  })
     test.setTimeout(60_000)
 
     await mockPlayerRoutes(page)
@@ -126,5 +158,100 @@ test.describe('Player + mini-player workflow', () => {
 
     await rewindBtn.click()
     await fastforwardBtn.click()
+  })
+
+  test('mini-player and vocabulary sidebar do not overlap when both open', async ({ page }) => {
+    test.setTimeout(60_000)
+
+    await mockPlayerRoutes(page)
+
+    const player = new PlayerPage(page)
+    await player.navigateTo(MOCK_VIDEO.id)
+    await player.assertLoaded()
+
+    await player.clickPlay()
+    await player.assertMiniPlayerOpen()
+
+    // Click first cue to activate it, then click a word to open the sidebar
+    await page.getByTestId('cue-0').click()
+    const wordBtn = page.getByTestId('word-never').first()
+    await expect(wordBtn).toBeVisible()
+    await wordBtn.click()
+
+    // Both mini-player and word sidebar must be visible
+    await expect(player.miniPlayer).toBeVisible()
+    await expect(page.getByTestId('word-sidebar')).toBeVisible()
+
+    // Verify non-overlap: get bounding boxes
+    const miniPlayerBox = await player.miniPlayer.boundingBox()
+    const sidebarBox = await page.getByTestId('word-sidebar').boundingBox()
+
+    expect(miniPlayerBox).not.toBeNull()
+    expect(sidebarBox).not.toBeNull()
+
+    if (miniPlayerBox && sidebarBox) {
+      // They should not intersect horizontally (mini-player must be left of the sidebar)
+      const miniPlayerRight = miniPlayerBox.x + miniPlayerBox.width
+      const sidebarLeft = sidebarBox.x
+      expect(miniPlayerRight).toBeLessThanOrEqual(sidebarLeft + 1) // 1px tolerance
+    }
+  })
+
+  test('mini-player controls remain clickable while vocabulary sidebar is open', async ({ page }) => {
+    test.setTimeout(60_000)
+
+    await mockPlayerRoutes(page)
+
+    const player = new PlayerPage(page)
+    await player.navigateTo(MOCK_VIDEO.id)
+    await player.assertLoaded()
+
+    await player.clickPlay()
+    await player.assertMiniPlayerOpen()
+
+    // Open vocabulary sidebar by clicking a word
+    await page.getByTestId('cue-0').click()
+    const wordBtn = page.getByTestId('word-never').first()
+    await expect(wordBtn).toBeVisible()
+    await wordBtn.click()
+    await expect(page.getByTestId('word-sidebar')).toBeVisible()
+
+    // Mini-player controls must be visible and clickable
+    const rewindBtn = page.getByTestId('rewind-button')
+    const fastforwardBtn = page.getByTestId('fastforward-button')
+    const closeBtn = page.getByTestId('mini-player-close')
+
+    await expect(rewindBtn).toBeVisible()
+    await expect(fastforwardBtn).toBeVisible()
+    await expect(closeBtn).toBeVisible()
+
+    // Verify controls are not obscured — clicking should not throw
+    await rewindBtn.click()
+    await fastforwardBtn.click()
+  })
+
+  test('mini-player uses default position when sidebar is closed', async ({ page }) => {
+    test.setTimeout(60_000)
+
+    await mockPlayerRoutes(page)
+
+    const player = new PlayerPage(page)
+    await player.navigateTo(MOCK_VIDEO.id)
+    await player.assertLoaded()
+
+    await player.clickPlay()
+    await player.assertMiniPlayerOpen()
+
+    // Sidebar is closed — mini-player should be at default right-4 position
+    await expect(page.getByTestId('word-sidebar')).not.toBeVisible()
+    const miniPlayerBox = await player.miniPlayer.boundingBox()
+    expect(miniPlayerBox).not.toBeNull()
+
+    if (miniPlayerBox) {
+      const viewportWidth = page.viewportSize()?.width ?? 1280
+      // With right-4 (16px), the mini-player right edge should be near the viewport right
+      const miniPlayerRight = miniPlayerBox.x + miniPlayerBox.width
+      expect(miniPlayerRight).toBeGreaterThan(viewportWidth - 32) // within 32px of right edge
+    }
   })
 })

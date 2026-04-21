@@ -13,6 +13,7 @@ interface LocalVideoPlayerProps {
   onTimeUpdate?: (currentTime: number, duration: number) => void
   seekToTime?: number | null
   onSeekApplied?: () => void
+  isSidebarOpen?: boolean
 }
 
 export default function LocalVideoPlayer({
@@ -22,6 +23,7 @@ export default function LocalVideoPlayer({
   onTimeUpdate,
   seekToTime,
   onSeekApplied,
+  isSidebarOpen = false,
 }: LocalVideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -95,7 +97,7 @@ export default function LocalVideoPlayer({
   return (
     <div
       data-testid="mini-player"
-      className="fixed bottom-4 right-4 z-50 w-80 shadow-2xl rounded-xl overflow-hidden bg-black md:bottom-auto md:top-20"
+      className={`fixed bottom-4 ${isSidebarOpen ? 'right-[21rem]' : 'right-4'} z-50 w-80 shadow-2xl rounded-xl overflow-hidden bg-black md:bottom-auto md:top-20`}
     >
       <div className="relative aspect-video">
         <video

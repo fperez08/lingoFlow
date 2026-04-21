@@ -158,6 +158,7 @@ export default function PlayerClient({ video, cues: propCues }: { video: Video; 
           onTimeUpdate={handleTimeUpdate}
           seekToTime={requestedSeekTime}
           onSeekApplied={() => setRequestedSeekTime(null)}
+          isSidebarOpen={selectedWord !== null}
         />
       )}
 

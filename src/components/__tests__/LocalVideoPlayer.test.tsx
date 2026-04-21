@@ -218,3 +218,47 @@ describe('LocalVideoPlayer seek controls accessibility', () => {
     expect(screen.getByTestId('fastforward-button')).toBeInTheDocument()
   })
 })
+
+describe('LocalVideoPlayer sidebar-aware positioning', () => {
+  beforeEach(() => {
+    setupVideoMock()
+  })
+
+  afterEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it('uses default right-4 position when sidebarOpen is false', () => {
+    render(<LocalVideoPlayer {...defaultProps} isSidebarOpen={false} />)
+    const miniPlayer = screen.getByTestId('mini-player')
+    expect(miniPlayer.className).toContain('right-4')
+    expect(miniPlayer.className).not.toContain('right-[21rem]')
+  })
+
+  it('uses default right-4 position when sidebarOpen is not provided', () => {
+    render(<LocalVideoPlayer {...defaultProps} />)
+    const miniPlayer = screen.getByTestId('mini-player')
+    expect(miniPlayer.className).toContain('right-4')
+    expect(miniPlayer.className).not.toContain('right-[21rem]')
+  })
+
+  it('shifts to right-[21rem] when sidebarOpen is true', () => {
+    render(<LocalVideoPlayer {...defaultProps} isSidebarOpen={true} />)
+    const miniPlayer = screen.getByTestId('mini-player')
+    expect(miniPlayer.className).toContain('right-[21rem]')
+    expect(miniPlayer.className).not.toContain('right-4')
+  })
+
+  it('remains visible (in the DOM) when sidebarOpen is true', () => {
+    render(<LocalVideoPlayer {...defaultProps} isSidebarOpen={true} />)
+    expect(screen.getByTestId('mini-player')).toBeInTheDocument()
+  })
+
+  it('controls remain accessible when sidebarOpen is true', () => {
+    render(<LocalVideoPlayer {...defaultProps} isSidebarOpen={true} />)
+    expect(screen.getByTestId('mini-player-play-pause')).toBeInTheDocument()
+    expect(screen.getByTestId('rewind-button')).toBeInTheDocument()
+    expect(screen.getByTestId('fastforward-button')).toBeInTheDocument()
+    expect(screen.getByTestId('mini-player-close')).toBeInTheDocument()
+  })
+})
