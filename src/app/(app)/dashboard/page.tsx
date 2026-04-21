@@ -29,7 +29,7 @@ export default function DashboardPage() {
     })
   }
 
-  const handleEditSave = (_updatedVideo: VideoCardProps) => {
+  const handleEditSave: (updatedVideo: VideoCardProps) => void = () => {
     setEditTarget(null)
     refreshVideos()
   }

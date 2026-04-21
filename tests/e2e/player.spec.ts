@@ -132,6 +132,8 @@ test.describe('Player + mini-player workflow', () => {
       expect(miniPlayerRight).toBeLessThanOrEqual(sidebarLeft + 1) // 1px tolerance
     }
   })
+
+  test('mini-player transport controls expose distinct labels and stay clickable', async ({ page }) => {
     test.setTimeout(60_000)
 
     await mockPlayerRoutes(page)

@@ -40,8 +40,9 @@ describe('VideoSchema', () => {
   })
 
   it('rejects missing required fields', () => {
-    const { id, ...rest } = validVideo
-    expect(() => VideoSchema.parse(rest)).toThrow()
+    const missingIdVideo = { ...validVideo }
+    delete (missingIdVideo as Partial<Video>).id
+    expect(() => VideoSchema.parse(missingIdVideo)).toThrow()
   })
 
   it('rejects non-array tags', () => {
@@ -58,8 +59,9 @@ describe('InsertVideoParamsSchema', () => {
   })
 
   it('rejects missing required fields', () => {
-    const { title, ...rest } = validInsert
-    expect(() => InsertVideoParamsSchema.parse(rest)).toThrow()
+    const missingTitleInsert = { ...validInsert }
+    delete (missingTitleInsert as Partial<InsertVideoParams>).title
+    expect(() => InsertVideoParamsSchema.parse(missingTitleInsert)).toThrow()
   })
 
   it('does not include created_at or updated_at', () => {

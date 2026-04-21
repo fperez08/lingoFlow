@@ -10,7 +10,6 @@ jest.mock('fs', () => ({
 }))
 
 jest.mock('@/lib/server/composition', () => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const actual = jest.requireActual('@/lib/server/composition')
   return { ...actual, getContainer: jest.fn() }
 })

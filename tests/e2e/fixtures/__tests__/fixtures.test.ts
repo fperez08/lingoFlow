@@ -13,8 +13,6 @@ import {
   teardownIsolatedDb,
   seedVideo,
   seedTranscript,
-  setupYoutubeStub,
-  teardownYoutubeStub,
   type FixtureContext,
 } from '../index'
 

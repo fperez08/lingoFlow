@@ -48,8 +48,12 @@ export default function LocalVideoPlayer({
   }
 
   useEffect(() => {
-    return () => stopPolling()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current)
+        pollIntervalRef.current = null
+      }
+    }
   }, [])
 
   useEffect(() => {
