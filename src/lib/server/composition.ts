@@ -8,17 +8,19 @@
  * Example:
  *   LINGOFLOW_DATA_DIR=/var/data/lingoflow pnpm start
  */
-import path from 'path'
 import { ensureDataDirs, openDb, initializeSchema } from '@/lib/db'
 import { SqliteVideoStore } from '@/lib/video-store'
 import { VideoService } from '@/lib/video-service'
 import { writeTranscript, deleteTranscript } from '@/lib/transcripts'
 import { SqliteVocabStore } from '@/lib/vocab-store'
+import { getDataDir, getDbPath, getVideosDir } from '@/lib/data-dir'
 import fs from 'fs'
+import path from 'path'
 
-function createContainer(dataDir: string) {
+function createContainer() {
+  const dataDir = getDataDir()
   ensureDataDirs(dataDir)
-  const db = openDb(path.join(dataDir, 'lingoflow.db'))
+  const db = openDb(getDbPath())
   initializeSchema(db)
 
   const store = new SqliteVideoStore(db)
@@ -29,7 +31,7 @@ function createContainer(dataDir: string) {
   }
   const videoFileStore = {
     write: (videoId: string, ext: string, buffer: Buffer): string => {
-      const videosDir = path.join(dataDir, 'videos')
+      const videosDir = getVideosDir()
       fs.mkdirSync(videosDir, { recursive: true })
       const filePath = path.join(videosDir, `${videoId}.${ext}`)
       fs.writeFileSync(filePath, buffer)
@@ -48,7 +50,6 @@ function createContainer(dataDir: string) {
   return { videoStore: store, videoService: service, vocabStore }
 }
 
-const dataDir = process.env.LINGOFLOW_DATA_DIR ?? path.join(process.cwd(), '.lingoflow-data')
-const { videoStore, videoService, vocabStore } = createContainer(dataDir)
+const { videoStore, videoService, vocabStore } = createContainer()
 
 export { videoStore, videoService, vocabStore }
