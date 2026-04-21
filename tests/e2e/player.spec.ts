@@ -98,4 +98,33 @@ test.describe('Player + mini-player workflow', () => {
     expect(consoleErrors).toEqual([])
     expect(pageErrors).toEqual([])
   })
+
+  test('seek controls are visible, distinct, and clickable in mini-player', async ({ page }) => {
+    test.setTimeout(60_000)
+
+    await mockPlayerRoutes(page)
+
+    const player = new PlayerPage(page)
+    await player.navigateTo(MOCK_VIDEO.id)
+    await player.assertLoaded()
+
+    await player.clickPlay()
+    await player.assertMiniPlayerOpen()
+
+    const rewindBtn = page.getByTestId('rewind-button')
+    const fastforwardBtn = page.getByTestId('fastforward-button')
+
+    await expect(rewindBtn).toBeVisible()
+    await expect(fastforwardBtn).toBeVisible()
+
+    const rewindLabel = await rewindBtn.getAttribute('aria-label')
+    const fastforwardLabel = await fastforwardBtn.getAttribute('aria-label')
+
+    expect(rewindLabel).not.toBe(fastforwardLabel)
+    expect(rewindLabel).toBeTruthy()
+    expect(fastforwardLabel).toBeTruthy()
+
+    await rewindBtn.click()
+    await fastforwardBtn.click()
+  })
 })

@@ -175,12 +175,11 @@ return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider
 
 **Query hooks** use `useQuery`; **mutation hooks** use `useMutation` + `queryClient.invalidateQueries`.
 
-### Raw `fetch` in `useEffect` — component-local state
+### Raw `fetch` in `useEffect` — component-local state (PlayerClient fallback only)
 
-`PlayerLoader` and `PlayerClient` fetch data via raw `fetch` inside `useEffect`. This data is not cached in React Query — it is component-local state only.
+`PlayerClient` contains a `useEffect` fallback that fetches `GET /api/videos/:id/transcript` **only** when the `cues` prop is `undefined`. In the normal render path `PlayerLoader` passes `cues` from `usePlayerData`, so the fetch is not triggered.
 
-- `PlayerLoader`: fetches `GET /api/videos/:id` on mount to resolve a `Video` object.
-- `PlayerClient`: fetches `GET /api/videos/:id/transcript` on mount to load `TranscriptCue[]`.
+`PlayerLoader` does **not** use raw `fetch`. It delegates entirely to `usePlayerData` (React Query via `useQueries`).
 
 ---
 
@@ -213,17 +212,32 @@ DashboardPage  [client component, 'use client']
 ### Player (`/player/[id]`)
 
 ```
-PlayerPage  [server component]           ← awaits params.id
-  └─ PlayerLoader  [client component]    ← fetches Video via raw fetch/useEffect
-       └─ PlayerClient  [client component]
-            ├─ useVocabulary()            ← React Query: GET /api/vocabulary
+PlayerPage  [server component]           ← awaits params.id; renders <PlayerLoader id={id} />
+  └─ PlayerLoader  [client component]    ← usePlayerData(id): parallel React Query fetch
+       │   usePlayerData → useQueries([video, transcript])
+       └─ PlayerClient  [client component]   receives video + cues props
+            ├─ useVocabulary()            ← React Query: GET /api/vocabulary → Map<string,VocabEntry>
             ├─ useUpdateWordStatus()      ← React Query mutation: PATCH /api/vocabulary/:word
-            ├─ LessonHero                 ← title, author, tags, Play button
-            ├─ PlaybackProgress           ← progress bar (shown only when mini-player open)
-            ├─ CueText[]                  ← tokenized transcript cues; word-click support
-            ├─ LocalVideoPlayer           ← floating <video> mini-player (conditional)
-            └─ WordSidebar                ← slide-over word detail panel (conditional)
+            ├─ LessonHero                 ← title, author, tags, Play button (data-testid="play-button")
+            ├─ PlaybackProgress           ← display-only progress bar (shown when mini-player is open)
+            ├─ CueText[]                  ← tokenized transcript cues; word-click → WordSidebar
+            ├─ LocalVideoPlayer           ← floating <video> mini-player (conditional on isMiniPlayerOpen)
+            └─ WordSidebar                ← slide-over word detail panel (conditional on selectedWord)
 ```
+
+**State in `PlayerClient`**:
+
+| State variable | Type | Purpose |
+|---|---|---|
+| `cues` | `TranscriptCue[]` | Transcript cues (from prop, or fetched as fallback) |
+| `loadingTranscript` | `boolean` | True while fallback fetch is pending |
+| `activeCueIndex` | `number` | Selected cue (manual click navigation) |
+| `isMiniPlayerOpen` | `boolean` | Controls visibility of `LocalVideoPlayer` |
+| `playbackTime` | `{ current: number, duration: number }` | Updated from `LocalVideoPlayer` polling |
+| `requestedSeekTime` | `number \| null` | One-shot seek request; cleared by `onSeekApplied` |
+| `selectedWord` | `{ word, contextSentence } \| null` | Controls visibility of `WordSidebar` |
+
+**Seek flow**: cue click → `setRequestedSeekTime(startTime)` → `seekToTime` prop on `LocalVideoPlayer` → `useEffect` sets `videoRef.current.currentTime` → `onSeekApplied()` clears `requestedSeekTime`.
 
 ### Vocabulary (`/vocabulary`)
 
@@ -241,6 +255,7 @@ VocabularyPage  [client component, 'use client']
 |---|---|---|---|
 | `useVideos` | `hooks/useVideos.ts` | `useQuery` | Fetches `Video[]` from `GET /api/videos`; query key `['videos']` |
 | `useVideoMutations` | `hooks/useVideoMutations.ts` | `useMutation` + `invalidateQueries` | `deleteVideo(id)` mutation; `refreshVideos()` cache invalidation |
+| `usePlayerData` | `hooks/usePlayerData.ts` | `useQueries` | Parallel-fetches `Video` + `TranscriptCue[]` for player; returns `{ video, cues, isLoading, error }` |
 | `useImportVideoForm` | `hooks/useImportVideoForm.ts` | `useReducer` + `useCallback` | Full import form state machine; submits to `POST /api/videos/import` |
 | `useVocabulary` | `hooks/useVocabulary.ts` | `useQuery` | Fetches `VocabEntry[]`; returns `Map<string, VocabEntry>`; query key `['vocabulary']` |
 | `useUpdateWordStatus` | `hooks/useVocabulary.ts` | `useMutation` + `invalidateQueries` | `PATCH /api/vocabulary/:word`; invalidates `['vocabulary']` on success |

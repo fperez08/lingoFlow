@@ -58,8 +58,8 @@ describe('LocalVideoPlayer', () => {
   it('renders play/pause, rewind, and fast-forward buttons', () => {
     render(<LocalVideoPlayer {...defaultProps} />)
     expect(screen.getByTestId('mini-player-play-pause')).toBeInTheDocument()
-    expect(screen.getByTestId('mini-player-rewind')).toBeInTheDocument()
-    expect(screen.getByTestId('mini-player-fastforward')).toBeInTheDocument()
+    expect(screen.getByTestId('rewind-button')).toBeInTheDocument()
+    expect(screen.getByTestId('fastforward-button')).toBeInTheDocument()
   })
 
   it('renders speed selector with all speed options', () => {
@@ -127,5 +127,94 @@ describe('LocalVideoPlayer', () => {
     expect(onTimeUpdate).toHaveBeenCalled()
 
     jest.useRealTimers()
+  })
+})
+
+describe('LocalVideoPlayer seek behavior', () => {
+  beforeEach(() => {
+    setupVideoMock()
+  })
+
+  afterEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it('rewind button seeks backward by 10 seconds', () => {
+    render(<LocalVideoPlayer {...defaultProps} />)
+    const video = screen.getByTestId('local-video') as HTMLVideoElement
+    Object.defineProperty(video, 'duration', { configurable: true, value: 120 })
+    video.currentTime = 30
+    fireEvent.click(screen.getByTestId('rewind-button'))
+    expect(video.currentTime).toBe(20)
+  })
+
+  it('rewind clamps to 0 when currentTime is less than seek interval', () => {
+    render(<LocalVideoPlayer {...defaultProps} />)
+    const video = screen.getByTestId('local-video') as HTMLVideoElement
+    Object.defineProperty(video, 'duration', { configurable: true, value: 120 })
+    video.currentTime = 5
+    fireEvent.click(screen.getByTestId('rewind-button'))
+    expect(video.currentTime).toBe(0)
+  })
+
+  it('fast-forward button seeks forward by 10 seconds', () => {
+    render(<LocalVideoPlayer {...defaultProps} />)
+    const video = screen.getByTestId('local-video') as HTMLVideoElement
+    Object.defineProperty(video, 'duration', { configurable: true, value: 120 })
+    video.currentTime = 30
+    fireEvent.click(screen.getByTestId('fastforward-button'))
+    expect(video.currentTime).toBe(40)
+  })
+
+  it('fast-forward clamps to duration when near end', () => {
+    render(<LocalVideoPlayer {...defaultProps} />)
+    const video = screen.getByTestId('local-video') as HTMLVideoElement
+    Object.defineProperty(video, 'duration', { configurable: true, value: 120 })
+    video.currentTime = 115
+    fireEvent.click(screen.getByTestId('fastforward-button'))
+    expect(video.currentTime).toBe(120)
+  })
+})
+
+describe('LocalVideoPlayer seek controls accessibility', () => {
+  beforeEach(() => {
+    setupVideoMock()
+  })
+
+  afterEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it('rewind button has accessible name "Rewind 10 seconds"', () => {
+    render(<LocalVideoPlayer {...defaultProps} />)
+    expect(screen.getByRole('button', { name: 'Rewind 10 seconds' })).toBeInTheDocument()
+  })
+
+  it('fast-forward button has accessible name "Fast-forward 10 seconds"', () => {
+    render(<LocalVideoPlayer {...defaultProps} />)
+    expect(screen.getByRole('button', { name: 'Fast-forward 10 seconds' })).toBeInTheDocument()
+  })
+
+  it('rewind and fast-forward buttons have different aria-labels', () => {
+    render(<LocalVideoPlayer {...defaultProps} />)
+    const rewind = screen.getByTestId('rewind-button')
+    const fastforward = screen.getByTestId('fastforward-button')
+    expect(rewind.getAttribute('aria-label')).not.toBe(fastforward.getAttribute('aria-label'))
+  })
+
+  it('both seek controls are keyboard-operable buttons', () => {
+    render(<LocalVideoPlayer {...defaultProps} />)
+    expect(screen.getByRole('button', { name: 'Rewind 10 seconds' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Fast-forward 10 seconds' })).toBeInTheDocument()
+  })
+
+  it('rewind button has data-testid "rewind-button"', () => {
+    render(<LocalVideoPlayer {...defaultProps} />)
+    expect(screen.getByTestId('rewind-button')).toBeInTheDocument()
+  })
+
+  it('fast-forward button has data-testid "fastforward-button"', () => {
+    render(<LocalVideoPlayer {...defaultProps} />)
+    expect(screen.getByTestId('fastforward-button')).toBeInTheDocument()
   })
 })

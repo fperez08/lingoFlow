@@ -9,8 +9,10 @@
 | File | Contents |
 |---|---|
 | [`architecture.md`](./architecture.md) | **Architecture reference** — App Router layout, DI/composition root, data flow, component hierarchy, hook inventory, testing conventions |
+| [`player-architecture.md`](./player-architecture.md) | **Player & mini-player reference** — component tree, seek flow, transport controls, `data-testid` map, test patterns |
 | [`api-reference.md`](./api-reference.md) | **Canonical API reference** — all REST endpoints, types, service interfaces, DB schema, library patterns |
-| [`api-docs.md`](./api-docs.md) | Extended API patterns, hooks, and issue-specific notes |
+| [`api.md`](./api.md) | Extended API reference — includes `ApiClient`, `usePlayerData`, `VocabStore`, vocabulary endpoints |
+| [`api-docs.md`](./api-docs.md) | Patterns for UI development — React 19, Tailwind design system, hooks, testing, media controls |
 | [`e2e-testing.md`](./e2e-testing.md) | Playwright config, Page Object Model, fixtures, `data-testid` reference |
 | [`project-docs.md`](./project-docs.md) | Architecture, directory layout, build/test commands, design decisions |
 
@@ -18,39 +20,23 @@
 
 ## api-docs.md — Sections
 
-| Section | Relevant Issue(s) |
+| Section | Notes |
 |---|---|
-| Tech Stack Summary | — |
-| Next.js App Router Patterns | all |
-| REST API Endpoints | all |
-| Tags API Contract | — |
-| Zod v4 Patterns | — |
-| better-sqlite3 / SQLite Patterns | #166 |
-| Dependency Injection / Composition Root | #166 |
-| TanStack React Query v5 Patterns | #167 |
-| Custom Hooks | #163, #167 |
-| Transcript Utilities | — |
-| File & Data Layout | #165 |
-| Testing Patterns | #163, #166 |
-| **Data Directory Module** | **#165** |
-| **React useReducer Pattern** | **#163** |
-| **PostImportTask Plugin System** | **#164** |
-| **DI Containers — createContainer / getContainer** | **#166** |
-| **React Query — useQueries (Parallel Fetching)** | **#167** |
-| **ApiClient Context Pattern** | **#167** |
-| TypeScript Types Quick Reference | — |
-
----
-
-## Open Issues Addressed
-
-| Issue | Title | Key API Patterns |
-|---|---|---|
-| #163 | Replace useState with useReducer in useImportVideoForm | `useReducer`, discriminated union actions, pure reducer testing |
-| #164 | PostImportTask plugin system on VideoService | `PostImportTask` interface, `registerPostImportTask`, `drainPostImportTasks` |
-| #165 | Extract getDataDir() to data-dir.ts | `getDataDir`, `getTranscriptsDir`, `getVideosDir`, `getThumbnailsDir`, `getDbPath` |
-| #166 | Export createContainer/getContainer for per-test DI | `createContainer`, `getContainer`, `Database(':memory:')`, `jest.spyOn` |
-| #167 | FetchApiClient + usePlayerData unified data-fetching | `useQueries`, `ApiClient` interface, `ApiClientProvider`, `usePlayerData` |
+| Tech Stack Summary | All versions |
+| Next.js App Router Patterns | params awaiting, response helpers |
+| REST API Endpoints | All routes |
+| Tags API Contract | ⚠️ format differs between import/update |
+| Zod v4 Patterns | `.issues` not `.errors` |
+| better-sqlite3 / SQLite Patterns | Sync calls, WAL, migration |
+| Dependency Injection / Composition Root | `getContainer()`, `createContainer(':memory:')` |
+| TanStack React Query v5 Patterns | `useQuery`, `useMutation`, `useQueries` |
+| Custom Hooks | `useVideos`, `useVideoMutations`, `useImportVideoForm`, `usePlayerData`, `useVocabulary`, `useUpdateWordStatus` |
+| Transcript Utilities | parse, detect, tokenize, file I/O |
+| File & Data Layout | `.lingoflow-data/` structure |
+| Testing Patterns | API routes, component tests, mocking, `fetch` |
+| React 19 Component Patterns | Server/client directive, hooks, `useRef`, `useReducer` |
+| Tailwind CSS Design System | Color tokens, typography, media controls, mini-player layout |
+| TypeScript Types Quick Reference | `Video`, `TranscriptCue`, `TranscriptToken`, `VocabEntry` |
 
 ---
 
