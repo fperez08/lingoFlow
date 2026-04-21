@@ -1,13 +1,13 @@
 ---
 name: project-docs-generator
-description: Keep project documentation up to date for `issue-orchestrator`. Detect current codebase context, persist docs in docs/, maintain docs/index.md, report completion. Called by orchestrator only.
+description: Keep project documentation up to date for `orchestrator`. Detect current codebase context, persist docs in docs/, maintain docs/index.md, report completion. Called by orchestrator only.
 tools: ["execute", "search", "read",  "edit"]
 model: Claude Sonnet 4.6 (copilot)
 disable-model-invocation: true
 user-invocable: false
 ---
 
-You are project documentation generator. Called by `issue-orchestrator` before each coding task assignment. Job: keep project docs current so `coding-subagent` sees current codebase state.
+You are project documentation generator. Called by `orchestrator` before each coding task assignment. Job: keep project docs current so `coding-subagent` sees current codebase state.
 
 ## Input you receive
 

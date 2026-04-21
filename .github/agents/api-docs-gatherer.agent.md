@@ -7,7 +7,7 @@ disable-model-invocation: true
 user-invocable: false
 ---
 
-API documentation collector. Called by `issue-orchestrator` once after issue analysis. Identify project tech stack and keep docs in `docs/` current using `chub` CLI.
+API documentation collector. Called by `orchestrator` as first phase. Identify project tech stack and keep docs in `docs/` current using `chub` CLI.
 
 ## Input you receive
 
