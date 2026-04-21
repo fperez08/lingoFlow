@@ -77,31 +77,35 @@ jobs:
             echo "failed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Install Copilot CLI
-        if: steps.initial_checks.outputs.failed == 'true' && github.event.pull_request.head.repo.full_name == github.repository
-        run: npm install --global @github/copilot
+      - name: Fail workflow if checks failing
+        if: steps.initial_checks.outputs.failed == 'true'
+        run: |
+          echo "Lint or unit tests failed."
+          exit 1
 
-      - name: Copilot autofix failing checks
-        if: steps.initial_checks.outputs.failed == 'true' && github.event.pull_request.head.repo.full_name == github.repository
+      - name: Emit success status
+        if: success()
         env:
-          COPILOT_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          copilot \
-            --model gpt-5.3-codex \
-            --yolo \
-            --no-ask-user \
-            --max-autopilot-continues 5 \
-            -p "You are in CI for PR checks. pnpm lint and/or pnpm test failed. Inspect failures, fix root cause in repository code, and update tests when required. Keep changes minimal and safe. After edits, run pnpm lint and pnpm test until they pass or you cannot make progress. Do not create a new branch."
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            /repos/${{ github.repository }}/statuses/${{ github.event.pull_request.head.sha }} \
+            -f state=success \
+            -f context="ci/pr-checks" \
+            -f description="Lint and unit tests passed." \
+            -f target_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
-      - name: Commit and push autofix
-        if: steps.initial_checks.outputs.failed == 'true' && github.event.pull_request.head.repo.full_name == github.repository
+      - name: Emit failure status
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if [ -n "$(git status --porcelain)" ]; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add -A
-            git commit -m "ci: copilot autofix lint/test failures"
-      
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            /repos/${{ github.repository }}/statuses/${{ github.event.pull_request.head.sha }} \
             -f state=failure \
             -f context="ci/pr-checks" \
             -f description="Lint or unit tests failed." \
