@@ -74,7 +74,6 @@ export function createContainer(dataDir: string): Container {
       }
     },
   }
-
   const service = new VideoService(store, transcriptStore, videoFileStore)
 
   if (dataDir !== ':memory:') {
