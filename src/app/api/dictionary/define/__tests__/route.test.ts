@@ -115,7 +115,7 @@ describe('/api/dictionary/define', () => {
             },
           }),
         }),
-      }) as any
+      })
     )
     process.env.GOOGLE_GEMINI_API_KEY = 'test-api-key'
 
