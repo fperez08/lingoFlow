@@ -98,7 +98,10 @@ describe('VideoService.importVideo', () => {
 describe('VideoService.importLocalVideo with PostImportTask', () => {
   it('calls registered task with saved video and merges update into store', async () => {
     const video = makeVideo({ local_video_path: '/data/videos/vid1.mp4' })
-    const store = makeVideoStore({ insert: jest.fn().mockReturnValue(video) })
+    const store = makeVideoStore({
+      insert: jest.fn().mockReturnValue(video),
+      getById: jest.fn().mockReturnValue(video),
+    })
     const transcripts = makeTranscriptStore()
     const videoFiles = makeVideoFileStore()
     const service = new VideoService(store, transcripts, videoFiles)
@@ -117,7 +120,10 @@ describe('VideoService.importLocalVideo with PostImportTask', () => {
 
   it('runs multiple tasks and merges all their updates in one store.update call', async () => {
     const video = makeVideo({ local_video_path: '/data/videos/vid1.mp4' })
-    const store = makeVideoStore({ insert: jest.fn().mockReturnValue(video) })
+    const store = makeVideoStore({
+      insert: jest.fn().mockReturnValue(video),
+      getById: jest.fn().mockReturnValue(video),
+    })
     const transcripts = makeTranscriptStore()
     const videoFiles = makeVideoFileStore()
     const service = new VideoService(store, transcripts, videoFiles)
@@ -141,7 +147,10 @@ describe('VideoService.importLocalVideo with PostImportTask', () => {
 
   it('does not call store.update if all tasks return empty objects', async () => {
     const video = makeVideo({ local_video_path: '/data/videos/vid1.mp4' })
-    const store = makeVideoStore({ insert: jest.fn().mockReturnValue(video) })
+    const store = makeVideoStore({
+      insert: jest.fn().mockReturnValue(video),
+      getById: jest.fn().mockReturnValue(video),
+    })
     const transcripts = makeTranscriptStore()
     const videoFiles = makeVideoFileStore()
     const service = new VideoService(store, transcripts, videoFiles)
@@ -158,7 +167,10 @@ describe('VideoService.importLocalVideo with PostImportTask', () => {
 
   it('task error does not fail the import — logs error, returns saved video', async () => {
     const video = makeVideo({ local_video_path: '/data/videos/vid1.mp4' })
-    const store = makeVideoStore({ insert: jest.fn().mockReturnValue(video) })
+    const store = makeVideoStore({
+      insert: jest.fn().mockReturnValue(video),
+      getById: jest.fn().mockReturnValue(video),
+    })
     const transcripts = makeTranscriptStore()
     const videoFiles = makeVideoFileStore()
     const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
@@ -193,6 +205,36 @@ describe('VideoService.importLocalVideo with PostImportTask', () => {
 
     expect(fakeTask.run).toHaveBeenCalledWith(video)
     expect(store.update).toHaveBeenCalledWith('vid1', { thumbnail_path: '/data/thumbnails/vid1.jpg' })
+  })
+
+  it('returns updated video with thumbnail_path after post-import task completes', async () => {
+    const originalVideo = makeVideo({ local_video_path: '/data/videos/vid1.mp4', thumbnail_path: null })
+    const updatedVideo = makeVideo({
+      local_video_path: '/data/videos/vid1.mp4',
+      thumbnail_path: '/data/thumbnails/vid1.jpg',
+    })
+
+    const store = makeVideoStore({
+      insert: jest.fn().mockReturnValue(originalVideo),
+      update: jest.fn().mockReturnValue(updatedVideo),
+      getById: jest.fn().mockReturnValue(updatedVideo),
+    })
+    const transcripts = makeTranscriptStore()
+    const videoFiles = makeVideoFileStore()
+    const service = new VideoService(store, transcripts, videoFiles)
+
+    const fakeTask: PostImportTask = {
+      run: jest.fn().mockResolvedValue({ thumbnail_path: '/data/thumbnails/vid1.jpg' }),
+    }
+    service.registerPostImportTask(fakeTask)
+
+    const result = await service.importLocalVideo(localImportParams)
+
+    // The critical assertion: result should include post-import updates
+    expect(result.thumbnail_path).toBe('/data/thumbnails/vid1.jpg')
+    expect(result).toEqual(updatedVideo)
+    // Verify getById was called to fetch the updated record
+    expect(store.getById).toHaveBeenCalledWith('vid1')
   })
 
   it('registerPostImportTask is fluent (returns this)', () => {

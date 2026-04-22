@@ -88,4 +88,22 @@ describe('GET /api/videos/[id]/thumbnail', () => {
     const res = await GET(makeRequest(), { params: Promise.resolve({ id: 'video-1' }) })
     expect(res.headers.get('cache-control')).toBe('public, max-age=31536000, immutable')
   })
+
+  it('serves thumbnail for imported video with thumbnail_path set by post-import task', async () => {
+    // Simulate an imported video where post-import task generated a thumbnail
+    const importedVideoWithThumbnail = makeVideoParams({
+      id: 'imported-video-id',
+      title: 'Imported Video',
+      thumbnail_path: '/data/thumbnails/imported-video-id.jpg',
+      local_video_path: '/data/videos/imported-video-id.mp4',
+    })
+    container.videoStore.insert(importedVideoWithThumbnail)
+    fsMock.readFileSync.mockReturnValue(Buffer.from('generated-thumbnail-jpeg'))
+
+    const res = await GET(makeRequest(), { params: Promise.resolve({ id: 'imported-video-id' }) })
+
+    expect(res.status).toBe(200)
+    expect(res.headers.get('content-type')).toBe('image/jpeg')
+    expect(fsMock.readFileSync).toHaveBeenCalledWith('/data/thumbnails/imported-video-id.jpg')
+  })
 })

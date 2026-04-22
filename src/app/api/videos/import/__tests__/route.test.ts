@@ -169,4 +169,20 @@ describe('POST /api/videos/import', () => {
     const res = await POST(makeRequest(fd) as unknown as NextRequest)
     expect(res.status).toBe(201)
   })
+
+  it('returns 201 with thumbnail_path included in response when post-import task generates one', async () => {
+    // Register a mock post-import task that simulates thumbnail generation
+    const fakeTask = {
+      run: jest.fn().mockResolvedValue({ thumbnail_path: '/data/thumbnails/test-id.jpg' }),
+    }
+    container.videoService.registerPostImportTask(fakeTask)
+
+    const fd = makeLocalFormData({ title: 'Video with Thumbnail' })
+    const res = await POST(makeRequest(fd) as unknown as NextRequest)
+
+    expect(res.status).toBe(201)
+    const body = await res.json()
+    // The critical assertion: response includes post-import derived field
+    expect(body.thumbnail_path).toBe('/data/thumbnails/test-id.jpg')
+  })
 })
