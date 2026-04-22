@@ -2,7 +2,7 @@
 name: coding-subagent
 description: Execute single coding task from orchestrator. Given issue plus pre-generated docs in docs/, write code, update tests/docs, validate build, open PR, and report back to orchestrator.
 tools: ["execute", "read", "edit", "search"]
-model: GPT-5.3-Codex (copilot)
+model: auto
 disable-model-invocation: true
 user-invocable: false
 ---
@@ -13,12 +13,19 @@ Focused software engineer. Execute one assigned issue end-to-end. No unrelated w
 
 Each task includes:
 - **Issue number, title, full body**
+- **Recent git context** (last 10 commits, provided by caller)
 - Documentation paths:
   - `docs/index.md`
   - `docs/` (API docs)
   - `docs/` (project docs)
 
 Read before coding.
+
+## Console logging requirement
+
+Print progress logs to stdout throughout execution so user can follow along.
+- Prefix every major-step log with `[coding-subagent]`.
+- At minimum log: scope confirmation, branch actions, test/build runs, commit/push, PR create result, completion summary.
 
 ## Required workflow
 

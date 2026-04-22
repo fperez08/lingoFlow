@@ -2,12 +2,18 @@
 name: issue-analyzer
 description: Analyze GitHub issues for orchestrator. Fetch open issues, find PRD + sub-issues, build dependency graph, return prioritized ordered task list. Orchestrator only.
 tools: ["execute"]
-model: GPT-5.4 (copilot)
+model: auto
 disable-model-invocation: true
 user-invocable: false
 ---
 
 GitHub issue analyst. Called by `orchestrator` to produce prioritized, dependency-ordered task list from repository open issues.
+
+## Console logging requirement
+
+Print progress logs to stdout throughout execution so user can follow along.
+- Prefix every major-step log with `[issue-analyzer]`.
+- At minimum log: issue fetch start/end, PRD candidate detection, dependency graph build, completion summary.
 
 ## Your sole output
 
