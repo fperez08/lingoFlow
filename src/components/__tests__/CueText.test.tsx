@@ -10,22 +10,22 @@ const mockVocabMap = new Map<string, VocabWord>([
 
 describe('CueText', () => {
   it('renders all words in the cue text', () => {
-    render(<CueText text="Hello world" vocabMap={new Map()} onWordClick={jest.fn()} />)
+    render(<CueText text="Hello world" cueIndex={0} vocabMap={new Map()} onWordClick={jest.fn()} />)
     expect(screen.getByText('Hello')).toBeInTheDocument()
     expect(screen.getByText('world')).toBeInTheDocument()
   })
 
   it('renders word spans as role=button', () => {
-    render(<CueText text="Hello world" vocabMap={new Map()} onWordClick={jest.fn()} />)
+    render(<CueText text="Hello world" cueIndex={0} vocabMap={new Map()} onWordClick={jest.fn()} />)
     const buttons = screen.getAllByRole('button')
     expect(buttons.length).toBe(2)
   })
 
-  it('calls onWordClick with word and sentence on click', () => {
+  it('calls onWordClick with word, sentence, and cueIndex on click', () => {
     const onWordClick = jest.fn()
-    render(<CueText text="Hello world" vocabMap={new Map()} onWordClick={onWordClick} />)
+    render(<CueText text="Hello world" cueIndex={5} vocabMap={new Map()} onWordClick={onWordClick} />)
     fireEvent.click(screen.getByText('Hello'))
-    expect(onWordClick).toHaveBeenCalledWith('Hello', 'Hello world')
+    expect(onWordClick).toHaveBeenCalledWith('Hello', 'Hello world', 5)
   })
 
   it('stops propagation so cue seek is not triggered', () => {
@@ -33,7 +33,7 @@ describe('CueText', () => {
     const parentClick = jest.fn()
     const { container } = render(
       <div onClick={parentClick}>
-        <CueText text="Hello" vocabMap={new Map()} onWordClick={onWordClick} />
+        <CueText text="Hello" cueIndex={0} vocabMap={new Map()} onWordClick={onWordClick} />
       </div>
     )
     fireEvent.click(container.querySelector('[role="button"]')!)
@@ -42,7 +42,7 @@ describe('CueText', () => {
   })
 
   it('applies vocab status styles for known words', () => {
-    render(<CueText text="ethereal resilient ambiguous" vocabMap={mockVocabMap} onWordClick={jest.fn()} />)
+    render(<CueText text="ethereal resilient ambiguous" cueIndex={0} vocabMap={mockVocabMap} onWordClick={jest.fn()} />)
     const ethereal = screen.getByTestId('word-ethereal')
     const resilient = screen.getByTestId('word-resilient')
     const ambiguous = screen.getByTestId('word-ambiguous')
@@ -53,13 +53,13 @@ describe('CueText', () => {
   })
 
   it('uses default style for words not in vocab', () => {
-    render(<CueText text="unknown" vocabMap={new Map()} onWordClick={jest.fn()} />)
+    render(<CueText text="unknown" cueIndex={0} vocabMap={new Map()} onWordClick={jest.fn()} />)
     const word = screen.getByTestId('word-unknown')
     expect(word.className).not.toMatch(/red|yellow|green/)
   })
 
   it('does not create clickable spans for punctuation', () => {
-    render(<CueText text="Hello, world!" vocabMap={new Map()} onWordClick={jest.fn()} />)
+    render(<CueText text="Hello, world!" cueIndex={0} vocabMap={new Map()} onWordClick={jest.fn()} />)
     const buttons = screen.getAllByRole('button')
     // Only 'Hello' and 'world' are words; comma, space, ! are punct
     expect(buttons.length).toBe(2)

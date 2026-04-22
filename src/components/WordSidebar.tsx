@@ -6,6 +6,7 @@ import { VocabInfo } from '@/lib/vocabulary'
 interface WordSidebarProps {
   word: string
   contextSentence: string
+  transcriptContext?: string[]
   vocabEntry: VocabInfo | undefined
   onClose: () => void
   onStatusChange?: (word: string, status: 'new' | 'learning' | 'mastered') => void
@@ -33,6 +34,7 @@ const STATUS_LABELS: Record<VocabInfo['status'], string> = {
 export default function WordSidebar({
   word,
   contextSentence,
+  transcriptContext,
   vocabEntry,
   onClose,
   onStatusChange,
@@ -63,10 +65,15 @@ export default function WordSidebar({
     setIsLoadingDefinition(true)
     setDefinitionError(null)
     try {
+      const body: Record<string, unknown> = { word, contextSentence }
+      if (transcriptContext) {
+        body.transcriptContext = transcriptContext
+      }
+
       const response = await fetch('/api/dictionary/define', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ word, contextSentence }),
+        body: JSON.stringify(body),
       })
 
       if (!response.ok) {

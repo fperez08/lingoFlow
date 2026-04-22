@@ -7,6 +7,7 @@ export const runtime = 'nodejs'
 const RequestSchema = z.object({
   word: z.string().min(1, 'Word is required'),
   contextSentence: z.string().min(1, 'Context sentence is required'),
+  transcriptContext: z.array(z.string()).optional(),
 })
 
 interface DefinitionResponse {
@@ -15,7 +16,24 @@ interface DefinitionResponse {
   example?: string
 }
 
-async function generateDefinition(word: string, contextSentence: string): Promise<DefinitionResponse> {
+function buildContextWindow(transcriptContext: string[] | undefined): string {
+  if (!transcriptContext || transcriptContext.length === 0) {
+    return ''
+  }
+
+  return transcriptContext.map((line, i) => {
+    if (transcriptContext.length === 1) return line
+    if (i === 0 && transcriptContext.length > 1) return `[previous] ${line}`
+    if (i === transcriptContext.length - 1 && transcriptContext.length > 1) return `[next] ${line}`
+    return `[current] ${line}`
+  }).join('\n')
+}
+
+async function generateDefinition(
+  word: string,
+  contextSentence: string,
+  transcriptContext?: string[]
+): Promise<DefinitionResponse> {
   const apiKey = process.env.GOOGLE_GEMINI_API_KEY
   if (!apiKey) {
     throw new Error('GOOGLE_GEMINI_API_KEY not configured')
@@ -24,7 +42,14 @@ async function generateDefinition(word: string, contextSentence: string): Promis
   const client = new GoogleGenerativeAI(apiKey)
   const model = client.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
-  const prompt = `You are a language learning assistant. Generate a clear, concise definition for the word "${word}" based on how it's used in this context: "${contextSentence}"
+  const contextWindow = buildContextWindow(transcriptContext)
+  const contextInfo = contextWindow
+    ? `Here is the surrounding context from the transcript:\n${contextWindow}`
+    : `Context: "${contextSentence}"`
+
+  const prompt = `You are a language learning assistant. Generate a clear, concise definition for the word "${word}" based on how it's used in this context.
+
+${contextInfo}
 
 Respond in valid JSON format only with these fields:
 - definition: (string) A concise definition of the word as used in the context
@@ -56,9 +81,9 @@ Return ONLY valid JSON, no markdown or extra text.`
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { word, contextSentence } = RequestSchema.parse(body)
+    const { word, contextSentence, transcriptContext } = RequestSchema.parse(body)
 
-    const definition = await generateDefinition(word, contextSentence)
+    const definition = await generateDefinition(word, contextSentence, transcriptContext)
 
     return NextResponse.json(definition)
   } catch (error) {
