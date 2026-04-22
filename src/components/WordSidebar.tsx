@@ -1,36 +1,39 @@
-'use client'
+"use client";
 
-import { useEffect, useRef, useState } from 'react'
-import { VocabInfo } from '@/lib/vocabulary'
-import { useUpdateWordDefinition } from '@/hooks/useVocabulary'
+import { useEffect, useRef, useState } from "react";
+import { VocabInfo } from "@/lib/vocabulary";
+import { useUpdateWordDefinition } from "@/hooks/useVocabulary";
 
 interface WordSidebarProps {
-  word: string
-  contextSentence: string
-  transcriptContext?: string[]
-  vocabEntry: VocabInfo | undefined
-  onClose: () => void
-  onStatusChange?: (word: string, status: 'new' | 'learning' | 'mastered') => void
-  isUpdating?: boolean
+  word: string;
+  contextSentence: string;
+  transcriptContext?: string[];
+  vocabEntry: VocabInfo | undefined;
+  onClose: () => void;
+  onStatusChange?: (
+    word: string,
+    status: "new" | "learning" | "mastered"
+  ) => void;
+  isUpdating?: boolean;
 }
 
 interface GeneratedDefinition {
-  definition: string
-  partOfSpeech?: string
-  example?: string
+  definition: string;
+  partOfSpeech?: string;
+  example?: string;
 }
 
-const STATUS_STYLES: Record<VocabInfo['status'], string> = {
-  mastered: 'text-green-600 bg-green-50 border-green-200',
-  learning: 'text-yellow-600 bg-yellow-50 border-yellow-200',
-  new: 'text-red-600 bg-red-50 border-red-200',
-}
+const STATUS_STYLES: Record<VocabInfo["status"], string> = {
+  mastered: "text-green-600 bg-green-50 border-green-200",
+  learning: "text-yellow-600 bg-yellow-50 border-yellow-200",
+  new: "text-red-600 bg-red-50 border-red-200",
+};
 
-const STATUS_LABELS: Record<VocabInfo['status'], string> = {
-  mastered: 'Mastered',
-  learning: 'Learning',
-  new: 'New',
-}
+const STATUS_LABELS: Record<VocabInfo["status"], string> = {
+  mastered: "Mastered",
+  learning: "Learning",
+  new: "New",
+};
 
 export default function WordSidebar({
   word,
@@ -41,79 +44,83 @@ export default function WordSidebar({
   onStatusChange,
   isUpdating = false,
 }: WordSidebarProps) {
-  const panelRef = useRef<HTMLDivElement>(null)
-  const [generatedDefinition, setGeneratedDefinition] = useState<GeneratedDefinition | null>(null)
-  const [isLoadingDefinition, setIsLoadingDefinition] = useState(false)
-  const [definitionError, setDefinitionError] = useState<string | null>(null)
-  const [isSavingDefinition, setIsSavingDefinition] = useState(false)
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [lastWord, setLastWord] = useState(word);
+  const [generatedDefinition, setGeneratedDefinition] =
+    useState<GeneratedDefinition | null>(
+      vocabEntry?.definition ? { definition: vocabEntry.definition } : null
+    );
+  const [isLoadingDefinition, setIsLoadingDefinition] = useState(false);
+  const [definitionError, setDefinitionError] = useState<string | null>(null);
+  const [isSavingDefinition, setIsSavingDefinition] = useState(false);
 
-  const saveDefinitionMutation = useUpdateWordDefinition()
+  // Derived state: reset when the selected word changes
+  if (word !== lastWord) {
+    setLastWord(word);
+    setGeneratedDefinition(
+      vocabEntry?.definition ? { definition: vocabEntry.definition } : null
+    );
+  }
 
-  // Auto-load saved definition from vocabEntry
-  useEffect(() => {
-    if (vocabEntry?.definition && !generatedDefinition) {
-      setGeneratedDefinition({
-        definition: vocabEntry.definition,
-      })
-    }
-  }, [vocabEntry, generatedDefinition])
+  const saveDefinitionMutation = useUpdateWordDefinition();
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose()
+      if (e.key === "Escape") onClose();
     }
-    document.addEventListener('keydown', handleKey)
-    return () => document.removeEventListener('keydown', handleKey)
-  }, [onClose])
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [onClose]);
 
-  const isKnown = vocabEntry?.status === 'mastered'
+  const isKnown = vocabEntry?.status === "mastered";
 
   function handleToggle() {
-    if (!onStatusChange) return
-    const nextStatus = isKnown ? 'new' : 'mastered'
-    onStatusChange(word, nextStatus)
+    if (!onStatusChange) return;
+    const nextStatus = isKnown ? "new" : "mastered";
+    onStatusChange(word, nextStatus);
   }
 
   async function handleGenerateDefinition() {
-    setIsLoadingDefinition(true)
-    setDefinitionError(null)
+    setIsLoadingDefinition(true);
+    setDefinitionError(null);
     try {
-      const body: Record<string, unknown> = { word, contextSentence }
+      const body: Record<string, unknown> = { word, contextSentence };
       if (transcriptContext) {
-        body.transcriptContext = transcriptContext
+        body.transcriptContext = transcriptContext;
       }
 
-      const response = await fetch('/api/dictionary/define', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/dictionary/define", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
-      })
+      });
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to generate definition')
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to generate definition");
       }
 
-      const data = (await response.json()) as GeneratedDefinition
-      setGeneratedDefinition(data)
+      const data = (await response.json()) as GeneratedDefinition;
+      setGeneratedDefinition(data);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'An error occurred'
-      setDefinitionError(message)
+      const message =
+        error instanceof Error ? error.message : "An error occurred";
+      setDefinitionError(message);
     } finally {
-      setIsLoadingDefinition(false)
+      setIsLoadingDefinition(false);
     }
   }
 
   async function handleSaveDefinition() {
-    if (!generatedDefinition) return
-    setIsSavingDefinition(true)
+    if (!generatedDefinition) return;
+    setIsSavingDefinition(true);
     try {
       await saveDefinitionMutation.mutateAsync({
         word: word.toLowerCase(),
         definition: generatedDefinition.definition,
-      })
+      });
     } finally {
-      setIsSavingDefinition(false)
+      setIsSavingDefinition(false);
     }
   }
 
@@ -137,7 +144,9 @@ export default function WordSidebar({
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-outline-variant/20 dark:border-slate-700">
-          <h2 className="text-lg font-bold text-on-surface dark:text-slate-100">Word Details</h2>
+          <h2 className="text-lg font-bold text-on-surface dark:text-slate-100">
+            Word Details
+          </h2>
           <button
             onClick={onClose}
             aria-label="Close word sidebar"
@@ -166,13 +175,17 @@ export default function WordSidebar({
             <span
               data-testid="sidebar-word"
               className={`text-3xl font-bold capitalize inline-block px-3 py-1 rounded-lg border ${
-                vocabEntry ? STATUS_STYLES[vocabEntry.status] : 'text-on-surface dark:text-slate-100 bg-surface-container dark:bg-slate-800 border-outline-variant/30'
+                vocabEntry
+                  ? STATUS_STYLES[vocabEntry.status]
+                  : "text-on-surface dark:text-slate-100 bg-surface-container dark:bg-slate-800 border-outline-variant/30"
               }`}
             >
               {word}
             </span>
             {vocabEntry && (
-              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full w-fit border ${STATUS_STYLES[vocabEntry.status]}`}>
+              <span
+                className={`text-xs font-semibold px-2 py-0.5 rounded-full w-fit border ${STATUS_STYLES[vocabEntry.status]}`}
+              >
                 {STATUS_LABELS[vocabEntry.status]}
               </span>
             )}
@@ -188,11 +201,15 @@ export default function WordSidebar({
                   </span>
                 )}
                 {vocabEntry.source && (
-                  <span className="text-xs text-on-surface-variant dark:text-slate-400">{vocabEntry.source}</span>
+                  <span className="text-xs text-on-surface-variant dark:text-slate-400">
+                    {vocabEntry.source}
+                  </span>
                 )}
               </div>
               {vocabEntry.definition && (
-                <p className="text-sm text-on-surface dark:text-slate-200 leading-relaxed">{vocabEntry.definition}</p>
+                <p className="text-sm text-on-surface dark:text-slate-200 leading-relaxed">
+                  {vocabEntry.definition}
+                </p>
               )}
             </div>
           )}
@@ -205,15 +222,15 @@ export default function WordSidebar({
               disabled={isUpdating}
               className={`w-full py-2 rounded-xl text-sm font-bold transition-opacity disabled:opacity-50 ${
                 isKnown
-                  ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                  : 'bg-green-100 text-green-700 hover:bg-green-200'
+                  ? "bg-red-100 text-red-700 hover:bg-red-200"
+                  : "bg-green-100 text-green-700 hover:bg-green-200"
               }`}
             >
               {isUpdating
-                ? 'Saving…'
+                ? "Saving…"
                 : isKnown
-                ? 'Mark as unknown'
-                : 'Mark as known'}
+                  ? "Mark as unknown"
+                  : "Mark as known"}
             </button>
           )}
 
@@ -225,7 +242,7 @@ export default function WordSidebar({
               data-testid="generate-definition-btn"
               className="w-full py-2 rounded-xl text-sm font-bold transition-opacity bg-blue-100 text-blue-700 hover:bg-blue-200 disabled:opacity-50"
             >
-              {isLoadingDefinition ? 'Generating...' : 'Generate Definition'}
+              {isLoadingDefinition ? "Generating..." : "Generate Definition"}
             </button>
 
             {definitionError && (
@@ -247,7 +264,10 @@ export default function WordSidebar({
                 </p>
                 {generatedDefinition.partOfSpeech && (
                   <p className="text-xs text-blue-700 dark:text-blue-300">
-                    Part of speech: <span className="font-semibold">{generatedDefinition.partOfSpeech}</span>
+                    Part of speech:{" "}
+                    <span className="font-semibold">
+                      {generatedDefinition.partOfSpeech}
+                    </span>
                   </p>
                 )}
                 {generatedDefinition.example && (
@@ -261,7 +281,7 @@ export default function WordSidebar({
                   data-testid="save-definition-btn"
                   className="w-full mt-2 py-2 rounded-lg text-xs font-bold bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50"
                 >
-                  {isSavingDefinition ? 'Saving...' : 'Save Definition'}
+                  {isSavingDefinition ? "Saving..." : "Save Definition"}
                 </button>
               </div>
             )}
@@ -282,5 +302,5 @@ export default function WordSidebar({
         </div>
       </div>
     </>
-  )
+  );
 }
