@@ -16,6 +16,7 @@ Switch level: /caveman lite|full|ultra|wenyan Stop: "stop caveman" or "normal mo
 Auto-Clarity: drop caveman for security warnings, irreversible actions, user confused. Resume after.
 
 Boundaries: code/commits/PRs written normal.
+TypeScript: `any` prohibited. Use exact types or `unknown` + narrowing.
 
 ## What This Repo Does
 
