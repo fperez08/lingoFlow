@@ -2,6 +2,17 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import WordSidebar from '../WordSidebar'
 import { VocabInfo } from '@/lib/vocabulary'
 
+// Mock the useUpdateWordDefinition hook
+jest.mock('@/hooks/useVocabulary', () => ({
+  useUpdateWordDefinition: jest.fn(() => ({
+    mutateAsync: jest.fn().mockResolvedValue({
+      word: 'serendipity',
+      definition: 'Test definition from AI',
+      status: 'learning',
+    }),
+  })),
+}))
+
 const mockVocabEntry: VocabInfo = {
   level: 'B2',
   definition: 'The occurrence and development of events by chance in a happy or beneficial way',
@@ -74,7 +85,9 @@ describe('WordSidebar', () => {
         onClose={jest.fn()}
       />
     )
-    expect(screen.getByText(mockVocabEntry.definition!)).toBeInTheDocument()
+    // The definition appears in vocab details and also in generated-definition auto-loaded area
+    const definitions = screen.getAllByText(mockVocabEntry.definition!)
+    expect(definitions.length).toBeGreaterThan(0)
   })
 
   it('does not render definition when no vocab entry', () => {
@@ -344,6 +357,89 @@ describe('WordSidebar', () => {
         })
       )
     })
+  })
+
+  it('shows Save Definition button after generating definition', async () => {
+    ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        definition: 'Test definition from AI',
+        partOfSpeech: 'noun',
+      }),
+    })
+
+    render(
+      <WordSidebar
+        word="serendipity"
+        contextSentence="It was pure serendipity that we met"
+        vocabEntry={mockVocabEntry}
+        onClose={jest.fn()}
+      />
+    )
+
+    fireEvent.click(screen.getByTestId('generate-definition-btn'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('save-definition-btn')).toBeInTheDocument()
+      expect(screen.getByTestId('save-definition-btn')).toHaveTextContent('Save Definition')
+    })
+  })
+
+  it('calls mutation when Save Definition button is clicked', async () => {
+    const { useUpdateWordDefinition } = require('@/hooks/useVocabulary')
+    const mockMutateAsync = jest.fn().mockResolvedValue({
+      word: 'serendipity',
+      definition: 'Test definition from AI',
+      status: 'learning',
+    })
+    useUpdateWordDefinition.mockReturnValue({
+      mutateAsync: mockMutateAsync,
+    })
+
+    ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        definition: 'Test definition from AI',
+      }),
+    })
+
+    render(
+      <WordSidebar
+        word="serendipity"
+        contextSentence="It was pure serendipity that we met"
+        vocabEntry={mockVocabEntry}
+        onClose={jest.fn()}
+      />
+    )
+
+    fireEvent.click(screen.getByTestId('generate-definition-btn'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('save-definition-btn')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByTestId('save-definition-btn'))
+
+    await waitFor(() => {
+      expect(mockMutateAsync).toHaveBeenCalledWith({
+        word: 'serendipity',
+        definition: 'Test definition from AI',
+      })
+    })
+  })
+
+  it('auto-loads definition from vocabEntry', () => {
+    render(
+      <WordSidebar
+        word="serendipity"
+        contextSentence="It was pure serendipity that we met"
+        vocabEntry={mockVocabEntry}
+        onClose={jest.fn()}
+      />
+    )
+
+    expect(screen.getByTestId('generated-definition')).toBeInTheDocument()
+    expect(screen.getByTestId('save-definition-btn')).toBeInTheDocument()
   })
 })
 

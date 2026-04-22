@@ -7,6 +7,7 @@ let mockVocabMapData = new Map()
 jest.mock('@/hooks/useVocabulary', () => ({
   useVocabulary: () => ({ data: mockVocabMapData, isLoading: false }),
   useUpdateWordStatus: () => ({ mutate: jest.fn(), isPending: false }),
+  useUpdateWordDefinition: () => ({ mutateAsync: jest.fn(), isPending: false }),
 }))
 
 const mockVideo: Video = {

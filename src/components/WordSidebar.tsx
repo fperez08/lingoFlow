@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { VocabInfo } from '@/lib/vocabulary'
+import { useUpdateWordDefinition } from '@/hooks/useVocabulary'
 
 interface WordSidebarProps {
   word: string
@@ -44,6 +45,18 @@ export default function WordSidebar({
   const [generatedDefinition, setGeneratedDefinition] = useState<GeneratedDefinition | null>(null)
   const [isLoadingDefinition, setIsLoadingDefinition] = useState(false)
   const [definitionError, setDefinitionError] = useState<string | null>(null)
+  const [isSavingDefinition, setIsSavingDefinition] = useState(false)
+
+  const saveDefinitionMutation = useUpdateWordDefinition()
+
+  // Auto-load saved definition from vocabEntry
+  useEffect(() => {
+    if (vocabEntry?.definition && !generatedDefinition) {
+      setGeneratedDefinition({
+        definition: vocabEntry.definition,
+      })
+    }
+  }, [vocabEntry, generatedDefinition])
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
@@ -88,6 +101,19 @@ export default function WordSidebar({
       setDefinitionError(message)
     } finally {
       setIsLoadingDefinition(false)
+    }
+  }
+
+  async function handleSaveDefinition() {
+    if (!generatedDefinition) return
+    setIsSavingDefinition(true)
+    try {
+      await saveDefinitionMutation.mutateAsync({
+        word: word.toLowerCase(),
+        definition: generatedDefinition.definition,
+      })
+    } finally {
+      setIsSavingDefinition(false)
     }
   }
 
@@ -229,6 +255,14 @@ export default function WordSidebar({
                     Example: {generatedDefinition.example}
                   </p>
                 )}
+                <button
+                  onClick={handleSaveDefinition}
+                  disabled={isSavingDefinition}
+                  data-testid="save-definition-btn"
+                  className="w-full mt-2 py-2 rounded-lg text-xs font-bold bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50"
+                >
+                  {isSavingDefinition ? 'Saving...' : 'Save Definition'}
+                </button>
               </div>
             )}
           </div>

@@ -76,7 +76,8 @@ export const ImportLocalVideoRequestSchema = z.object({
 })
 
 export const UpdateVocabRequestSchema = z.object({
-  status: z.enum(['new', 'learning', 'mastered']),
+  status: z.enum(['new', 'learning', 'mastered']).optional(),
+  definition: z.string().optional(),
 })
 
 export const UpdateVideoRequestSchema = z.object({
