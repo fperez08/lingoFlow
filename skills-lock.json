@@ -51,6 +51,11 @@
       "sourceType": "github",
       "computedHash": "32192340c1a14317b25741f5a0a38d162b387b6d4bfd09e0ed3859367321e98f"
     },
+    "setup-pre-commit": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "computedHash": "f9aeedf0a1f560ec465c3939c54434c2d949ac8b958a0493db52216f688a0366"
+    },
     "tdd": {
       "source": "mattpocock/skills",
       "sourceType": "github",
