@@ -27,13 +27,14 @@ function parseTimeToSeconds(timestamp: string): number {
 export default function PlayerClient({ video, cues: propCues }: { video: Video; cues?: TranscriptCue[] }) {
   const { data: vocabMap = new Map() } = useVocabulary()
   const updateWordStatus = useUpdateWordStatus()
-  const [cues, setCues] = useState<TranscriptCue[]>(propCues ?? [])
+  const [fetchedCues, setFetchedCues] = useState<TranscriptCue[]>([])
   const [loadingTranscript, setLoadingTranscript] = useState(propCues === undefined)
   const [activeCueIndex, setActiveCueIndex] = useState(0)
   const [isMiniPlayerOpen, setIsMiniPlayerOpen] = useState(false)
   const [playbackTime, setPlaybackTime] = useState({ current: 0, duration: 0 })
   const [requestedSeekTime, setRequestedSeekTime] = useState<number | null>(null)
   const [selectedWord, setSelectedWord] = useState<SelectedWord | null>(null)
+  const cues = propCues ?? fetchedCues
 
   function handleTimeUpdate(current: number, duration: number) {
     setPlaybackTime({ current, duration })
@@ -47,21 +48,15 @@ export default function PlayerClient({ video, cues: propCues }: { video: Video; 
   }
 
   useEffect(() => {
-    if (propCues === undefined) return
-    setCues(propCues)
-    setLoadingTranscript(false)
-  }, [propCues])
-
-  useEffect(() => {
     if (propCues !== undefined) return
     fetch(`/api/videos/${video.id}/transcript`)
       .then((r) => r.json())
       .then((data) => {
         const fetchedCues: TranscriptCue[] = data.cues ?? []
-        setCues(fetchedCues)
+        setFetchedCues(fetchedCues)
       })
       .catch(() => {
-        setCues([])
+        setFetchedCues([])
       })
       .finally(() => setLoadingTranscript(false))
   }, [propCues, video.id])

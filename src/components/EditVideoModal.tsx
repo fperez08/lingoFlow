@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { VideoCardProps } from './VideoCard'
 
 interface EditVideoModalProps {
@@ -10,23 +10,23 @@ interface EditVideoModalProps {
 }
 
 export default function EditVideoModal({ video, onClose, onSave }: EditVideoModalProps) {
-  const [tags, setTags] = useState<string[]>([])
+  if (!video) return null
+
+  return <EditVideoModalContent key={video.id} video={video} onClose={onClose} onSave={onSave} />
+}
+
+interface EditVideoModalContentProps {
+  video: VideoCardProps
+  onClose: () => void
+  onSave: (updatedVideo: VideoCardProps) => void
+}
+
+function EditVideoModalContent({ video, onClose, onSave }: EditVideoModalContentProps) {
+  const [tags, setTags] = useState<string[]>(video.tags)
   const [tagInput, setTagInput] = useState('')
   const [transcript, setTranscript] = useState<File | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (video) {
-      setTags(video.tags)
-      setTagInput('')
-      setTranscript(null)
-      setIsSaving(false)
-      setError(null)
-    }
-  }, [video])
-
-  if (!video) return null
 
   const handleRemoveTag = (tag: string) => {
     setTags((prev) => prev.filter((t) => t !== tag))
