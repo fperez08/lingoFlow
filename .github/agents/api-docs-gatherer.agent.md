@@ -2,7 +2,7 @@
 name: api-docs-gatherer
 description: Gathers and maintains API documentation for the project tech stack. Detects installed stack, checks existing docs in docs/, refreshes stack docs with chub, and reports completion. Called by the orchestrator only.
 tools: ["execute", "read", "edit"]
-model: Claude Haiku 4.5 (copilot)
+model: auto
 disable-model-invocation: true
 user-invocable: false
 ---
@@ -11,7 +11,13 @@ API documentation collector. Called by `orchestrator` as first phase. Identify p
 
 ## Input you receive
 
-Orchestrator passes no issue-specific context. This agent works from repository state only.
+Orchestrator/script may pass trace context (issue payload, chub help text). This agent still works from repository state only for doc generation decisions.
+
+## Console logging requirement
+
+Print progress logs to stdout throughout execution so user can follow along.
+- Prefix every major-step log with `[api-docs-gatherer]`.
+- At minimum log: stack detection start/end, chub usage discovery, each topic fetch attempt, file write/refresh decisions, completion summary.
 
 ## Steps
 
@@ -38,6 +44,8 @@ chub help
 ```
 
 Read help output to understand available subcommands and doc query method.
+
+If caller already provided `chub help` output in prompt context, use it as initial reference and still validate locally when possible.
 
 If `chub` not installed or returns error, note this, skip fetch step, create or update `docs/chub-unavailable.md` with status, and continue to reporting.
 

@@ -6,12 +6,13 @@ cd "$ROOT_DIR"
 
 usage() {
   cat <<'USAGE'
-Usage: ./dev-pipeline.sh <issue-number>
+Usage: ./ai-dev-workflow.sh <issue-number>
 
 Runs single-issue development pipeline:
-1) Fetch issue data from GitHub
-2) Invoke Copilot CLI with orchestrator agent
-3) Print implemented issue and raised PR
+1) Validate required tools and auth (gh, copilot, chub)
+2) Fetch issue data + chub usage info + recent commit context
+3) Run agents in order: api-docs-gatherer -> project-docs-generator -> coding-subagent
+4) Validate coding result and report implemented issue + PR status
 USAGE
 }
 
@@ -20,6 +21,41 @@ require_cmd() {
     echo "Error: required command '$1' not found in PATH." >&2
     exit 1
   fi
+}
+
+require_file() {
+  if [[ ! -f "$1" ]]; then
+    echo "Error: missing required file $1" >&2
+    exit 1
+  fi
+}
+
+run_agent_phase() {
+  local phase_name="$1"
+  local agent_name="$2"
+  local prompt="$3"
+  local output_file="$4"
+
+  echo "[$phase_name] Running $agent_name..."
+
+  set +e
+  copilot \
+    --agent "$agent_name" \
+    --model auto \
+    --yolo \
+    --no-ask-user \
+    --max-autopilot-continues 10 \
+    --silent \
+    -p "$prompt" | tee "$output_file"
+  local exit_code=${PIPESTATUS[0]}
+  set -e
+
+  if [[ $exit_code -ne 0 ]]; then
+    echo "Error: phase '$phase_name' failed with exit code $exit_code." >&2
+    return $exit_code
+  fi
+
+  echo "[$phase_name] Completed $agent_name invocation."
 }
 
 if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
@@ -40,18 +76,18 @@ fi
 
 require_cmd gh
 require_cmd copilot
+require_cmd chub
 
 if ! gh auth status >/dev/null 2>&1; then
   echo "Error: gh is not authenticated. Run 'gh auth login' first." >&2
   exit 1
 fi
 
-if [[ ! -f ".github/agents/orchestrator.agent.md" ]]; then
-  echo "Error: missing agent file .github/agents/orchestrator.agent.md" >&2
-  exit 1
-fi
+require_file ".github/agents/api-docs-gatherer.agent.md"
+require_file ".github/agents/project-docs-generator.agent.md"
+require_file ".github/agents/coding-subagent.agent.md"
 
-echo "[1/3] Fetching issue #$ISSUE_NUMBER from GitHub..."
+echo "[workflow] Fetching issue #$ISSUE_NUMBER from GitHub..."
 ISSUE_JSON="$(gh issue view "$ISSUE_NUMBER" --json number,title,body,url,labels,milestone --jq '{number,title,body,url,labels:[.labels[].name],milestone:(.milestone.title // "")}' 2>/dev/null || true)"
 
 if [[ -z "$ISSUE_JSON" || "$ISSUE_JSON" == "null" ]]; then
@@ -59,61 +95,137 @@ if [[ -z "$ISSUE_JSON" || "$ISSUE_JSON" == "null" ]]; then
   exit 1
 fi
 
-PROMPT=$(cat <<EOF
-You are running a single-issue development pipeline.
+echo "[workflow] Capturing chub usage info..."
+set +e
+CHUB_HELP="$(chub help 2>&1)"
+CHUB_HELP_EXIT=$?
+set -e
 
-Use agent: orchestrator.
+if [[ $CHUB_HELP_EXIT -ne 0 || -z "$CHUB_HELP" ]]; then
+  echo "Error: 'chub help' failed. Ensure chub is installed and working." >&2
+  exit 1
+fi
+
+echo "[workflow] Fetching last 10 commits using gh..."
+COMMITS_SUMMARY="$(gh api repos/:owner/:repo/commits -f per_page=10 --jq '.[] | "- \(.sha[0:7]) \(.commit.message | split("\n")[0]) - \(.commit.author.name) @ \(.commit.author.date)"' 2>/dev/null || true)"
+
+if [[ -z "$COMMITS_SUMMARY" ]]; then
+  echo "Error: failed to fetch last 10 commits with gh." >&2
+  exit 1
+fi
+
+TMP_API_OUTPUT="$(mktemp)"
+TMP_PROJECT_OUTPUT="$(mktemp)"
+TMP_CODING_OUTPUT="$(mktemp)"
+trap 'rm -f "$TMP_API_OUTPUT" "$TMP_PROJECT_OUTPUT" "$TMP_CODING_OUTPUT"' EXIT
+
+API_PROMPT=$(cat <<EOF
+Phase 1.
+Agent: api-docs-gatherer.
+
+Use chub help below as command truth:
+$CHUB_HELP
+
+Do:
+1) Log steps. Prefix [api-docs-gatherer].
+2) Refresh docs/ API stack docs.
+3) End with:
+API DOCS COMPLETE - Project Stack
+EOF
+)
+
+PROJECT_PROMPT=$(cat <<EOF
+Phase 2.
+Agent: project-docs-generator.
+
+Do:
+1) Log steps. Prefix [project-docs-generator].
+2) Refresh project docs in docs/.
+3) End with:
+PROJECT DOCS COMPLETE - Repository State
+EOF
+)
+
+CODING_PROMPT=$(cat <<EOF
+Phase 3.
+Agent: coding-subagent.
 
 Issue payload (JSON):
 $ISSUE_JSON
 
-Required execution order:
-1. Call api-docs-gatherer first.
-2. Then call project-docs-generator.
-3. Then call coding-subagent and pass the full issue payload.
-4. Then call task-reporter.
+Recent commit context (last 10 commits fetched via gh):
+$COMMITS_SUMMARY
 
-Final output requirements:
-- Include implemented issue number and title.
-- Include PR URL raised by coding-subagent.
-- Clearly indicate completion status.
+Do:
+1) Log steps. Prefix [coding-subagent].
+2) Implement issue.
+3) Create PR.
+4) End with:
+TASK COMPLETE - Report for orchestrator
 EOF
 )
 
-echo "[2/3] Running Copilot orchestrator pipeline..."
-TMP_OUTPUT="$(mktemp)"
-trap 'rm -f "$TMP_OUTPUT"' EXIT
+echo "[workflow] Phase 1/3: API docs gatherer"
+run_agent_phase "api-docs-gatherer" "api-docs-gatherer" "$API_PROMPT" "$TMP_API_OUTPUT"
 
-set +e
-copilot \
-  --agent orchestrator \
-  --model gpt-5.3-codex \
-  --yolo \
-  --no-ask-user \
-  --max-autopilot-continues 10 \
-  --silent \
-  -p "$PROMPT" | tee "$TMP_OUTPUT"
-COPILOT_EXIT=${PIPESTATUS[0]}
-set -e
-
-if [[ $COPILOT_EXIT -ne 0 ]]; then
-  echo "Error: Copilot pipeline failed with exit code $COPILOT_EXIT." >&2
-  exit $COPILOT_EXIT
+API_DOCS_OK=0
+if grep -q "API DOCS COMPLETE" "$TMP_API_OUTPUT" && grep -q "Project Stack" "$TMP_API_OUTPUT"; then
+  API_DOCS_OK=1
 fi
 
-PR_URL="$(grep -Eo 'https://github\.com/[^[:space:]]+/pull/[0-9]+' "$TMP_OUTPUT" | head -n1 || true)"
-IMPLEMENTED_ISSUE_LINE="$(grep -E 'Issue[: ]+#[0-9]+' "$TMP_OUTPUT" | head -n1 || true)"
-
-if [[ -z "$PR_URL" ]]; then
-  echo "Error: pipeline completed but no PR URL found in orchestrator output." >&2
+if [[ $API_DOCS_OK -ne 1 ]]; then
+  echo "Error: api-docs-gatherer output missing completion marker." >&2
   exit 1
 fi
+
+echo "[workflow] Phase 2/3: Project docs generator"
+run_agent_phase "project-docs-generator" "project-docs-generator" "$PROJECT_PROMPT" "$TMP_PROJECT_OUTPUT"
+
+PROJECT_DOCS_OK=0
+if grep -q "PROJECT DOCS COMPLETE" "$TMP_PROJECT_OUTPUT" && grep -q "Repository State" "$TMP_PROJECT_OUTPUT"; then
+  PROJECT_DOCS_OK=1
+fi
+
+if [[ $PROJECT_DOCS_OK -ne 1 ]]; then
+  echo "Error: project-docs-generator output missing completion marker." >&2
+  exit 1
+fi
+
+echo "[workflow] Phase 3/3: Coding subagent"
+run_agent_phase "coding-subagent" "coding-subagent" "$CODING_PROMPT" "$TMP_CODING_OUTPUT"
+
+CODING_OK=0
+if grep -q "TASK COMPLETE" "$TMP_CODING_OUTPUT" && grep -q "Report for orchestrator" "$TMP_CODING_OUTPUT"; then
+  CODING_OK=1
+fi
+
+if [[ $CODING_OK -ne 1 ]]; then
+  echo "Error: coding-subagent output missing completion marker." >&2
+  exit 1
+fi
+
+PR_URL="$(grep -Eo 'https://github\.com/[^[:space:]]+/pull/[0-9]+' "$TMP_CODING_OUTPUT" | head -n1 || true)"
+IMPLEMENTED_ISSUE_LINE="$(grep -E '\*\*Issue:\*\* #[0-9]+|Issue[: ]+#[0-9]+' "$TMP_CODING_OUTPUT" | head -n1 || true)"
+PR_STATUS_LINE="$(grep -E '\*\*PR Status:\*\*|PR Status:' "$TMP_CODING_OUTPUT" | head -n1 || true)"
 
 if [[ -z "$IMPLEMENTED_ISSUE_LINE" ]]; then
   IMPLEMENTED_ISSUE_LINE="Issue: #$ISSUE_NUMBER"
 fi
 
-echo "[3/3] Pipeline summary"
+if [[ -z "$PR_URL" ]]; then
+  echo "Error: coding phase completed but no PR URL found." >&2
+  exit 1
+fi
+
+echo "[workflow] Pipeline summary"
+echo "API Docs: PASS"
+echo "Project Docs: PASS"
+echo "Coding: PASS"
 echo "$IMPLEMENTED_ISSUE_LINE"
 echo "PR: $PR_URL"
+
+if [[ -n "$PR_STATUS_LINE" ]]; then
+  echo "$PR_STATUS_LINE"
+fi
+
 echo "Status: SUCCESS"
