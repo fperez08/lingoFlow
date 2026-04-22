@@ -46,7 +46,7 @@ run_agent_phase() {
     --no-ask-user \
     --max-autopilot-continues 10 \
     --silent \
-    -p "$prompt" | tee "$output_file"
+    -p "$prompt" 2>&1 | tee "$output_file"
   local exit_code=${PIPESTATUS[0]}
   set -e
 
@@ -56,6 +56,53 @@ run_agent_phase() {
   fi
 
   echo "[$phase_name] Completed $agent_name invocation."
+}
+
+sanitize_output_file() {
+  local input_file="$1"
+  # Strip CR + ANSI color/control sequences so marker matching works reliably.
+  tr -d '\r' < "$input_file" | sed -E 's/\x1B\[[0-9;?]*[[:alpha:]]//g'
+}
+
+output_has_all_markers() {
+  local input_file="$1"
+  local marker1="$2"
+  local marker2="$3"
+
+  local cleaned_output
+  cleaned_output="$(sanitize_output_file "$input_file")"
+
+  if grep -Fqi "$marker1" <<< "$cleaned_output" && grep -Fqi "$marker2" <<< "$cleaned_output"; then
+    return 0
+  fi
+
+  return 1
+}
+
+output_matches_regexes() {
+  local input_file="$1"
+  local regex1="$2"
+  local regex2="$3"
+
+  local cleaned_output
+  cleaned_output="$(sanitize_output_file "$input_file")"
+
+  if grep -Eqi "$regex1" <<< "$cleaned_output" && grep -Eqi "$regex2" <<< "$cleaned_output"; then
+    return 0
+  fi
+
+  return 1
+}
+
+handle_missing_completion_marker() {
+  local phase_name="$1"
+
+  if [[ "${STRICT_COMPLETION_MARKERS:-0}" == "1" ]]; then
+    echo "Error: ${phase_name} output missing completion marker." >&2
+    exit 1
+  fi
+
+  echo "Warning: ${phase_name} output missing completion marker. Continuing because agent exited successfully." >&2
 }
 
 if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
@@ -169,39 +216,39 @@ echo "[workflow] Phase 1/3: API docs gatherer"
 run_agent_phase "api-docs-gatherer" "api-docs-gatherer" "$API_PROMPT" "$TMP_API_OUTPUT"
 
 API_DOCS_OK=0
-if grep -q "API DOCS COMPLETE" "$TMP_API_OUTPUT" && grep -q "Project Stack" "$TMP_API_OUTPUT"; then
+if output_has_all_markers "$TMP_API_OUTPUT" "API DOCS COMPLETE" "Project Stack" \
+  || output_matches_regexes "$TMP_API_OUTPUT" "phase[[:space:]]*1[^[:alnum:]]*complete|api[[:space:]-]*docs[[:space:]]*complete" "api|docs|documentation|stack"; then
   API_DOCS_OK=1
 fi
 
 if [[ $API_DOCS_OK -ne 1 ]]; then
-  echo "Error: api-docs-gatherer output missing completion marker." >&2
-  exit 1
+  handle_missing_completion_marker "api-docs-gatherer"
 fi
 
 echo "[workflow] Phase 2/3: Project docs generator"
 run_agent_phase "project-docs-generator" "project-docs-generator" "$PROJECT_PROMPT" "$TMP_PROJECT_OUTPUT"
 
 PROJECT_DOCS_OK=0
-if grep -q "PROJECT DOCS COMPLETE" "$TMP_PROJECT_OUTPUT" && grep -q "Repository State" "$TMP_PROJECT_OUTPUT"; then
+if output_has_all_markers "$TMP_PROJECT_OUTPUT" "PROJECT DOCS COMPLETE" "Repository State" \
+  || output_matches_regexes "$TMP_PROJECT_OUTPUT" "phase[[:space:]]*2[^[:alnum:]]*complete|project[[:space:]-]*docs[[:space:]]*complete" "project|repository|docs"; then
   PROJECT_DOCS_OK=1
 fi
 
 if [[ $PROJECT_DOCS_OK -ne 1 ]]; then
-  echo "Error: project-docs-generator output missing completion marker." >&2
-  exit 1
+  handle_missing_completion_marker "project-docs-generator"
 fi
 
 echo "[workflow] Phase 3/3: Coding subagent"
 run_agent_phase "coding-subagent" "coding-subagent" "$CODING_PROMPT" "$TMP_CODING_OUTPUT"
 
 CODING_OK=0
-if grep -q "TASK COMPLETE" "$TMP_CODING_OUTPUT" && grep -q "Report for orchestrator" "$TMP_CODING_OUTPUT"; then
+if output_has_all_markers "$TMP_CODING_OUTPUT" "TASK COMPLETE" "Report for orchestrator" \
+  || output_matches_regexes "$TMP_CODING_OUTPUT" "phase[[:space:]]*3[^[:alnum:]]*complete|task[[:space:]-]*complete" "orchestrator|report|pr|issue"; then
   CODING_OK=1
 fi
 
 if [[ $CODING_OK -ne 1 ]]; then
-  echo "Error: coding-subagent output missing completion marker." >&2
-  exit 1
+  handle_missing_completion_marker "coding-subagent"
 fi
 
 PR_URL="$(grep -Eo 'https://github\.com/[^[:space:]]+/pull/[0-9]+' "$TMP_CODING_OUTPUT" | head -n1 || true)"

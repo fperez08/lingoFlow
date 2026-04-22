@@ -2,7 +2,6 @@
 name: project-docs-generator
 description: Keep project documentation up to date for `orchestrator`. Detect current codebase context, persist docs in docs/, maintain docs/index.md, report completion. Called by orchestrator only.
 tools: ["execute", "search", "read",  "edit"]
-model: auto
 disable-model-invocation: true
 user-invocable: false
 ---

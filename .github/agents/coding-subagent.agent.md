@@ -2,7 +2,6 @@
 name: coding-subagent
 description: Execute single coding task from orchestrator. Given issue plus pre-generated docs in docs/, write code, update tests/docs, validate build, open PR, and report back to orchestrator.
 tools: ["execute", "read", "edit", "search"]
-model: auto
 disable-model-invocation: true
 user-invocable: false
 ---

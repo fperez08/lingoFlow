@@ -2,7 +2,6 @@
 name: api-docs-gatherer
 description: Gathers and maintains API documentation for the project tech stack. Detects installed stack, checks existing docs in docs/, refreshes stack docs with chub, and reports completion. Called by the orchestrator only.
 tools: ["execute", "read", "edit"]
-model: auto
 disable-model-invocation: true
 user-invocable: false
 ---
