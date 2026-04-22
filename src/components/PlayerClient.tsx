@@ -13,6 +13,8 @@ import { useVocabulary, useUpdateWordStatus } from '@/hooks/useVocabulary'
 interface SelectedWord {
   word: string
   contextSentence: string
+  transcriptContext: string[]
+  cueIndex: number
 }
 
 function parseTimeToSeconds(timestamp: string): number {
@@ -22,6 +24,22 @@ function parseTimeToSeconds(timestamp: string): number {
 
   const [, hh, mm, ss, ms] = match
   return Number(hh) * 3600 + Number(mm) * 60 + Number(ss) + Number(ms) / 1000
+}
+
+function buildTranscriptContext(cues: TranscriptCue[], cueIndex: number): string[] {
+  const context: string[] = []
+
+  if (cueIndex > 0) {
+    context.push(cues[cueIndex - 1].text)
+  }
+
+  context.push(cues[cueIndex].text)
+
+  if (cueIndex < cues.length - 1) {
+    context.push(cues[cueIndex + 1].text)
+  }
+
+  return context
 }
 
 export default function PlayerClient({ video, cues: propCues }: { video: Video; cues?: TranscriptCue[] }) {
@@ -132,15 +150,23 @@ export default function PlayerClient({ video, cues: propCues }: { video: Video; 
                         <p className="text-sm text-on-surface dark:text-slate-100 leading-relaxed">
                           <CueText
                             text={cue.text}
+                            cueIndex={i}
                             vocabMap={vocabMap}
-                            onWordClick={(word, sentence) => setSelectedWord({ word, contextSentence: sentence })}
+                            onWordClick={(word, sentence, cueIndex) => {
+                              const context = buildTranscriptContext(cues, cueIndex)
+                              setSelectedWord({ word, contextSentence: sentence, transcriptContext: context, cueIndex })
+                            }}
                           />
                         </p>
                       ) : (
                         <CueText
                           text={cue.text}
+                          cueIndex={i}
                           vocabMap={vocabMap}
-                          onWordClick={(word, sentence) => setSelectedWord({ word, contextSentence: sentence })}
+                          onWordClick={(word, sentence, cueIndex) => {
+                            const context = buildTranscriptContext(cues, cueIndex)
+                            setSelectedWord({ word, contextSentence: sentence, transcriptContext: context, cueIndex })
+                          }}
                         />
                       )}
                     </div>
@@ -167,6 +193,7 @@ export default function PlayerClient({ video, cues: propCues }: { video: Video; 
         <WordSidebar
           word={selectedWord.word}
           contextSentence={selectedWord.contextSentence}
+          transcriptContext={selectedWord.transcriptContext}
           vocabEntry={vocabMap.get(selectedWord.word.toLowerCase())}
           onClose={() => setSelectedWord(null)}
           onStatusChange={(w, status) => updateWordStatus.mutate({ word: w, status })}

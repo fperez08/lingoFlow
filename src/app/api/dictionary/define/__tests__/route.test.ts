@@ -135,4 +135,87 @@ describe('/api/dictionary/define', () => {
     expect(data).toHaveProperty('definition')
     expect(data.definition).toBe('Invalid JSON')
   })
+
+  it('should accept 3-line context (previous, current, next)', async () => {
+    const request = new Request('http://localhost:3000/api/dictionary/define', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        word: 'serendipity',
+        contextSentence: 'It was pure serendipity that we met',
+        transcriptContext: [
+          'We had given up hope.',
+          'It was pure serendipity that we met',
+          'Fate brought us together.',
+        ],
+      }),
+    })
+
+    const response = await POST(request)
+    expect(response.status).toBe(200)
+
+    const data = await response.json()
+    expect(data).toHaveProperty('definition')
+  })
+
+  it('should handle single-line transcript (first and only line)', async () => {
+    const request = new Request('http://localhost:3000/api/dictionary/define', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        word: 'serendipity',
+        contextSentence: 'It was pure serendipity that we met',
+        transcriptContext: ['It was pure serendipity that we met'],
+      }),
+    })
+
+    const response = await POST(request)
+    expect(response.status).toBe(200)
+
+    const data = await response.json()
+    expect(data).toHaveProperty('definition')
+  })
+
+  it('should handle first line of transcript (no previous)', async () => {
+    const request = new Request('http://localhost:3000/api/dictionary/define', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        word: 'serendipity',
+        contextSentence: 'It was pure serendipity that we met',
+        transcriptContext: [
+          'It was pure serendipity that we met',
+          'Fate brought us together.',
+        ],
+      }),
+    })
+
+    const response = await POST(request)
+    expect(response.status).toBe(200)
+
+    const data = await response.json()
+    expect(data).toHaveProperty('definition')
+  })
+
+  it('should handle last line of transcript (no next)', async () => {
+    const request = new Request('http://localhost:3000/api/dictionary/define', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        word: 'serendipity',
+        contextSentence: 'Fate brought us together.',
+        transcriptContext: [
+          'We had given up hope.',
+          'It was pure serendipity that we met',
+          'Fate brought us together.',
+        ],
+      }),
+    })
+
+    const response = await POST(request)
+    expect(response.status).toBe(200)
+
+    const data = await response.json()
+    expect(data).toHaveProperty('definition')
+  })
 })

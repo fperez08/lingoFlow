@@ -5,8 +5,9 @@ import { VocabInfo } from '@/lib/vocabulary'
 
 interface CueTextProps {
   text: string
+  cueIndex: number
   vocabMap: Map<string, VocabInfo>
-  onWordClick: (word: string, sentence: string) => void
+  onWordClick: (word: string, sentence: string, cueIndex: number) => void
 }
 
 const STATUS_WORD_STYLES: Record<VocabInfo['status'], string> = {
@@ -17,7 +18,7 @@ const STATUS_WORD_STYLES: Record<VocabInfo['status'], string> = {
 
 const DEFAULT_WORD_STYLE = 'cursor-pointer hover:bg-surface-container dark:hover:bg-slate-700 rounded transition-colors'
 
-export default function CueText({ text, vocabMap, onWordClick }: CueTextProps) {
+export default function CueText({ text, cueIndex, vocabMap, onWordClick }: CueTextProps) {
   const tokens = tokenizeCueText(text)
 
   return (
@@ -39,12 +40,12 @@ export default function CueText({ text, vocabMap, onWordClick }: CueTextProps) {
             className={`inline px-0.5 ${style}`}
             onClick={(e) => {
               e.stopPropagation()
-              onWordClick(token.raw, text)
+              onWordClick(token.raw, text, cueIndex)
             }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.stopPropagation()
-                onWordClick(token.raw, text)
+                onWordClick(token.raw, text, cueIndex)
               }
             }}
           >

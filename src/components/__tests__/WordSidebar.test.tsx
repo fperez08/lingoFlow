@@ -308,5 +308,42 @@ describe('WordSidebar', () => {
       expect(screen.queryByText('First definition')).not.toBeInTheDocument()
     })
   })
+
+  it('sends transcript context to API when provided', async () => {
+    ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        definition: 'Test definition',
+        partOfSpeech: 'noun',
+      }),
+    })
+
+    render(
+      <WordSidebar
+        word="serendipity"
+        contextSentence="It was pure serendipity that we met"
+        transcriptContext={[
+          'We had given up hope.',
+          'It was pure serendipity that we met',
+          'Fate brought us together.',
+        ]}
+        vocabEntry={mockVocabEntry}
+        onClose={jest.fn()}
+      />
+    )
+
+    fireEvent.click(screen.getByTestId('generate-definition-btn'))
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/dictionary/define',
+        expect.objectContaining({
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: expect.stringContaining('transcriptContext'),
+        })
+      )
+    })
+  })
 })
 
