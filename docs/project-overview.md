@@ -7,13 +7,15 @@
 
 ## What Is LingoFlow?
 
-**LingoFlow** is a local-first, single-user Next.js web app for importing YouTube videos or local video files with transcript files (`.srt`, `.vtt`, `.txt`), syncing video playback with transcript display, editing tags/metadata, and browsing vocabulary.
+**LingoFlow** is a local-first, single-user Next.js web app for importing YouTube videos or local video files with transcript files (`.srt`, `.vtt`, `.txt`), syncing video playback with transcript display, editing tags/metadata, and browsing vocabulary with word status tracking.
 
 - **No cloud backend** — all data stored locally in SQLite (`.lingoflow-data/lingoflow.db`)
 - **No authentication** — single-user app
-- **Local-first** — transcripts, videos, and thumbnails stored on local filesystem
+- **Local-first** — transcripts, videos, thumbnails stored on local filesystem
+- **Vocabulary tracking** — mark words as learned (CEFR levels A1–C2) in database
 - **React 19 + TypeScript 5** — strict mode enabled
 - **App Router** — Next.js 16.2.3 (no Pages directory)
+- **Video processing** — thumbnails extracted via ffmpeg on import
 
 ---
 
@@ -140,7 +142,9 @@ User clicks edit → EditVideoModal opens
 ```
 User navigates /vocabulary
   → Server fetches: GET /api/vocabulary
-  → Renders vocabulary list
+    → VocabStore queries SQLite
+    → Returns populated VocabEntry[] (loaded from DB)
+  → Renders vocabulary list with status tracking
   → User can mark words as learned (status → CEFR level)
   → PATCH /api/vocabulary/{word}
     → VocabStore updates word status in SQLite
@@ -368,7 +372,7 @@ pnpm lint
 | Import local video + transcript | ✅ Complete | Supports .srt, .vtt, .txt |
 | Video grid + metadata | ✅ Complete | Tags, thumbnails, sync |
 | Player + transcript sync | ✅ Complete | Seeks to cue on click |
-| Vocabulary browser | ✅ Complete | DB-wired (uses mock data for initial load) |
+| Vocabulary browser | ✅ Complete | DB-wired with CEFR level tracking (A1–C2) |
 | Edit video metadata | ✅ Complete | Tags, transcripts |
 | Delete video | ✅ Complete | Cleanup: DB, files, thumbnails |
 | Generate thumbnails | ✅ Complete | Via ffmpeg post-import task |

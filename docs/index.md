@@ -4,6 +4,15 @@
 
 ---
 
+## Project Documentation
+
+| File | Contents |
+|---|---|
+| [`project-overview.md`](./project-overview.md) | **Project overview** — what LingoFlow does, quick start, tech stack, module ownership, core runtime behavior |
+| [`project-architecture.md`](./project-architecture.md) | **Architecture reference** — system design, service layer, data flow, component tree, conventions, critical patterns, file structure |
+
+---
+
 ## Files
 
 | File | Contents |

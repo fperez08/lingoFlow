@@ -19,7 +19,7 @@ Boundaries: code/commits/PRs written normal.
 
 ## What This Repo Does
 
-LingoFlow is **local-first, single-user Next.js web app** (App Router, React 19, TypeScript 5). User import YouTube video + transcript file (`.srt`, `.vtt`, `.txt`), view synced transcript/player, edit tags/metadata, browse vocabulary. No app-owned backend or auth; fetch video metadata from YouTube oEmbed at import, store local in SQLite. Vocabulary page uses mock data only (not DB-wired yet). Transcript files live on local filesystem.
+LingoFlow is **local-first, single-user Next.js web app** (App Router, React 19, TypeScript 5). User imports local video files or YouTube videos with transcript files (`.srt`, `.vtt`, `.txt`), views synced transcript/player, edits tags/metadata, browses vocabulary with status tracking. No app-owned backend or auth; all data stored locally in SQLite. Transcript files and videos live on local filesystem. Thumbnails extracted via ffmpeg on import.
 
 ## Tech Stack
 
