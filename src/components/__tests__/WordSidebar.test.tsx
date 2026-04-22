@@ -1,4 +1,10 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  cleanup,
+} from "@testing-library/react";
 import WordSidebar from "../WordSidebar";
 import { VocabInfo } from "@/lib/vocabulary";
 import { useUpdateWordDefinition } from "@/hooks/useVocabulary";
@@ -26,6 +32,14 @@ const mockVocabEntry: VocabInfo = {
 global.fetch = jest.fn();
 
 describe("WordSidebar", () => {
+  beforeEach(() => {
+    (global.fetch as jest.Mock).mockClear();
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
   it("renders the selected word", () => {
     render(
       <WordSidebar
@@ -229,7 +243,7 @@ describe("WordSidebar", () => {
       <WordSidebar
         word="serendipity"
         contextSentence="It was pure serendipity that we met"
-        vocabEntry={mockVocabEntry}
+        vocabEntry={undefined}
         onClose={jest.fn()}
       />
     );
@@ -260,7 +274,7 @@ describe("WordSidebar", () => {
       <WordSidebar
         word="serendipity"
         contextSentence="It was pure serendipity that we met"
-        vocabEntry={mockVocabEntry}
+        vocabEntry={undefined}
         onClose={jest.fn()}
       />
     );
@@ -285,7 +299,7 @@ describe("WordSidebar", () => {
       <WordSidebar
         word="serendipity"
         contextSentence="It was pure serendipity that we met"
-        vocabEntry={mockVocabEntry}
+        vocabEntry={undefined}
         onClose={jest.fn()}
       />
     );
@@ -319,7 +333,7 @@ describe("WordSidebar", () => {
       <WordSidebar
         word="serendipity"
         contextSentence="It was pure serendipity that we met"
-        vocabEntry={mockVocabEntry}
+        vocabEntry={undefined}
         onClose={jest.fn()}
       />
     );
@@ -356,7 +370,7 @@ describe("WordSidebar", () => {
           "It was pure serendipity that we met",
           "Fate brought us together.",
         ]}
-        vocabEntry={mockVocabEntry}
+        vocabEntry={undefined}
         onClose={jest.fn()}
       />
     );
@@ -431,6 +445,12 @@ describe("WordSidebar", () => {
     fireEvent.click(screen.getByTestId("generate-definition-btn"));
 
     await waitFor(() => {
+      expect(screen.getByTestId("confirmation-modal")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId("confirmation-confirm"));
+
+    await waitFor(() => {
       expect(screen.getByTestId("save-definition-btn")).toBeInTheDocument();
     });
 
@@ -456,5 +476,129 @@ describe("WordSidebar", () => {
 
     expect(screen.getByTestId("generated-definition")).toBeInTheDocument();
     expect(screen.getByTestId("save-definition-btn")).toBeInTheDocument();
+  });
+
+  it("shows overwrite confirmation modal when clicking Generate with existing definition", async () => {
+    render(
+      <WordSidebar
+        word="serendipity"
+        contextSentence="It was pure serendipity that we met"
+        vocabEntry={mockVocabEntry}
+        onClose={jest.fn()}
+      />
+    );
+
+    expect(screen.queryByTestId("confirmation-modal")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("generate-definition-btn"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("confirmation-modal")).toBeInTheDocument();
+    });
+  });
+
+  it("does not show confirmation modal when clicking Generate with no existing definition", async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        definition: "First AI definition",
+      }),
+    });
+
+    render(
+      <WordSidebar
+        word="hello"
+        contextSentence="Hello there"
+        vocabEntry={undefined}
+        onClose={jest.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId("generate-definition-btn"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("generated-definition")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByTestId("confirmation-modal")).not.toBeInTheDocument();
+  });
+
+  it("closes confirmation modal when cancel button is clicked", async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        definition: "Should not be used",
+      }),
+    });
+
+    render(
+      <WordSidebar
+        word="serendipity"
+        contextSentence="It was pure serendipity that we met"
+        vocabEntry={mockVocabEntry}
+        onClose={jest.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId("generate-definition-btn"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("confirmation-modal")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId("confirmation-cancel"));
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("confirmation-modal")
+      ).not.toBeInTheDocument();
+    });
+
+    // Verify generation did not start
+    expect(
+      (global.fetch as jest.Mock).mock.calls.filter(
+        (call: unknown[]) => (call as string[])[0] === "/api/dictionary/define"
+      )
+    ).toHaveLength(0);
+  });
+
+  it("generates new definition when confirming overwrite", async () => {
+    (global.fetch as jest.Mock).mockReset();
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        definition: "New AI definition replacing old one",
+        partOfSpeech: "noun",
+      }),
+    });
+
+    render(
+      <WordSidebar
+        word="serendipity"
+        contextSentence="It was pure serendipity that we met"
+        vocabEntry={mockVocabEntry}
+        onClose={jest.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId("generate-definition-btn"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("confirmation-modal")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId("confirmation-confirm"));
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("confirmation-modal")
+      ).not.toBeInTheDocument();
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("New AI definition replacing old one")
+      ).toBeInTheDocument();
+    });
   });
 });
