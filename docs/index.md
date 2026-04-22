@@ -1,31 +1,23 @@
 # LingoFlow Docs — Navigation Index
 
-> Quick reference for coding agents. All docs are in `/workspaces/lingoFlow/docs/`.
+> Agent reference. All docs in `/workspaces/lingoFlow/docs/`. No duplicate files — one file per topic.
 
 ---
 
-## Project Documentation
+## Project Docs (codebase-specific)
 
 | File | Contents |
 |---|---|
-| [`project-overview.md`](./project-overview.md) | **Project overview** — what LingoFlow does, quick start, tech stack, module ownership, core runtime behavior |
-| [`project-architecture.md`](./project-architecture.md) | **Architecture reference** — system design, service layer, data flow, component tree, conventions, critical patterns, file structure |
-
----
-
-## Files
-
-| File | Contents |
-|---|---|
-| [`stack.md`](./stack.md) | **Tech stack** — all dependencies with versions, architecture decisions, build commands, CI pipeline |
-| [`architecture.md`](./architecture.md) | **Architecture reference** — App Router layout, DI/composition root, data flow, component hierarchy, hook inventory, testing conventions |
-| [`components.md`](./components.md) | **Component reference** — every React component in `src/components/`: purpose, props, `data-testid` map, z-index layering |
-| [`player-architecture.md`](./player-architecture.md) | **Player & mini-player reference** — component tree, seek flow, transport controls, `data-testid` map, test patterns |
-| [`api-reference.md`](./api-reference.md) | **Canonical API reference** — all REST endpoints, types, service interfaces, DB schema, library patterns |
-| [`api.md`](./api.md) | Extended API reference — includes `ApiClient`, `usePlayerData`, `VocabStore`, vocabulary endpoints |
-| [`api-docs.md`](./api-docs.md) | Patterns for UI development — React 19, Tailwind design system, hooks, testing, media controls |
+| [`project-overview.md`](./project-overview.md) | What LingoFlow does, quick start, tech stack, module ownership, runtime behavior |
+| [`architecture.md`](./architecture.md) | App Router layout, DI/composition root, data flow, component hierarchy, hook inventory, testing conventions |
+| [`project-docs.md`](./project-docs.md) | Full snapshot: file tree, tech stack, player structure, all API routes, data model, DI, commands, CI |
+| [`stack.md`](./stack.md) | All dependencies + versions, architecture decisions, build commands, CI pipeline |
+| [`components.md`](./components.md) | Every React component in `src/components/`: purpose, props, `data-testid` map, z-index layering |
+| [`player-architecture.md`](./player-architecture.md) | Player component tree, seek flow, transport controls, `data-testid` map, test patterns |
+| [`api.md`](./api.md) | REST endpoints, types, service interfaces, DB schema, `ApiClient`, `VocabStore`, vocabulary endpoints |
+| [`api-docs.md`](./api-docs.md) | Codebase patterns: App Router gotchas, Tags API contract, Zod v4, SQLite, DI, React Query v5, hooks, transcripts, Tailwind design system |
 | [`e2e-testing.md`](./e2e-testing.md) | Playwright config, Page Object Model, fixtures, `data-testid` reference |
-| [`project-docs.md`](./project-docs.md) | Architecture, directory layout, build/test commands, design decisions |
+| [`API_DOCS_STATUS.md`](./API_DOCS_STATUS.md) | Chub-registry fetch status: what was fetched, version pins, coverage gaps |
 
 ---
 
@@ -39,7 +31,7 @@
 | Tags API Contract | ⚠️ format differs between import/update |
 | Zod v4 Patterns | `.issues` not `.errors` |
 | better-sqlite3 / SQLite Patterns | Sync calls, WAL, migration |
-| Dependency Injection / Composition Root | `getContainer()`, `createContainer(':memory:')` |
+| Dependency Injection / Composition Root | imports from `@/lib/server/composition` |
 | TanStack React Query v5 Patterns | `useQuery`, `useMutation`, `useQueries` |
 | Custom Hooks | `useVideos`, `useVideoMutations`, `useImportVideoForm`, `usePlayerData`, `useVocabulary`, `useUpdateWordStatus` |
 | Transcript Utilities | parse, detect, tokenize, file I/O |
@@ -51,9 +43,24 @@
 
 ---
 
+## External API References (framework guides)
+
+| File | Contents |
+|---|---|
+| [`api-nextjs-core.md`](./api-nextjs-core.md) | Next.js 16 App Router — install, routes, server components, env vars |
+| [`api-react-core.md`](./api-react-core.md) | React 19 — components, hooks, rendering |
+| [`api-typescript.md`](./api-typescript.md) | TypeScript — `tsconfig`, `tsc` CLI, type-checking |
+| [`api-jest.md`](./api-jest.md) | Jest 30 — testing framework guide |
+| [`api-playwright-core.md`](./api-playwright-core.md) | Playwright 1.59 — browser automation, test execution, assertions |
+| [`api-tailwindcss-core.md`](./api-tailwindcss-core.md) | Tailwind CSS 3 — utility classes, config |
+| [`api-eslint-nextjs.md`](./api-eslint-nextjs.md) | ESLint for Next.js — `eslint-config-next` flat config, Core Web Vitals rules |
+| [`tailwind-eslint.md`](./tailwind-eslint.md) | `eslint-plugin-tailwindcss` — install, flat config, class-ordering rules |
+
+---
+
 ## Stack Versions (from package.json)
 
-> See [`stack.md`](./stack.md) for full detail including architecture decisions and CLI commands.
+> See [`stack.md`](./stack.md) for full detail.
 
 | Library | Version |
 |---|---|

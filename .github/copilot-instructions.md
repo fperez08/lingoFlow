@@ -160,3 +160,10 @@ See canonical pattern in `src/app/api/videos/[id]/route.ts`.
 
 ### 8. API route test mocking
 Mock `@/lib/server/composition` in route handler tests. Follow existing patterns under `src/app/api/`; some routes also mock `next/server` for `NextResponse`.
+
+### 9. No duplicate documentation
+One file per topic. Before touching docs:
+- Check `docs/index.md` — canonical list, all files, all purposes.
+- No new file if topic already covered. No copying content between files — link instead.
+- Add content to single authoritative file. Update `docs/index.md` if new file needed.
+- External framework refs live in: `api-nextjs-core.md`, `api-react-core.md`, `api-typescript.md`, `api-jest.md`, `api-playwright-core.md`, `api-tailwindcss-core.md`, `api-eslint-nextjs.md`, `tailwind-eslint.md`. No new files for these frameworks.

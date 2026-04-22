@@ -1,10 +1,26 @@
 # Copilot Instructions for LingoFlow
 
-> Trust these instructions. Only search the codebase if information here is incomplete or appears incorrect.
+> Trust instructions. Search codebase only if info here incomplete or wrong.
+
+Respond terse like smart caveman. All technical substance stay. Only fluff die.
+
+Rules:
+
+Drop: articles (a/an/the), filler (just/really/basically), pleasantries, hedging
+Fragments OK. Short synonyms. Technical terms exact. Code unchanged.
+Pattern: [thing] [action] [reason]. [next step].
+Not: "Sure! I'd be happy to help you with that."
+Yes: "Bug in auth middleware. Fix:"
+Switch level: /caveman lite|full|ultra|wenyan Stop: "stop caveman" or "normal mode"
+
+Auto-Clarity: drop caveman for security warnings, irreversible actions, user confused. Resume after.
+
+Boundaries: code/commits/PRs written normal.
+TypeScript: `any` prohibited. Use exact types or `unknown` + narrowing.
 
 ## What This Repo Does
 
-LingoFlow is a **local-first, single-user Next.js web app** (App Router, React 19, TypeScript 5). Users import YouTube videos with transcript files (`.srt`, `.vtt`, `.txt`), view transcripts in a synced player, edit tags/metadata, and browse vocabulary. There is no app-owned backend or authentication; video metadata is fetched from the YouTube oEmbed API at import time and then stored locally in SQLite. The vocabulary page uses mock data only (not yet DB-wired). Transcript files are stored on the local filesystem.
+LingoFlow is **local-first, single-user Next.js web app** (App Router, React 19, TypeScript 5). User imports local video files or YouTube videos with transcript files (`.srt`, `.vtt`, `.txt`), views synced transcript/player, edits tags/metadata, browses vocabulary with status tracking. No app-owned backend or auth; all data stored locally in SQLite. Transcript files and videos live on local filesystem. Thumbnails extracted via ffmpeg on import.
 
 ## Tech Stack
 
@@ -17,12 +33,12 @@ LingoFlow is a **local-first, single-user Next.js web app** (App Router, React 1
 | Validation | Zod 4 |
 | Unit tests | Jest 30 + Testing Library |
 | E2E tests | Playwright 1.59 |
-| Package manager | **pnpm** (only supported; do not use npm or yarn) |
+| Package manager | **pnpm** only (no npm/yarn) |
 | Node runtime | Node 24 |
 
 ## Build & Validation
 
-**Always run `pnpm install` before any other command**, especially after changing `package.json`.
+Run `pnpm install` before any other command, especially after `package.json` changes.
 
 ```bash
 pnpm install          # install / sync dependencies
@@ -33,20 +49,20 @@ pnpm lint             # ESLint — DO NOT treat exit code as a gate (see below)
 pnpm test:e2e         # Playwright E2E — auto-starts dev server via webServer config
 ```
 
-**`pnpm build` validates TypeScript.** It must succeed. Run it after any type-level changes.
+`pnpm build` validates TypeScript. Must pass. Run after type-level changes.
 
-**`pnpm lint` has pre-existing failures** in test files (`no-explicit-any`, `no-require-imports`). The CI pipeline does **not** run lint. Do not introduce new lint errors in `src/` (production code), but do not attempt to fix the pre-existing test-file errors unless that is the task.
+`pnpm lint` has pre-existing failures in test files (`no-explicit-any`, `no-require-imports`). CI does **not** run lint. Do not add new lint errors in `src/` (production code). Do not fix existing test-file lint errors unless task asks.
 
-**E2E tests** stub the YouTube API. The env var `E2E_STUB_YOUTUBE=true` is set automatically by Playwright's `webServer` config. Running `pnpm test:e2e` locally reuses an existing dev server if one is already running on port 3000.
+E2E tests stub YouTube API. Env var `E2E_STUB_YOUTUBE=true` auto-set by Playwright `webServer` config. `pnpm test:e2e` reuses existing local dev server on port 3000.
 
 ## CI Pipeline
 
-Defined in `.github/workflows/e2e.yml`. Triggers on **push to `main` only** (post-merge, not on PRs). Steps:
+Defined in `.github/workflows/e2e.yml`. Triggers on **push to `main` only** (post-merge, not PR). Steps:
 1. `pnpm install --frozen-lockfile`
 2. `pnpm test` (Jest)
 3. `pnpm test:e2e` (Playwright, Chromium only)
 
-There is no lint step in CI. Because CI is post-merge only, **always run `pnpm build` and `pnpm test` locally before finishing** to catch failures before they land on `main`.
+No lint step in CI. Because CI is post-merge only, run `pnpm build` and `pnpm test` locally before finish to catch failures before landing on `main`.
 
 ## Project Layout
 
@@ -89,58 +105,66 @@ tests/
     fixtures/                      # Test fixture data (sample.srt, fixture factory)
 ```
 
-**Key config files in repo root:** `next.config.ts`, `tsconfig.json`, `eslint.config.mjs`, `tailwind.config.ts`, `jest.config.js`, `playwright.config.ts`, `pnpm-workspace.yaml`.
+Key repo root config files: `next.config.ts`, `tsconfig.json`, `eslint.config.mjs`, `tailwind.config.ts`, `jest.config.js`, `playwright.config.ts`, `pnpm-workspace.yaml`.
 
-**Path alias:** `@/` resolves to `src/`. Use `@/lib/...`, `@/components/...`, etc. in all imports.
+Path alias: `@/` -> `src/`. Use `@/lib/...`, `@/components/...`, etc. in imports.
 
-**Data directory:** `.lingoflow-data/` (gitignored). Contains `lingoflow.db` and `transcripts/`. Override with `LINGOFLOW_DATA_DIR` env var.
+Data directory: `.lingoflow-data/` (gitignored). Contains `lingoflow.db` + `transcripts/`. Override with `LINGOFLOW_DATA_DIR`.
 
-**Native module:** `better-sqlite3` is a native addon. `pnpm-workspace.yaml` sets `allowBuilds: { better-sqlite3: true }`. Do not remove this entry.
+Native module: `better-sqlite3` is native addon. `pnpm-workspace.yaml` sets `allowBuilds: { better-sqlite3: true }`. Do not remove.
 
 ## Critical Patterns — Must Follow
 
 ### 1. API routes require Node.js runtime
-Every file under `src/app/api/` **must** export:
+Every file under `src/app/api/` must export:
 ```ts
 export const runtime = 'nodejs'
 ```
-`better-sqlite3` is a native module that cannot run in the Edge runtime. Omitting this line causes runtime errors.
+`better-sqlite3` is native module; cannot run in Edge runtime. Missing line causes runtime errors.
 
 ### 2. API route tests require node Jest environment
-Test files for API routes **must** start with:
+API route test files must start with:
 ```ts
 // @jest-environment node
 ```
-The default `jsdom` environment lacks the global `Request` object. See `src/app/api/videos/__tests__/route.test.ts` for the pattern.
+Default `jsdom` env lacks global `Request`. See `src/app/api/videos/__tests__/route.test.ts` pattern.
 
 ### 3. Zod v4 error access
-Use `result.error.issues[0].message` — **not** `result.error.errors`. Zod 4 renamed the property.
+Use `result.error.issues[0].message`, not `result.error.errors`. Zod 4 renamed property.
 
 ### 4. Composition root — do not instantiate services directly
 Route handlers import from `@/lib/server/composition`:
 ```ts
 import { videoStore, videoService } from '@/lib/server/composition'
 ```
-Never construct `SqliteVideoStore` or `VideoService` directly in a route handler.
+Never construct `SqliteVideoStore` or `VideoService` directly in route handler.
 
 ### 5. Tags API contract differs between routes
-- `POST /api/videos/import`: `tags` in `FormData` is a **comma-separated string** (e.g. `"french,beginner"`)
-- `PATCH /api/videos/[id]`: `tags` in `FormData` is a **JSON-serialized array string** (e.g. `'["french","beginner"]'`)
+- `POST /api/videos/import`: `tags` in `FormData` is **comma-separated string** (example: `"french,beginner"`)
+- `PATCH /api/videos/[id]`: `tags` in `FormData` is **JSON-serialized array string** (example: `'["french","beginner"]'`)
 
-See `src/lib/api-schemas.ts` (`ImportVideoRequestSchema` vs `UpdateVideoRequestSchema`) for the exact shapes.
+See `src/lib/api-schemas.ts` (`ImportVideoRequestSchema` vs `UpdateVideoRequestSchema`) for exact shapes.
 
 ### 6. Dynamic route `params` must be awaited
-In Next.js App Router (this repo uses Next 16), `params` is typed as `Promise<{ id: string }>` and must be awaited:
+In Next.js App Router (repo uses Next 16), `params` type is `Promise<{ id: string }>` and must be awaited:
 ```ts
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   // ...
 }
 ```
-See `src/app/api/videos/[id]/route.ts` for the canonical pattern.
+See canonical pattern in `src/app/api/videos/[id]/route.ts`.
 
 ### 7. Tags are JSON-serialized in SQLite
-The `tags` column stores a JSON array string (e.g. `'["french","beginner"]'`). `SqliteVideoStore.rowToVideo()` deserializes it. Always pass `string[]` to store/service methods; never serialize manually in callers.
+`tags` column stores JSON array string (example: `'["french","beginner"]'`). `SqliteVideoStore.rowToVideo()` deserializes. Always pass `string[]` to store/service methods; never serialize manually in callers.
 
 ### 8. API route test mocking
-Mock `@/lib/server/composition` in route handler tests. Follow existing test patterns under `src/app/api/` — some routes also mock `next/server` for `NextResponse`.
+Mock `@/lib/server/composition` in route handler tests. Follow existing patterns under `src/app/api/`; some routes also mock `next/server` for `NextResponse`.
+
+### 9. No duplicate documentation
+`docs/` has one file per topic. Before creating or updating docs:
+- Check `docs/index.md` — canonical list of all docs files and their purposes.
+- Never create new file covering topic already in existing file.
+- Never copy content from one doc file into another. Link instead.
+- When adding content, put it in the single authoritative file. Update `docs/index.md` if new file needed.
+- External framework references: `api-nextjs-core.md`, `api-react-core.md`, `api-typescript.md`, `api-jest.md`, `api-playwright-core.md`, `api-tailwindcss-core.md`, `api-eslint-nextjs.md`, `tailwind-eslint.md`. Do not create new files for these frameworks.
