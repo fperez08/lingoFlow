@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { VocabInfo } from '@/lib/vocabulary'
 
 interface WordSidebarProps {
@@ -10,6 +10,12 @@ interface WordSidebarProps {
   onClose: () => void
   onStatusChange?: (word: string, status: 'new' | 'learning' | 'mastered') => void
   isUpdating?: boolean
+}
+
+interface GeneratedDefinition {
+  definition: string
+  partOfSpeech?: string
+  example?: string
 }
 
 const STATUS_STYLES: Record<VocabInfo['status'], string> = {
@@ -33,6 +39,9 @@ export default function WordSidebar({
   isUpdating = false,
 }: WordSidebarProps) {
   const panelRef = useRef<HTMLDivElement>(null)
+  const [generatedDefinition, setGeneratedDefinition] = useState<GeneratedDefinition | null>(null)
+  const [isLoadingDefinition, setIsLoadingDefinition] = useState(false)
+  const [definitionError, setDefinitionError] = useState<string | null>(null)
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
@@ -48,6 +57,31 @@ export default function WordSidebar({
     if (!onStatusChange) return
     const nextStatus = isKnown ? 'new' : 'mastered'
     onStatusChange(word, nextStatus)
+  }
+
+  async function handleGenerateDefinition() {
+    setIsLoadingDefinition(true)
+    setDefinitionError(null)
+    try {
+      const response = await fetch('/api/dictionary/define', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ word, contextSentence }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to generate definition')
+      }
+
+      const data = (await response.json()) as GeneratedDefinition
+      setGeneratedDefinition(data)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'An error occurred'
+      setDefinitionError(message)
+    } finally {
+      setIsLoadingDefinition(false)
+    }
   }
 
   return (
@@ -149,6 +183,48 @@ export default function WordSidebar({
                 : 'Mark as known'}
             </button>
           )}
+
+          {/* AI Definition Section */}
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={handleGenerateDefinition}
+              disabled={isLoadingDefinition}
+              data-testid="generate-definition-btn"
+              className="w-full py-2 rounded-xl text-sm font-bold transition-opacity bg-blue-100 text-blue-700 hover:bg-blue-200 disabled:opacity-50"
+            >
+              {isLoadingDefinition ? 'Generating...' : 'Generate Definition'}
+            </button>
+
+            {definitionError && (
+              <div
+                data-testid="definition-error"
+                className="text-sm text-red-600 bg-red-50 rounded-lg p-3 border border-red-200"
+              >
+                {definitionError}
+              </div>
+            )}
+
+            {generatedDefinition && (
+              <div
+                data-testid="generated-definition"
+                className="flex flex-col gap-2 bg-blue-50 dark:bg-slate-800 rounded-lg p-3 border border-blue-200 dark:border-slate-700"
+              >
+                <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                  {generatedDefinition.definition}
+                </p>
+                {generatedDefinition.partOfSpeech && (
+                  <p className="text-xs text-blue-700 dark:text-blue-300">
+                    Part of speech: <span className="font-semibold">{generatedDefinition.partOfSpeech}</span>
+                  </p>
+                )}
+                {generatedDefinition.example && (
+                  <p className="text-xs text-blue-700 dark:text-blue-300 italic">
+                    Example: {generatedDefinition.example}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Context sentence */}
           <div className="flex flex-col gap-1.5">

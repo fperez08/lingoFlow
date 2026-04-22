@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import WordSidebar from '../WordSidebar'
 import { VocabInfo } from '@/lib/vocabulary'
 
@@ -8,6 +8,9 @@ const mockVocabEntry: VocabInfo = {
   source: 'Cinema',
   status: 'learning',
 }
+
+// Mock fetch
+global.fetch = jest.fn()
 
 describe('WordSidebar', () => {
   it('renders the selected word', () => {
@@ -169,4 +172,141 @@ describe('WordSidebar', () => {
     expect(btn).toBeDisabled()
     expect(btn).toHaveTextContent('Saving…')
   })
+
+  it('renders Generate Definition button', () => {
+    render(
+      <WordSidebar
+        word="serendipity"
+        contextSentence="It was pure serendipity that we met"
+        vocabEntry={mockVocabEntry}
+        onClose={jest.fn()}
+      />
+    )
+    expect(screen.getByTestId('generate-definition-btn')).toBeInTheDocument()
+    expect(screen.getByTestId('generate-definition-btn')).toHaveTextContent('Generate Definition')
+  })
+
+  it('shows loading state when generating definition', async () => {
+    ;(global.fetch as jest.Mock).mockImplementation(
+      () =>
+        new Promise(resolve =>
+          setTimeout(() => {
+            resolve({
+              ok: true,
+              json: async () => ({
+                definition: 'A test definition',
+                partOfSpeech: 'noun',
+              }),
+            })
+          }, 100)
+        )
+    )
+
+    render(
+      <WordSidebar
+        word="serendipity"
+        contextSentence="It was pure serendipity that we met"
+        vocabEntry={mockVocabEntry}
+        onClose={jest.fn()}
+      />
+    )
+
+    fireEvent.click(screen.getByTestId('generate-definition-btn'))
+    expect(screen.getByTestId('generate-definition-btn')).toHaveTextContent('Generating...')
+
+    await waitFor(() => {
+      expect(screen.getByTestId('generate-definition-btn')).toHaveTextContent('Generate Definition')
+    })
+  })
+
+  it('displays generated definition after successful API call', async () => {
+    ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        definition: 'Test definition from AI',
+        partOfSpeech: 'noun',
+        example: 'Test example',
+      }),
+    })
+
+    render(
+      <WordSidebar
+        word="serendipity"
+        contextSentence="It was pure serendipity that we met"
+        vocabEntry={mockVocabEntry}
+        onClose={jest.fn()}
+      />
+    )
+
+    fireEvent.click(screen.getByTestId('generate-definition-btn'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('generated-definition')).toBeInTheDocument()
+      expect(screen.getByText('Test definition from AI')).toBeInTheDocument()
+      expect(screen.getByText(/Part of speech/)).toHaveTextContent('noun')
+      expect(screen.getByText(/Example/)).toHaveTextContent('Test example')
+    })
+  })
+
+  it('displays error message when API call fails', async () => {
+    ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: false,
+      json: async () => ({ error: 'AI service unavailable' }),
+    })
+
+    render(
+      <WordSidebar
+        word="serendipity"
+        contextSentence="It was pure serendipity that we met"
+        vocabEntry={mockVocabEntry}
+        onClose={jest.fn()}
+      />
+    )
+
+    fireEvent.click(screen.getByTestId('generate-definition-btn'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('definition-error')).toBeInTheDocument()
+      expect(screen.getByTestId('definition-error')).toHaveTextContent('AI service unavailable')
+    })
+  })
+
+  it('allows regenerating definition by clicking button multiple times', async () => {
+    ;(global.fetch as jest.Mock)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          definition: 'First definition',
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          definition: 'Second definition',
+        }),
+      })
+
+    render(
+      <WordSidebar
+        word="serendipity"
+        contextSentence="It was pure serendipity that we met"
+        vocabEntry={mockVocabEntry}
+        onClose={jest.fn()}
+      />
+    )
+
+    fireEvent.click(screen.getByTestId('generate-definition-btn'))
+
+    await waitFor(() => {
+      expect(screen.getByText('First definition')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByTestId('generate-definition-btn'))
+
+    await waitFor(() => {
+      expect(screen.getByText('Second definition')).toBeInTheDocument()
+      expect(screen.queryByText('First definition')).not.toBeInTheDocument()
+    })
+  })
 })
+
