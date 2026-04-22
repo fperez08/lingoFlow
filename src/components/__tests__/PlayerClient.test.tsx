@@ -2,8 +2,10 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import PlayerClient from '../PlayerClient'
 import { Video } from '@/lib/videos'
 
+let mockVocabMapData = new Map()
+
 jest.mock('@/hooks/useVocabulary', () => ({
-  useVocabulary: () => ({ data: new Map(), isLoading: false }),
+  useVocabulary: () => ({ data: mockVocabMapData, isLoading: false }),
   useUpdateWordStatus: () => ({ mutate: jest.fn(), isPending: false }),
 }))
 
@@ -42,6 +44,7 @@ jest.mock('@/components/LocalVideoPlayer', () => ({
 beforeEach(() => {
   mockCapturedOnTimeUpdate = undefined
   mockCapturedIsSidebarOpen = undefined
+  mockVocabMapData = new Map()
   global.fetch = jest.fn()
 })
 
@@ -168,5 +171,66 @@ describe('PlayerClient', () => {
     fireEvent.click(screen.getByTestId('word-hello'))
     expect(mockCapturedIsSidebarOpen).toBe(true)
   })
+
+  it('renders transcript words with highlighting when vocabMap is provided', () => {
+    const cues = [
+      { index: 1, startTime: '00:00:00,000', endTime: '00:00:02,000', text: 'Hello world' },
+    ]
+    mockVocabMapData = new Map([
+      ['hello', { word: 'hello', status: 'mastered' as const, level: 'A1', definition: 'greeting' }],
+      ['world', { word: 'world', status: 'learning' as const, level: 'A2', definition: 'earth' }],
+    ])
+
+    render(<PlayerClient video={mockVideo} cues={cues} />)
+
+    // Verify words are rendered
+    const helloWord = screen.getByTestId('word-hello')
+    const worldWord = screen.getByTestId('word-world')
+    expect(helloWord).toBeInTheDocument()
+    expect(worldWord).toBeInTheDocument()
+
+    // Verify mastered word has green styling
+    expect(helloWord).toHaveClass('text-green-600')
+    expect(helloWord).toHaveClass('bg-green-50')
+
+    // Verify learning word has yellow styling
+    expect(worldWord).toHaveClass('text-yellow-600')
+    expect(worldWord).toHaveClass('bg-yellow-50')
+  })
+
+  it('updates transcript word highlighting when vocabMap is refreshed', async () => {
+    const cues = [
+      { index: 1, startTime: '00:00:00,000', endTime: '00:00:02,000', text: 'Hello world' },
+    ]
+    mockVocabMapData = new Map([
+      ['hello', { word: 'hello', status: 'new' as const, level: 'A1', definition: 'greeting' }],
+      ['world', { word: 'world', status: 'new' as const, level: 'A2', definition: 'earth' }],
+    ])
+
+    const { rerender } = render(<PlayerClient video={mockVideo} cues={cues} />)
+
+    // Initially, words should NOT have mastered/learning styles (status is 'new')
+    const helloWord = screen.getByTestId('word-hello')
+    expect(helloWord).not.toHaveClass('text-green-600')
+    expect(helloWord).not.toHaveClass('text-yellow-600')
+
+    // Update vocabMap to indicate 'hello' is now mastered
+    mockVocabMapData = new Map([
+      ['hello', { word: 'hello', status: 'mastered' as const, level: 'A1', definition: 'greeting' }],
+      ['world', { word: 'world', status: 'new' as const, level: 'A2', definition: 'earth' }],
+    ])
+
+    rerender(<PlayerClient video={mockVideo} cues={cues} />)
+
+    // After vocab refresh, 'hello' should have mastered styling
+    const updatedHelloWord = screen.getByTestId('word-hello')
+    expect(updatedHelloWord).toHaveClass('text-green-600')
+    expect(updatedHelloWord).toHaveClass('bg-green-50')
+
+    // 'world' should still not have special styling
+    const worldWord = screen.getByTestId('word-world')
+    expect(worldWord).not.toHaveClass('text-green-600')
+  })
 })
+
 
