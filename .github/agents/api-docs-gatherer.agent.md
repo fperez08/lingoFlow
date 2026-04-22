@@ -58,11 +58,12 @@ Produce list of **2–6 documentation queries** covering project core stack.
 
 ### 4. Check existing documentation in docs/
 
-Inspect current markdown files in `docs/` and determine which files already cover stack topics.
-
-- Reuse existing stack doc files when possible.
-- Avoid creating duplicate docs for same technology.
-- Keep project-specific docs untouched unless they are stack API docs that need refresh.
+Before writing any file:
+1. Read `docs/index.md` — canonical list of all docs and purposes.
+2. Check `docs/` for existing files covering same technology.
+3. Topic already covered → refresh that file. No new file.
+4. No new file if topic exists elsewhere. No duplicate docs.
+5. Project-specific docs: untouched unless they are stack API docs needing refresh.
 
 ### 5. Fetch and refresh API documentation
 

@@ -36,25 +36,30 @@ Persist gathered context to files instead of returning full inline package.
 1. Ensure folders exist:
    - `docs/`
 
-2. Generate or refresh these files:
+2. Check before creating any file:
+   - Read `docs/index.md` first — canonical list of all docs and purposes.
+   - Topic already covered in existing file → update that file. No new file.
+   - Never create file if same topic already documented elsewhere. No duplicate docs.
+
+3. Generate or refresh these files:
    - `docs/project-architecture.md`
      - Include relevant files found, one-line relevance notes, key conventions/patterns
    - `docs/project-overview.md`
      - Include current stack, key runtime behaviors, and module ownership summary
 
-3. Check staleness and refresh:
+4. Check staleness and refresh:
    - If files already exist, compare existing and new content
    - Overwrite only when content changed
    - Mark unchanged files as up to date
 
-4. Maintain `docs/index.md`:
+5. Maintain `docs/index.md`:
    - Create if missing
    - Ensure `## Project Documentation` section exists
    - Add/update links for project documentation files in `docs/`
    - Preserve/keep `## API Documentation` section and links when present
    - Edit only this section so other sections stay unchanged
 
-5. Report completion back to orchestrator with concise structured status block:
+6. Report completion back to orchestrator with concise structured status block:
 
 ---
 
