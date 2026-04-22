@@ -28,7 +28,7 @@ function rowToEntry(row: VocabRow): VocabEntry {
 export interface VocabStore {
   getAll(): VocabEntry[]
   getByWord(word: string): VocabEntry | null
-  upsert(word: string, status: VocabEntry['status'], level?: string, definition?: string): VocabEntry
+  upsert(word: string, status?: VocabEntry['status'], level?: string, definition?: string): VocabEntry
 }
 
 export class SqliteVocabStore implements VocabStore {
@@ -44,8 +44,15 @@ export class SqliteVocabStore implements VocabStore {
     return row ? rowToEntry(row) : null
   }
 
-  upsert(word: string, status: VocabEntry['status'], level?: string, definition?: string): VocabEntry {
+  upsert(word: string, status?: VocabEntry['status'], level?: string, definition?: string): VocabEntry {
     const now = new Date().toISOString()
+    
+    // Get existing entry if it exists
+    const existing = this.getByWord(word)
+    const finalStatus = status ?? existing?.status ?? 'new'
+    const finalLevel = level ?? existing?.level
+    const finalDefinition = definition ?? existing?.definition
+    
     this.db
       .prepare(
         `INSERT INTO vocabulary (word, status, level, definition, created_at, updated_at)
@@ -56,7 +63,7 @@ export class SqliteVocabStore implements VocabStore {
            definition = excluded.definition,
            updated_at = excluded.updated_at`
       )
-      .run(word, status, level ?? null, definition ?? null, now, now)
+      .run(word, finalStatus, finalLevel ?? null, finalDefinition ?? null, now, now)
     return this.getByWord(word)!
   }
 }

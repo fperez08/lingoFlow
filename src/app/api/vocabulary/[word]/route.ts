@@ -19,7 +19,7 @@ export async function PATCH(
     }
 
     const { vocabStore } = getContainer()
-    const entry = vocabStore.upsert(decoded, result.data.status)
+    const entry = vocabStore.upsert(decoded, result.data.status, undefined, result.data.definition)
     return NextResponse.json(entry)
   } catch (error) {
     console.error('PATCH vocabulary error:', error)

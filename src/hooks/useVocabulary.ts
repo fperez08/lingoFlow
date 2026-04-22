@@ -37,3 +37,26 @@ export function useUpdateWordStatus(): UseMutationResult<
     },
   })
 }
+
+export function useUpdateWordDefinition(): UseMutationResult<
+  VocabEntry,
+  Error,
+  { word: string; definition: string }
+> {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ word, definition }) => {
+      const res = await fetch(`/api/vocabulary/${encodeURIComponent(word.toLowerCase())}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ definition }),
+      })
+      if (!res.ok) throw new Error('Failed to save definition')
+      return res.json() as Promise<VocabEntry>
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vocabulary'] })
+    },
+  })
+}
