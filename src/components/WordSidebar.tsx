@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { VocabInfo } from "@/lib/vocabulary";
 import { useUpdateWordDefinition } from "@/hooks/useVocabulary";
+import ConfirmationModal from "./ConfirmationModal";
 
 interface WordSidebarProps {
   word: string;
@@ -53,6 +54,8 @@ export default function WordSidebar({
   const [isLoadingDefinition, setIsLoadingDefinition] = useState(false);
   const [definitionError, setDefinitionError] = useState<string | null>(null);
   const [isSavingDefinition, setIsSavingDefinition] = useState(false);
+  const [showOverwriteConfirm, setShowOverwriteConfirm] = useState(false);
+  const [isConfirmingOverwrite, setIsConfirmingOverwrite] = useState(false);
 
   // Derived state: reset when the selected word changes
   if (word !== lastWord) {
@@ -80,9 +83,33 @@ export default function WordSidebar({
     onStatusChange(word, nextStatus);
   }
 
+  function handleClickGenerateDefinition() {
+    // Check if word already has a saved definition
+    if (vocabEntry?.definition) {
+      setShowOverwriteConfirm(true);
+    } else {
+      handleGenerateDefinition();
+    }
+  }
+
+  function handleCancelOverwrite() {
+    setShowOverwriteConfirm(false);
+  }
+
+  async function handleConfirmOverwrite() {
+    setIsConfirmingOverwrite(true);
+    try {
+      await handleGenerateDefinition();
+    } finally {
+      setIsConfirmingOverwrite(false);
+      setShowOverwriteConfirm(false);
+    }
+  }
+
   async function handleGenerateDefinition() {
     setIsLoadingDefinition(true);
     setDefinitionError(null);
+    setGeneratedDefinition(null);
     try {
       const body: Record<string, unknown> = { word, contextSentence };
       if (transcriptContext) {
@@ -237,7 +264,7 @@ export default function WordSidebar({
           {/* AI Definition Section */}
           <div className="flex flex-col gap-3">
             <button
-              onClick={handleGenerateDefinition}
+              onClick={handleClickGenerateDefinition}
               disabled={isLoadingDefinition}
               data-testid="generate-definition-btn"
               className="w-full py-2 rounded-xl text-sm font-bold transition-opacity bg-blue-100 text-blue-700 hover:bg-blue-200 disabled:opacity-50"
@@ -301,6 +328,15 @@ export default function WordSidebar({
           </div>
         </div>
       </div>
+
+      {/* Overwrite Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showOverwriteConfirm}
+        word={word}
+        onCancel={handleCancelOverwrite}
+        onConfirm={handleConfirmOverwrite}
+        isConfirming={isConfirmingOverwrite}
+      />
     </>
   );
 }
