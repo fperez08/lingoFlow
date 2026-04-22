@@ -125,7 +125,12 @@ export class VideoService {
     try {
       const record = this.store.insert(insertParams)
       await this.drainPostImportTasks(record)
-      return record
+      // Fetch updated record to include post-import derived fields (e.g., thumbnail_path)
+      const updatedRecord = this.store.getById(record.id)
+      if (!updatedRecord) {
+        throw new Error(`Video ${record.id} disappeared after import`)
+      }
+      return updatedRecord
     } catch (err) {
       this.transcripts.delete(transcriptPath)
       this.videoFiles.delete(videoPath)

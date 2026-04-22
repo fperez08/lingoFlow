@@ -81,4 +81,72 @@ test.describe('Import happy path', () => {
     await dashboard.assertVideoCardCount(1)
     await expect(page.getByTestId(`video-card-${importedVideo.id}`)).toContainText(LOCAL_VIDEO_TITLE)
   })
+
+  test('imports local video and shows thumbnail immediately on dashboard', async ({ page }) => {
+    const dashboard = new DashboardPage(page)
+    const importActions = new ImportActions(page)
+    const importedVideoWithThumbnail = {
+      id: 'test-vid-thumbnail',
+      title: 'Video with Thumbnail',
+      author_name: '',
+      thumbnail_url: '',
+      thumbnail_path: '/data/thumbnails/test-vid-thumbnail.jpg',
+      transcript_path: '/data/transcripts/test-vid-thumbnail.srt',
+      transcript_format: 'srt',
+      tags: [],
+      created_at: '2024-01-01T00:00:00.000Z',
+      updated_at: '2024-01-01T00:00:00.000Z',
+      local_video_path: '/data/videos/test-vid-thumbnail.mp4',
+      local_video_filename: 'video.mp4',
+      source_type: 'local',
+    }
+    let videos: typeof importedVideoWithThumbnail[] = []
+
+    await page.route('**/api/videos', async route => {
+      await route.fulfill({ json: videos })
+    })
+
+    await page.route('**/api/videos/import', async route => {
+      videos = [importedVideoWithThumbnail]
+      // Import response now includes post-import derived field (thumbnail_path)
+      await route.fulfill({ status: 201, json: importedVideoWithThumbnail })
+    })
+
+    // Mock thumbnail endpoint to serve generated thumbnail
+    await page.route('**/api/videos/test-vid-thumbnail/thumbnail', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'image/jpeg',
+        body: Buffer.from('fake jpeg data'),
+      })
+    })
+
+    // 1. Load dashboard empty state
+    await dashboard.loadDashboard()
+    await dashboard.assertEmpty()
+
+    // 2. Open import modal and fill form
+    await importActions.clickImportButton()
+    await importActions.fillVideoFile({
+      name: 'video.mp4',
+      mimeType: 'video/mp4',
+      buffer: Buffer.from('fake mp4 content'),
+    })
+    await importActions.fillTitle('Video with Thumbnail')
+    await importActions.fillTranscriptFile(SAMPLE_SRT)
+
+    // 3. Submit import
+    await importActions.clickSubmitImport()
+
+    // 4. Assert modal closes
+    await expect(page.getByTestId('import-modal')).toBeHidden()
+
+    // 5. Assert video card appears with thumbnail immediately
+    await dashboard.assertVideoCardCount(1)
+    const card = page.getByTestId(`video-card-${importedVideoWithThumbnail.id}`)
+
+    // Verify thumbnail is visible — it should be requested from the API
+    const thumbnailImg = card.locator('img[alt*="thumbnail"]').first()
+    await expect(thumbnailImg).toBeVisible()
+  })
 })
