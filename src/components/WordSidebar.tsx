@@ -48,21 +48,18 @@ export default function WordSidebar({
   const panelRef = useRef<HTMLDivElement>(null);
   const [lastWord, setLastWord] = useState(word);
   const [generatedDefinition, setGeneratedDefinition] =
-    useState<GeneratedDefinition | null>(
-      vocabEntry?.definition ? { definition: vocabEntry.definition } : null
-    );
+    useState<GeneratedDefinition | null>(null);
   const [isLoadingDefinition, setIsLoadingDefinition] = useState(false);
   const [definitionError, setDefinitionError] = useState<string | null>(null);
   const [isSavingDefinition, setIsSavingDefinition] = useState(false);
   const [showOverwriteConfirm, setShowOverwriteConfirm] = useState(false);
   const [isConfirmingOverwrite, setIsConfirmingOverwrite] = useState(false);
 
-  // Derived state: reset when the selected word changes
+  // Reset transient generation state when the selected word changes
   if (word !== lastWord) {
     setLastWord(word);
-    setGeneratedDefinition(
-      vocabEntry?.definition ? { definition: vocabEntry.definition } : null
-    );
+    setGeneratedDefinition(null);
+    setDefinitionError(null);
   }
 
   const saveDefinitionMutation = useUpdateWordDefinition();
@@ -146,6 +143,12 @@ export default function WordSidebar({
         word: word.toLowerCase(),
         definition: generatedDefinition.definition,
       });
+      // On successful save, hide the generated-definition card
+      setGeneratedDefinition(null);
+      setDefinitionError(null);
+    } catch {
+      // On failure, keep the generated card visible so user can retry
+      // Error will be handled by mutation hook
     } finally {
       setIsSavingDefinition(false);
     }

@@ -103,9 +103,9 @@ describe("WordSidebar", () => {
         onClose={jest.fn()}
       />
     );
-    // The definition appears in vocab details and also in generated-definition auto-loaded area
+    // The definition appears only in vocab details section (line 237-239), not in generated-definition card
     const definitions = screen.getAllByText(mockVocabEntry.definition!);
-    expect(definitions.length).toBeGreaterThan(0);
+    expect(definitions.length).toBeGreaterThanOrEqual(1);
   });
 
   it("does not render definition when no vocab entry", () => {
@@ -409,6 +409,13 @@ describe("WordSidebar", () => {
 
     fireEvent.click(screen.getByTestId("generate-definition-btn"));
 
+    // With existing definition, confirmation modal appears
+    await waitFor(() => {
+      expect(screen.getByTestId("confirmation-modal")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId("confirmation-confirm"));
+
     await waitFor(() => {
       expect(screen.getByTestId("save-definition-btn")).toBeInTheDocument();
       expect(screen.getByTestId("save-definition-btn")).toHaveTextContent(
@@ -464,7 +471,7 @@ describe("WordSidebar", () => {
     });
   });
 
-  it("auto-loads definition from vocabEntry", () => {
+  it("does not auto-load definition card from vocabEntry - shows in saved details instead", () => {
     render(
       <WordSidebar
         word="serendipity"
@@ -474,8 +481,247 @@ describe("WordSidebar", () => {
       />
     );
 
-    expect(screen.getByTestId("generated-definition")).toBeInTheDocument();
-    expect(screen.getByTestId("save-definition-btn")).toBeInTheDocument();
+    // Definition should appear in saved vocab details (lines 236-240)
+    expect(screen.getByText(mockVocabEntry.definition!)).toBeInTheDocument();
+
+    // But generated-definition card should NOT be visible
+    expect(
+      screen.queryByTestId("generated-definition")
+    ).not.toBeInTheDocument();
+    expect(screen.queryByTestId("save-definition-btn")).not.toBeInTheDocument();
+  });
+
+  it("hides generated-definition card after successful save", async () => {
+    const mockMutateAsync = jest.fn().mockResolvedValue({
+      word: "hello",
+      definition: "Test definition from AI",
+      status: "learning",
+    });
+    jest.mocked(useUpdateWordDefinition).mockReturnValue({
+      mutateAsync: mockMutateAsync,
+    });
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        definition: "Test definition from AI",
+        partOfSpeech: "noun",
+        example: "Example usage",
+      }),
+    });
+
+    render(
+      <WordSidebar
+        word="hello"
+        contextSentence="Hello there"
+        vocabEntry={undefined}
+        onClose={jest.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId("generate-definition-btn"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("generated-definition")).toBeInTheDocument();
+      expect(screen.getByTestId("save-definition-btn")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId("save-definition-btn"));
+
+    await waitFor(() => {
+      expect(mockMutateAsync).toHaveBeenCalled();
+      // After save, generated-definition card should be hidden
+      expect(
+        screen.queryByTestId("generated-definition")
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("save-definition-btn")
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  it("shows saved definition details after successful save", async () => {
+    const mockMutateAsync = jest.fn().mockResolvedValue({
+      word: "hello",
+      definition: "Test definition from AI",
+      status: "learning",
+    });
+    jest.mocked(useUpdateWordDefinition).mockReturnValue({
+      mutateAsync: mockMutateAsync,
+    });
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        definition: "Test definition from AI",
+        partOfSpeech: "noun",
+        example: "Example usage",
+      }),
+    });
+
+    const { rerender } = render(
+      <WordSidebar
+        word="hello"
+        contextSentence="Hello there"
+        vocabEntry={undefined}
+        onClose={jest.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId("generate-definition-btn"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("generated-definition")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId("save-definition-btn"));
+
+    await waitFor(() => {
+      expect(mockMutateAsync).toHaveBeenCalled();
+    });
+
+    // Re-render with updated vocabEntry to simulate data refresh
+    const updatedVocabEntry = {
+      status: "learning" as const,
+      definition: "Test definition from AI",
+      partOfSpeech: "noun",
+      example: "Example usage",
+    };
+
+    rerender(
+      <WordSidebar
+        word="hello"
+        contextSentence="Hello there"
+        vocabEntry={updatedVocabEntry}
+        onClose={jest.fn()}
+      />
+    );
+
+    // Definition should be in saved vocab details section
+    expect(screen.getByText("Test definition from AI")).toBeInTheDocument();
+    // Generated card should still be hidden
+    expect(
+      screen.queryByTestId("generated-definition")
+    ).not.toBeInTheDocument();
+  });
+
+  it("reopens generated-definition card when user clicks Generate again after save", async () => {
+    const mockMutateAsync = jest.fn().mockResolvedValue({
+      word: "hello",
+      definition: "Test definition from AI",
+      status: "learning",
+    });
+    jest.mocked(useUpdateWordDefinition).mockReturnValue({
+      mutateAsync: mockMutateAsync,
+    });
+    (global.fetch as jest.Mock)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          definition: "Test definition from AI",
+          partOfSpeech: "noun",
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          definition: "New AI definition",
+          partOfSpeech: "verb",
+          example: "New example",
+        }),
+      });
+
+    const { rerender } = render(
+      <WordSidebar
+        word="hello"
+        contextSentence="Hello there"
+        vocabEntry={undefined}
+        onClose={jest.fn()}
+      />
+    );
+
+    // First generate
+    fireEvent.click(screen.getByTestId("generate-definition-btn"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Test definition from AI")).toBeInTheDocument();
+    });
+
+    // Save
+    fireEvent.click(screen.getByTestId("save-definition-btn"));
+
+    await waitFor(() => {
+      expect(mockMutateAsync).toHaveBeenCalled();
+      // Card should be hidden after save
+      expect(
+        screen.queryByTestId("generated-definition")
+      ).not.toBeInTheDocument();
+    });
+
+    // Simulate mutation success by updating vocabEntry
+    rerender(
+      <WordSidebar
+        word="hello"
+        contextSentence="Hello there"
+        vocabEntry={{
+          status: "learning",
+          definition: "Test definition from AI",
+        }}
+        onClose={jest.fn()}
+      />
+    );
+
+    // Click generate again - now there's a saved definition so confirmation modal appears
+    fireEvent.click(screen.getByTestId("generate-definition-btn"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("confirmation-modal")).toBeInTheDocument();
+    });
+
+    // Confirm to generate new definition
+    fireEvent.click(screen.getByTestId("confirmation-confirm"));
+
+    // New definition should appear
+    await waitFor(() => {
+      expect(screen.getByText("New AI definition")).toBeInTheDocument();
+      expect(screen.getByTestId("generated-definition")).toBeInTheDocument();
+    });
+  });
+
+  it("keeps generated-definition visible on save failure with error message", async () => {
+    const mockMutateAsync = jest
+      .fn()
+      .mockRejectedValue(new Error("Save failed"));
+    jest.mocked(useUpdateWordDefinition).mockReturnValue({
+      mutateAsync: mockMutateAsync,
+    });
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        definition: "Test definition from AI",
+      }),
+    });
+
+    render(
+      <WordSidebar
+        word="hello"
+        contextSentence="Hello there"
+        vocabEntry={undefined}
+        onClose={jest.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId("generate-definition-btn"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("generated-definition")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId("save-definition-btn"));
+
+    await waitFor(() => {
+      expect(mockMutateAsync).toHaveBeenCalled();
+      // On failure, generated-definition card should still be visible for retry
+      expect(screen.getByTestId("generated-definition")).toBeInTheDocument();
+    });
   });
 
   it("shows overwrite confirmation modal when clicking Generate with existing definition", async () => {
